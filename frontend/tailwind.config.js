@@ -77,8 +77,8 @@ export default {
         },
         // Transición entre páginas: fade limpio sin translateY (patrón nativo)
         'page-enter': {
-          '0%':   { opacity: '0', transform: 'scale(0.99)' },
-          '100%': { opacity: '1', transform: 'scale(1)'    },
+          '0%':   { opacity: '0' },
+          '100%': { opacity: '1' },
         },
       },
       animation: {
