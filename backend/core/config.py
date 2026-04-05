@@ -13,6 +13,7 @@ class Settings(BaseSettings):
     FRONTEND_URL: str = "http://localhost:5173"
     ENVIRONMENT: str = "development"
     FIREBASE_CREDENTIALS_PATH: str = ""
+    FIREBASE_CREDENTIALS_JSON: str = ""
 
     model_config = {"env_file": ".env", "extra": "ignore"}
 

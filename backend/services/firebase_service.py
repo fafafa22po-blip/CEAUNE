@@ -42,15 +42,21 @@ def _init_firebase():
     if _firebase_app:
         return True
     try:
+        import json
         import firebase_admin
         from firebase_admin import credentials
 
-        path = settings.FIREBASE_CREDENTIALS_PATH
-        if not path:
-            logger.warning("[Firebase] FIREBASE_CREDENTIALS_PATH no configurado — push desactivado")
-            return False
+        # Primero intenta con JSON string (para Railway/producción)
+        json_str = getattr(settings, "FIREBASE_CREDENTIALS_JSON", "")
+        if json_str:
+            cred = credentials.Certificate(json.loads(json_str))
+        else:
+            path = settings.FIREBASE_CREDENTIALS_PATH
+            if not path:
+                logger.warning("[Firebase] FIREBASE_CREDENTIALS_PATH no configurado — push desactivado")
+                return False
+            cred = credentials.Certificate(path)
 
-        cred = credentials.Certificate(path)
         _firebase_app = firebase_admin.initialize_app(cred)
         logger.info("[Firebase] Inicializado correctamente")
         return True
