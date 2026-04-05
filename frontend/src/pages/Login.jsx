@@ -73,13 +73,18 @@ export default function Login() {
           <div className="w-14 h-14 bg-dorado rounded-2xl flex items-center justify-center mb-8 shadow-lg">
             <span className="text-white font-black text-xl tracking-tight">CE</span>
           </div>
-          <p className="text-white/35 text-[11px] font-bold uppercase tracking-widest mb-3">
-            Centro de Aplicación UNE
+          <p className="text-dorado text-[11px] font-bold uppercase tracking-widest mb-1">
+            Universidad Nacional de Educación Enrique Guzmán y Valle
           </p>
-          <h1 className="text-5xl font-black leading-[1.1] mb-4">
+          <h1 className="text-2xl font-black leading-tight mb-1">
+            Colegio Experimental de Aplicación
+          </h1>
+          <p className="text-white/50 text-[11px] mb-0.5">I.E. por Convenio UNE-MED, según R.M. N° 045-2001-ED</p>
+          <p className="text-white/50 text-[11px] mb-6">Modelo Educativo: Jornada Escolar Completa con Formación Técnica</p>
+          <h2 className="text-4xl font-black leading-[1.1] mb-4">
             Control de<br />asistencia<br />
             <span className="text-dorado">inteligente</span>
-          </h1>
+          </h2>
           <p className="text-white/40 text-sm leading-relaxed max-w-xs mt-4">
             Sistema unificado para el seguimiento y control de asistencia escolar en tiempo real.
           </p>
@@ -112,11 +117,12 @@ export default function Login() {
           <div className="w-16 h-16 bg-dorado rounded-2xl flex items-center justify-center mb-5 shadow-lg">
             <span className="text-white font-black text-2xl tracking-tight">CE</span>
           </div>
-          <p className="text-[11px] font-bold uppercase tracking-widest text-white/35 mb-1">
-            Centro de Aplicación UNE
+          <p className="text-dorado text-[10px] font-bold uppercase tracking-widest mb-0.5 text-center">
+            Universidad Nacional de Educación Enrique Guzmán y Valle
           </p>
-          <h1 className="text-2xl font-black">CEAUNE</h1>
-          <p className="text-white/40 text-sm mt-1">Sistema de Control de Asistencia</p>
+          <h1 className="text-xl font-black text-center">Colegio Experimental de Aplicación</h1>
+          <p className="text-white/40 text-[10px] mt-0.5 text-center">I.E. por Convenio UNE-MED, según R.M. N° 045-2001-ED</p>
+          <p className="text-white/40 text-[10px] text-center">Modelo Educativo: Jornada Escolar Completa con Formación Técnica</p>
         </div>
 
         {/* Formulario centrado */}

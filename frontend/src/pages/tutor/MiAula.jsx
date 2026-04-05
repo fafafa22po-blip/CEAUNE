@@ -211,7 +211,7 @@ function FichaModal({ estudianteId, nombreCompleto, grado, seccion, onCerrar }) 
                     ))}
                   </div>
                   <div>
-                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Últimos 30 días</p>
+                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Este mes</p>
                     <div className="overflow-x-auto">
                       <table className="w-full border-separate border-spacing-1">
                         <thead>
@@ -603,9 +603,11 @@ function TabEstadisticas() {
   )
 
   const total     = data.estudiantes.length
-  const riesgo    = [...data.estudiantes].filter(e => e.porcentaje < 75).sort((a, b) => a.porcentaje - b.porcentaje)
-  const atencion  = [...data.estudiantes].filter(e => e.porcentaje >= 75 && e.porcentaje < 90).sort((a, b) => a.porcentaje - b.porcentaje)
-  const excelente = [...data.estudiantes].filter(e => e.porcentaje >= 90).sort((a, b) => b.porcentaje - a.porcentaje)
+  const dt        = data.dias_transcurridos || 0
+  const pctReal   = (e) => dt > 0 ? Math.round((dt - Math.min(e.faltas, dt)) / dt * 100) : 100
+  const riesgo    = [...data.estudiantes].filter(e => pctReal(e) < 75).sort((a, b) => pctReal(a) - pctReal(b))
+  const atencion  = [...data.estudiantes].filter(e => pctReal(e) >= 75 && pctReal(e) < 90).sort((a, b) => pctReal(a) - pctReal(b))
+  const excelente = [...data.estudiantes].filter(e => pctReal(e) >= 90).sort((a, b) => pctReal(b) - pctReal(a))
   const sinFaltas = data.estudiantes.filter(e => e.faltas === 0).length
   const promedio  = total > 0 ? Math.round(data.estudiantes.reduce((s, e) => s + e.porcentaje, 0) / total) : 0
 

@@ -342,11 +342,19 @@ def estadisticas_aula(
             "porcentaje":      r["pct"],
         })
 
+    # Días laborables transcurridos hasta hoy (para calcular riesgo real)
+    from services.asistencia_calc import get_fechas_laborables
+    hoy_r = date.today()
+    inicio_r = date(mes_actual, 1, 1).replace(year=anio_actual)
+    hasta_r  = min(date(anio_actual, mes_actual, monthrange(anio_actual, mes_actual)[1]), hoy_r)
+    dias_transcurridos = len(get_fechas_laborables(vinculo.nivel, vinculo.grado, vinculo.seccion, inicio_r, hasta_r, db))
+
     return {
-        "mes":             mes_actual,
-        "anio":            anio_actual,
-        "dias_laborables": batch["dias_lab"],
-        "estudiantes":     sorted(result, key=lambda x: x["porcentaje"]),
+        "mes":                mes_actual,
+        "anio":               anio_actual,
+        "dias_laborables":    batch["dias_lab"],
+        "dias_transcurridos": dias_transcurridos,
+        "estudiantes":        sorted(result, key=lambda x: x["porcentaje"]),
     }
 
 
@@ -938,13 +946,13 @@ def ficha_estudiante(
         raise HTTPException(status.HTTP_403_FORBIDDEN, "El estudiante no es de tu aula")
 
     hoy = date.today()
-    hace_30 = hoy - timedelta(days=29)
+    inicio_mes = date(hoy.year, hoy.month, 1)
 
     asistencias = (
         db.query(Asistencia)
         .filter(
             Asistencia.estudiante_id == estudiante_id,
-            Asistencia.fecha >= hace_30,
+            Asistencia.fecha >= inicio_mes,
             Asistencia.fecha <= hoy,
             Asistencia.tipo.in_(["ingreso", "ingreso_especial"]),
         )
@@ -958,7 +966,7 @@ def ficha_estudiante(
             mapa_dias[f] = "tardanza" if a.estado == "tardanza" else "presente"
 
     fechas = []
-    d = hace_30
+    d = inicio_mes
     while d <= hoy:
         if d.weekday() < 5:
             f = d.isoformat()
