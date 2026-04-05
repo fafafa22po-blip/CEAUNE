@@ -19,6 +19,11 @@ dist/
 # Docker
 mysql_data/
 
+# Backups
+*.sql
+!backend/database/schema.sql
+!backend/migrar_*.sql
+
 # IDE
 .vscode/
 .idea/

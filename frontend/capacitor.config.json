@@ -3,7 +3,7 @@
   "appName": "CEAUNE",
   "webDir": "dist",
   "server": {
-    "url": "http://192.168.1.79:5173",
+    "url": "https://ceaune.vercel.app",
     "cleartext": true,
     "allowNavigation": ["*"]
   },
