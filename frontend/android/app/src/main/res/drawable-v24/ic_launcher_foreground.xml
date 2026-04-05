@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Ícono adaptable CEAUNE — foreground layer (108x108dp)
+  El background layer provee el color marino #0a1f3d
+  Safe zone: círculo radio 36dp centrado en (54,54) → x:18-90, y:18-90
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Badge dorado redondeado — dentro de safe zone (26,26)→(82,82) radio 12 -->
+    <path
+        android:fillColor="#c9a227"
+        android:pathData="M38,26 h32 q12,0 12,12 v32 q0,12 -12,12 h-32 q-12,0 -12,-12 v-32 q0,-12 12,-12 z"/>
+
+    <!-- Letra C -->
+    <path android:fillColor="#ffffff" android:pathData="M32,35 h20 v6 h-20 z"/>
+    <path android:fillColor="#ffffff" android:pathData="M32,35 h6 v38 h-6 z"/>
+    <path android:fillColor="#ffffff" android:pathData="M32,67 h20 v6 h-20 z"/>
+
+    <!-- Letra E -->
+    <path android:fillColor="#ffffff" android:pathData="M56,35 h6 v38 h-6 z"/>
+    <path android:fillColor="#ffffff" android:pathData="M56,35 h20 v6 h-20 z"/>
+    <path android:fillColor="#ffffff" android:pathData="M56,51 h16 v6 h-16 z"/>
+    <path android:fillColor="#ffffff" android:pathData="M56,67 h20 v6 h-20 z"/>
+
+</vector>

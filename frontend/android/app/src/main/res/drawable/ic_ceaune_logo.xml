@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Logo CEAUNE para splash screen — 120x120dp
+  Badge dorado con letras CE en blanco
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="120dp"
+    android:height="120dp"
+    android:viewportWidth="120"
+    android:viewportHeight="120">
+
+    <!-- Badge dorado con esquinas redondeadas -->
+    <path
+        android:fillColor="#c9a227"
+        android:pathData="M20,0 H100 Q120,0 120,20 V100 Q120,120 100,120 H20 Q0,120 0,100 V20 Q0,0 20,0 Z"/>
+
+    <!-- Letra C — barra superior -->
+    <path android:fillColor="#ffffff" android:pathData="M22,32 h34 v10 h-34 z"/>
+    <!-- Letra C — barra izquierda -->
+    <path android:fillColor="#ffffff" android:pathData="M22,32 h10 v56 h-10 z"/>
+    <!-- Letra C — barra inferior -->
+    <path android:fillColor="#ffffff" android:pathData="M22,78 h34 v10 h-34 z"/>
+
+    <!-- Letra E — barra izquierda vertical -->
+    <path android:fillColor="#ffffff" android:pathData="M64,32 h10 v56 h-10 z"/>
+    <!-- Letra E — barra superior -->
+    <path android:fillColor="#ffffff" android:pathData="M64,32 h34 v10 h-34 z"/>
+    <!-- Letra E — barra media -->
+    <path android:fillColor="#ffffff" android:pathData="M64,55 h28 v10 h-28 z"/>
+    <!-- Letra E — barra inferior -->
+    <path android:fillColor="#ffffff" android:pathData="M64,78 h34 v10 h-34 z"/>
+
+</vector>

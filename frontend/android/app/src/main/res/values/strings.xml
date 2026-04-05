@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">CEAUNE ASISTENCIA</string>
+    <string name="title_activity_main">CEAUNE ASISTENCIA</string>
+    <string name="package_name">com.ceaune.app</string>
+    <string name="custom_url_scheme">com.ceaune.app</string>
+</resources>

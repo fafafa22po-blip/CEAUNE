@@ -1,0 +1,28 @@
+{
+  "appId": "com.ceaune.app",
+  "appName": "CEAUNE",
+  "webDir": "dist",
+  "server": {
+    "url": "http://192.168.1.79:5173",
+    "cleartext": true,
+    "allowNavigation": ["*"]
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 0,
+      "launchAutoHide": false,
+      "backgroundColor": "#0a1f3d",
+      "androidSplashResourceName": "splash",
+      "showSpinner": false,
+      "splashFullScreen": true,
+      "splashImmersive": true
+    },
+    "PushNotifications": {
+      "presentationOptions": ["badge", "sound", "alert"]
+    },
+    "LocalNotifications": {
+      "smallIcon": "ic_stat_icon",
+      "iconColor": "#0a1f3d"
+    }
+  }
+}

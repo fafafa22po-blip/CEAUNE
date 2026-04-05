@@ -1,0 +1,33 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-gray-50 text-gray-900 font-sans;
+  }
+}
+
+@layer components {
+  .btn-gold {
+    @apply bg-ceaune-gold hover:bg-ceaune-gold-light text-white font-semibold px-6 py-2.5 rounded-lg transition-colors duration-200;
+  }
+  .btn-navy {
+    @apply bg-ceaune-navy hover:bg-ceaune-navy-light text-white font-semibold px-6 py-2.5 rounded-lg transition-colors duration-200;
+  }
+  .card {
+    @apply bg-white rounded-xl shadow-sm border border-gray-100 p-6;
+  }
+  .badge-puntual {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800;
+  }
+  .badge-tardanza {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800;
+  }
+  .badge-falta {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800;
+  }
+  .badge-especial {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800;
+  }
+}

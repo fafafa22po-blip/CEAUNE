@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Splash screen CEAUNE
+  Fondo marino oscuro con el logo CE centrado
+-->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Fondo: marino #0a1f3d -->
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="#0a1f3d"/>
+        </shape>
+    </item>
+
+    <!-- Logo CE centrado en pantalla -->
+    <item
+        android:drawable="@drawable/ic_ceaune_logo"
+        android:gravity="center"/>
+
+</layer-list>
