@@ -481,6 +481,22 @@ def _generar_pdf_estadisticas_aula(
                     textColor=white, leading=11)
     S_WHITE_S = _ps("whites",  fontSize=7.5, textColor=white, leading=11)
 
+    import base64
+    from reportlab.platypus import Image as RLImage
+
+    # Cargar logo
+    _logo_path = Path(__file__).parent.parent / "logo_b64.txt"
+    try:
+        from reportlab.lib.utils import ImageReader
+        _logo_b64   = _logo_path.read_text().strip()
+        _logo_bytes = base64.b64decode(_logo_b64)
+        _iw, _ih    = ImageReader(BytesIO(_logo_bytes)).getSize()
+        _target_h   = 1.8 * cm
+        _target_w   = _target_h * (_iw / _ih)
+        _logo_img   = RLImage(BytesIO(_logo_bytes), width=_target_w, height=_target_h)
+    except Exception:
+        _logo_img = None
+
     buf = _BytesIO()
     W, _ = A4
     margin   = 1.8 * cm
@@ -502,26 +518,48 @@ def _generar_pdf_estadisticas_aula(
     story = []
 
     # ── 1. ENCABEZADO ─────────────────────────────────────────────────────
+    _logo_cell = _logo_img if _logo_img else P(
+        "CEAUNE", _ps("logo", fontName="Helvetica-Bold", fontSize=16, textColor=DORADO, leading=20)
+    )
     hdr = Table([[
-        P("CEAUNE", _ps("logo", fontName="Helvetica-Bold", fontSize=20,
-                         textColor=DORADO, leading=24)),
-        P("Resumen de Asistencia Mensual",
-          _ps("htitle", fontName="Helvetica-Bold", fontSize=13,
-               textColor=white, leading=16, alignment=TA_CENTER)),
-        P(f"Generado el {generado.strftime('%d/%m/%Y')}",
-          _ps("hdate", fontSize=8, textColor=white, leading=11,
-               alignment=TA_RIGHT)),
-    ]], colWidths=[3 * cm, usable_w - 6.5 * cm, 3.5 * cm])
+        _logo_cell,
+        P(
+            "<font size='8' color='#c9a227'><b>UNIVERSIDAD NACIONAL DE EDUCACIÓN ENRIQUE GUZMÁN Y VALLE</b></font><br/>"
+            "<font size='12'><b>COLEGIO EXPERIMENTAL DE APLICACIÓN</b></font><br/>"
+            "<font size='7'>I.E. por Convenio UNE-MED, según R.M. N° 045-2001-ED</font><br/>"
+            "<font size='7'>Modelo Educativo: Jornada Escolar Completa con Formación Técnica</font>",
+            _ps("inst", fontName="Helvetica-Bold", fontSize=12,
+                 textColor=white, leading=14, alignment=TA_CENTER),
+        ),
+        P(
+            f"Generado el<br/><b>{generado.strftime('%d/%m/%Y')}</b>",
+            _ps("hdate", fontSize=8, textColor=HexColor("#93c5fd"),
+                 leading=12, alignment=TA_RIGHT),
+        ),
+    ]], colWidths=[3.5 * cm, usable_w - 7 * cm, 3.5 * cm])
     hdr.setStyle(TableStyle([
         ("BACKGROUND",    (0, 0), (-1, -1), MARINO),
         ("VALIGN",        (0, 0), (-1, -1), "MIDDLE"),
-        ("TOPPADDING",    (0, 0), (-1, -1), 14),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 14),
+        ("TOPPADDING",    (0, 0), (-1, -1), 12),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 12),
         ("LEFTPADDING",   (0, 0), (0,  -1), 14),
         ("RIGHTPADDING",  (-1, 0), (-1, -1), 14),
     ]))
+    sub = Table([[
+        P("RESUMEN DE ASISTENCIA MENSUAL",
+          _ps("sub", fontName="Helvetica-Bold", fontSize=10,
+               textColor=MARINO, leading=13, alignment=TA_CENTER)),
+    ]], colWidths=[usable_w])
+    sub.setStyle(TableStyle([
+        ("BACKGROUND",    (0, 0), (-1, -1), DORADO),
+        ("TOPPADDING",    (0, 0), (-1, -1), 6),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+        ("LEFTPADDING",   (0, 0), (-1, -1), 0),
+        ("RIGHTPADDING",  (0, 0), (-1, -1), 0),
+    ]))
     story.append(hdr)
-    story.append(Spacer(1, 0.35 * cm))
+    story.append(sub)
+    story.append(Spacer(1, 0.45 * cm))
 
     # ── 2. INFO DE AULA ───────────────────────────────────────────────────
     info_t = Table([[
