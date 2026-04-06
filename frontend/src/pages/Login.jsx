@@ -5,6 +5,7 @@ import toast from 'react-hot-toast'
 import api from '../lib/api'
 import { guardarSesion, obtenerRutaPorRol } from '../lib/auth'
 import { iniciarPush, resetPush } from '../lib/pushNotifications'
+import logoImg from '../assets/logo.png'
 
 const FEATURES = [
   { icon: QrCode,    text: 'Escaneo QR en tiempo real' },
@@ -106,32 +107,63 @@ export default function Login() {
       {/* ── Panel derecho / pantalla completa en móvil ─────────────────── */}
       <div className="flex flex-col w-full lg:w-[48%] min-h-screen" style={{ background: '#f8f7f4' }}>
 
-        {/* Header móvil con logo (oculto en desktop) */}
+        {/* ── Header móvil (APK) ── */}
         <div
-          className="lg:hidden flex flex-col items-center pt-14 pb-12 px-8 text-white"
+          className="lg:hidden flex flex-col items-center px-6 text-white relative overflow-hidden"
           style={{
-            background: '#0a1f3d',
-            borderRadius: '0 0 2.5rem 2.5rem',
+            background: 'linear-gradient(160deg, #0d2547 0%, #0a1f3d 60%, #071628 100%)',
+            paddingTop: '3.5rem',
+            paddingBottom: '3rem',
+            borderRadius: '0 0 2.8rem 2.8rem',
           }}
         >
-          <div className="w-16 h-16 bg-dorado rounded-2xl flex items-center justify-center mb-5 shadow-lg">
-            <span className="text-white font-black text-2xl tracking-tight">CE</span>
+          {/* Círculo decorativo de fondo */}
+          <div
+            className="absolute -top-16 -right-16 w-48 h-48 rounded-full opacity-5"
+            style={{ background: '#c9a227' }}
+          />
+          <div
+            className="absolute -bottom-8 -left-10 w-32 h-32 rounded-full opacity-5"
+            style={{ background: '#c9a227' }}
+          />
+
+          {/* Logo */}
+          <div className="relative mb-4">
+            <div
+              className="w-20 h-20 rounded-full flex items-center justify-center shadow-2xl"
+              style={{ background: 'rgba(201,162,39,0.12)', border: '2px solid rgba(201,162,39,0.35)' }}
+            >
+              <img src={logoImg} alt="CEAUNE" className="w-14 h-14 object-contain drop-shadow-lg" />
+            </div>
           </div>
-          <p className="text-dorado text-[10px] font-bold uppercase tracking-widest mb-0.5 text-center">
-            Universidad Nacional de Educación Enrique Guzmán y Valle
+
+          {/* Separador dorado */}
+          <div className="w-10 h-0.5 rounded-full mb-3" style={{ background: '#c9a227', opacity: 0.7 }} />
+
+          {/* Textos institucionales */}
+          <p
+            className="text-center font-bold uppercase tracking-widest mb-1 leading-snug"
+            style={{ fontSize: '9px', color: '#c9a227', letterSpacing: '0.12em' }}
+          >
+            Universidad Nacional de Educación<br />Enrique Guzmán y Valle
           </p>
-          <h1 className="text-xl font-black text-center">Colegio Experimental de Aplicación</h1>
-          <p className="text-white/40 text-[10px] mt-0.5 text-center">I.E. por Convenio UNE-MED, según R.M. N° 045-2001-ED</p>
-          <p className="text-white/40 text-[10px] text-center">Modelo Educativo: Jornada Escolar Completa con Formación Técnica</p>
+          <h1 className="text-[17px] font-black text-center text-white leading-tight mb-2">
+            Colegio Experimental de Aplicación
+          </h1>
+          <p className="text-center leading-snug" style={{ fontSize: '9.5px', color: 'rgba(255,255,255,0.45)' }}>
+            I.E. por Convenio UNE-MED · R.M. N° 045-2001-ED
+          </p>
+          <p className="text-center mt-0.5" style={{ fontSize: '9.5px', color: 'rgba(255,255,255,0.45)' }}>
+            Jornada Escolar Completa con Formación Técnica
+          </p>
         </div>
 
-        {/* Formulario centrado */}
-        <div className="flex-1 flex flex-col justify-center px-8 sm:px-12 py-10">
+        {/* ── Formulario ── */}
+        <div className="flex-1 flex flex-col justify-center px-7 sm:px-12 py-8">
           <div className="max-w-sm w-full mx-auto">
 
-            {/* Encabezado del form */}
-            <div className="mb-8">
-              <h2 className="text-2xl font-black text-marino">Iniciar sesión</h2>
+            <div className="mb-7">
+              <h2 className="text-[22px] font-black text-marino">Iniciar sesión</h2>
               <p className="text-gray-400 text-sm mt-1">
                 Ingrese su DNI y contraseña para continuar
               </p>
@@ -141,14 +173,11 @@ export default function Login() {
 
               {/* DNI */}
               <div>
-                <label className="block text-[11px] font-bold text-gray-400 uppercase tracking-wide mb-1.5">
+                <label className="block text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">
                   DNI
                 </label>
                 <div className="relative">
-                  <User
-                    size={15}
-                    className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
-                  />
+                  <User size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
                   <input
                     className="input pl-10"
                     value={dni}
@@ -163,14 +192,11 @@ export default function Login() {
 
               {/* Contraseña */}
               <div>
-                <label className="block text-[11px] font-bold text-gray-400 uppercase tracking-wide mb-1.5">
+                <label className="block text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">
                   Contraseña
                 </label>
                 <div className="relative">
-                  <Lock
-                    size={15}
-                    className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
-                  />
+                  <Lock size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
                   <input
                     className="input pl-10 pr-11"
                     type={verPassword ? 'text' : 'password'}
@@ -189,23 +215,22 @@ export default function Login() {
                 </div>
               </div>
 
-              {/* Botón ingresar */}
+              {/* Botón */}
               <button
                 type="submit"
                 disabled={cargando || !dni || !password}
-                className="w-full py-3.5 rounded-xl font-bold text-white text-sm transition-all mt-2 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed active:scale-[.98]"
-                style={{ background: '#0a1f3d' }}
+                className="w-full py-3.5 rounded-xl font-bold text-sm transition-all mt-1 flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed active:scale-[.98]"
+                style={{ background: '#0a1f3d', color: '#c9a227', letterSpacing: '0.03em' }}
               >
                 {cargando ? (
                   <>
-                    <span className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full" />
+                    <span className="animate-spin w-4 h-4 border-2 border-current border-t-transparent rounded-full" />
                     Verificando...
                   </>
                 ) : 'Ingresar al sistema'}
               </button>
             </form>
 
-            {/* Ayuda */}
             <p className="text-center text-xs text-gray-400 mt-8 leading-relaxed">
               ¿Problemas para ingresar?<br />
               Contacte al administrador del sistema.
@@ -214,8 +239,8 @@ export default function Login() {
         </div>
 
         {/* Footer */}
-        <p className="text-center text-[10px] text-gray-300 pb-6 px-4">
-          CEAUNE © {new Date().getFullYear()} · Centro de Aplicación UNE
+        <p className="text-center text-[10px] text-gray-300 pb-5 px-4">
+          CEAUNE © {new Date().getFullYear()} · Sistema de Control de Asistencia
         </p>
       </div>
     </div>
