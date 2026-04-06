@@ -19,6 +19,9 @@ logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # ── Startup ──────────────────────────────────────────────
+    logger.info("[Config] GMAIL_CLIENT_ID=%s", "OK" if settings.GMAIL_CLIENT_ID else "VACIO")
+    logger.info("[Config] GMAIL_REFRESH_TOKEN=%s", "OK" if settings.GMAIL_REFRESH_TOKEN else "VACIO")
+    logger.info("[Config] FIREBASE_JSON=%s", "OK" if settings.FIREBASE_CREDENTIALS_JSON else "VACIO")
     # Auto-crear tablas nuevas (dispositivos_usuario, etc.)
     from database import Base, engine
     import models.dispositivo    # noqa: F401
