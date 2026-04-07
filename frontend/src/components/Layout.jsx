@@ -15,6 +15,7 @@ import {
   BookOpen, Eye, BarChart2, Home, LogOut,
   ChevronLeft, ChevronRight, Clock, User, Phone, ScanSearch,
   CalendarCheck, GraduationCap, NotebookText, MoreHorizontal, UserCheck, Briefcase, ArrowLeftRight,
+  Download,
 } from 'lucide-react'
 
 // ── BOTTOM NAV — config por rol ──────────────────────────────────────
@@ -447,6 +448,24 @@ export default function Layout() {
           ))}
         </nav>
 
+        {/* Descargar app — solo si no es nativo */}
+        {!window.Capacitor?.isNativePlatform?.() && (
+          <NavLink
+            to={`${['i-auxiliar','p-auxiliar','s-auxiliar'].includes(rolEfectivo) ? '/auxiliar' : `/${rolEfectivo}`}/descargar-app`}
+            className={({ isActive }) =>
+              `flex items-center gap-3 px-3 py-2.5 mx-2 rounded-xl transition-all text-sm font-medium ${
+                isActive
+                  ? 'bg-dorado text-white shadow-sm'
+                  : 'text-white/60 hover:bg-white/10 hover:text-white'
+              }`
+            }
+            title={colapsado ? 'Descargar App' : undefined}
+          >
+            <Download size={17} className="flex-shrink-0" />
+            {!colapsado && <span>Descargar App</span>}
+          </NavLink>
+        )}
+
         {/* Cerrar sesión */}
         <button
           onClick={handleLogout}
@@ -661,6 +680,26 @@ export default function Layout() {
                   </NavLink>
                 ))}
               </div>
+
+              {/* Descargar app — solo si no es nativo */}
+              {!window.Capacitor?.isNativePlatform?.() && (
+                <div className="mb-3">
+                  <NavLink
+                    to={`${['i-auxiliar','p-auxiliar','s-auxiliar'].includes(rolEfectivo) ? '/auxiliar' : `/${rolEfectivo}`}/descargar-app`}
+                    onClick={() => setMasAbierto(false)}
+                    className="flex items-center gap-3 w-full px-3 py-3 rounded-2xl transition-colors active:bg-marino/5"
+                    style={{ color: '#0a1f3d' }}
+                  >
+                    <div className="w-9 h-9 rounded-xl bg-marino flex items-center justify-center flex-shrink-0">
+                      <Download size={16} className="text-dorado" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold leading-tight">Descargar App CEAUNE</p>
+                      <p className="text-xs text-gray-400 mt-0.5">Notificaciones push · Android</p>
+                    </div>
+                  </NavLink>
+                </div>
+              )}
 
               {/* Separador + logout */}
               <div className="border-t border-gray-100 pt-3">

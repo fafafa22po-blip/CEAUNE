@@ -82,6 +82,7 @@ import ContactoApoderado from './pages/apoderado/Contacto'
 
 // Perfil compartido
 import Perfil from './pages/Perfil'
+import DescargarApp from './pages/DescargarApp'
 
 // Admin
 import Dashboard from './pages/admin/Dashboard'
@@ -156,6 +157,7 @@ export default function App() {
               <Route path="horario-clases"  element={<AuxiliarHorarioClases />} />
               <Route path="contactos"       element={<Contactos />} />
               <Route path="perfil"          element={<Perfil />} />
+              <Route path="descargar-app"   element={<DescargarApp />} />
             </Route>
           </Route>
 
@@ -170,6 +172,7 @@ export default function App() {
               <Route path="reuniones"     element={<Reuniones />} />
               <Route path="comunicados"   element={<TutorComunicados />} />
               <Route path="perfil"        element={<Perfil />} />
+              <Route path="descargar-app" element={<DescargarApp />} />
             </Route>
           </Route>
 
@@ -185,6 +188,7 @@ export default function App() {
               <Route path="horario"     element={<HorarioApoderado />} />
               <Route path="contacto"    element={<ContactoApoderado />} />
               <Route path="perfil"      element={<Perfil />} />
+              <Route path="descargar-app" element={<DescargarApp />} />
             </Route>
           </Route>
 
@@ -202,6 +206,7 @@ export default function App() {
               <Route path="usuarios"       element={<Usuarios />} />
               <Route path="comunicar"      element={<AdminComunicar />} />
               <Route path="bandeja"        element={<AdminBandeja />} />
+              <Route path="descargar-app"  element={<DescargarApp />} />
             </Route>
           </Route>
         </Routes>

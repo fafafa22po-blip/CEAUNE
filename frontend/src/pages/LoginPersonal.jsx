@@ -3,8 +3,11 @@ import { useNavigate } from 'react-router-dom'
 import {
   Eye, EyeOff, QrCode,
   BarChart2, Mail, CheckCircle,
-  Briefcase, Users,
+  Briefcase, Users, Smartphone, Download,
 } from 'lucide-react'
+
+const APK_URL = import.meta.env.VITE_APK_URL || null
+const esNativo = window.Capacitor?.isNativePlatform?.() === true
 import logoImg from '../assets/logo.png'
 import toast from 'react-hot-toast'
 import api from '../lib/api'
@@ -217,6 +220,40 @@ export default function LoginPersonal() {
             ¿Problemas para ingresar?<br />
             Contacte al administrador del sistema.
           </p>
+
+          {/* Banner APK — solo en navegador web */}
+          {!esNativo && (
+            APK_URL ? (
+              <a
+                href={APK_URL}
+                download
+                className="mt-5 flex items-center gap-3 p-3.5 rounded-xl transition-colors active:opacity-80"
+                style={{ background: 'rgba(10,31,61,0.05)', border: '1px solid rgba(10,31,61,0.1)' }}
+              >
+                <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: '#0a1f3d' }}>
+                  <Smartphone size={17} className="text-dorado" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs font-bold text-marino leading-tight">Descarga la App CEAUNE</p>
+                  <p className="text-[11px] text-gray-400 mt-0.5">Escaneo QR y notificaciones nativas</p>
+                </div>
+                <Download size={14} className="text-gray-400 flex-shrink-0" />
+              </a>
+            ) : (
+              <div
+                className="mt-5 flex items-center gap-3 p-3.5 rounded-xl"
+                style={{ background: 'rgba(10,31,61,0.04)', border: '1px solid rgba(10,31,61,0.08)' }}
+              >
+                <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: '#0a1f3d' }}>
+                  <Smartphone size={17} className="text-dorado" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs font-bold text-marino leading-tight">App CEAUNE disponible</p>
+                  <p className="text-[11px] text-gray-400 mt-0.5">Solicita la instalación al administrador</p>
+                </div>
+              </div>
+            )
+          )}
         </div>
       </div>
 
