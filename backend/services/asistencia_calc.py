@@ -23,6 +23,8 @@ from datetime import date, datetime, time, timedelta
 
 from sqlalchemy.orm import Session
 
+from core.tz import ahora as _ahora_lima
+
 from models.asistencia import Asistencia, Horario
 from models.dia_no_laborable import DiasNoLaborables
 
@@ -165,7 +167,7 @@ def calcular_resumen_mes(estudiante_id: str, nivel: str, grado: str, seccion: st
     es_mes_actual = (mes == hoy.month and anio == hoy.year)
     if es_mes_actual or asistencias:
         hora_cierre = _get_hora_cierre(nivel, db)
-        dia_cerrado = datetime.now().time() >= hora_cierre
+        dia_cerrado = _ahora_lima().time() >= hora_cierre
         hasta_impl  = hasta if dia_cerrado else min(hasta, hoy - timedelta(days=1))
         _aplicar_faltas_implicitas(mapa, inicio, hasta_impl, dias_no_lab)
 
@@ -201,7 +203,7 @@ def calcular_resumen_mes_aula(estudiantes: list, nivel: str, grado: str, seccion
     dias_lab    = _contar_dias_lab(inicio, fin, dias_no_lab)
 
     hora_cierre = _get_hora_cierre(nivel, db)
-    dia_cerrado = datetime.now().time() >= hora_cierre
+    dia_cerrado = _ahora_lima().time() >= hora_cierre
     hasta_impl  = hasta if dia_cerrado else min(hasta, hoy - timedelta(days=1))
     es_mes_actual = (mes == hoy.month and anio == hoy.year)
 
