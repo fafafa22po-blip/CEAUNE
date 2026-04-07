@@ -449,6 +449,7 @@ def escanear(
     notificar = (
         (nuevo.tipo in ("ingreso", "ingreso_especial") and nuevo.estado in ("puntual", "tardanza", "especial"))
         or (nuevo.tipo == "salida_especial" and nuevo.motivo_especial is not None)
+        or nuevo.tipo == "salida"
     )
     if notificar:
         try:

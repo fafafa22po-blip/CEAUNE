@@ -283,8 +283,20 @@ def notificar_asistencia(asistencia_id: str):
 {obs}
 """
 
+        elif asistencia.tipo == "salida":
+            subject = f"🏠 {nombre} salió del colegio · {hora_str}"
+            content = f"""
+<p>Estimado apoderado,</p>
+<p><strong>{nombre}</strong> registró su <strong>salida del colegio</strong> hoy.</p>
+<div class="card">
+  <strong>{hora_str}</strong>
+  <span>{fecha_str} — {estudiante.nivel.capitalize()} {estudiante.grado} "{estudiante.seccion}"</span>
+</div>
+<span class="badge ok" style="background:#eff6ff;color:#1d4ed8">🏠 Salida registrada</span>
+"""
+
         else:
-            return  # salidas normales y otros casos no generan notificación
+            return
 
         html = _html(content)
         enviado = _send_many(emails, subject, html)

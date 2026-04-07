@@ -186,6 +186,10 @@ def push_asistencia(asistencia_id: str):
             titulo  = f"{nombre} salió temprano del colegio"
             cuerpo  = f"{motivo} · Hora de salida: {hora_str}. {nivel_grado}"
 
+        elif asistencia.tipo == "salida":
+            titulo  = f"{nombre} salió del colegio"
+            cuerpo  = f"Salida registrada a las {hora_str}. {nivel_grado}"
+
         else:
             logger.info("[push_asistencia] tipo='%s' estado='%s' no requiere push", asistencia.tipo, asistencia.estado)
             return
