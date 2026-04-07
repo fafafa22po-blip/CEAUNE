@@ -48,8 +48,12 @@ SCOPES = ["https://www.googleapis.com/auth/gmail.send"]
 
 def _get_service():
     """Construye el servicio Gmail con el refresh token del .env."""
-    if not settings.GMAIL_CLIENT_ID or not settings.GMAIL_REFRESH_TOKEN:
-        raise RuntimeError("Credenciales Gmail no configuradas en .env")
+    if not settings.GMAIL_CLIENT_ID:
+        raise RuntimeError("GMAIL_CLIENT_ID no configurado en variables de entorno")
+    if not settings.GMAIL_CLIENT_SECRET:
+        raise RuntimeError("GMAIL_CLIENT_SECRET no configurado en variables de entorno")
+    if not settings.GMAIL_REFRESH_TOKEN:
+        raise RuntimeError("GMAIL_REFRESH_TOKEN no configurado en variables de entorno")
 
     creds = Credentials(
         token=None,
@@ -59,7 +63,10 @@ def _get_service():
         client_secret=settings.GMAIL_CLIENT_SECRET,
         scopes=SCOPES,
     )
-    creds.refresh(Request())
+    try:
+        creds.refresh(Request())
+    except Exception as exc:
+        raise RuntimeError(f"Error al refrescar token Gmail (token expirado o inválido): {exc}") from exc
     return build("gmail", "v1", credentials=creds, cache_discovery=False)
 
 

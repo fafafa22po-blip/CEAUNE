@@ -20,7 +20,9 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):
     # ── Startup ──────────────────────────────────────────────
     logger.info("[Config] GMAIL_CLIENT_ID=%s", "OK" if settings.GMAIL_CLIENT_ID else "VACIO")
+    logger.info("[Config] GMAIL_CLIENT_SECRET=%s", "OK" if settings.GMAIL_CLIENT_SECRET else "VACIO")
     logger.info("[Config] GMAIL_REFRESH_TOKEN=%s", "OK" if settings.GMAIL_REFRESH_TOKEN else "VACIO")
+    logger.info("[Config] DRIVE_FOLDER_ID=%s", settings.DRIVE_FOLDER_ID or "VACIO (sube al raíz)")
     logger.info("[Config] FIREBASE_JSON=%s", "OK" if settings.FIREBASE_CREDENTIALS_JSON else "VACIO")
     # Auto-crear tablas nuevas (dispositivos_usuario, etc.)
     from database import Base, engine
@@ -120,3 +122,31 @@ def health():
         for j in scheduler.get_jobs()
     ]
     return {"status": "ok", "env": settings.ENVIRONMENT, "scheduler_jobs": jobs}
+
+
+@app.get("/health/google")
+def health_google():
+    """Verifica si las credenciales Gmail/Drive están configuradas y funcionan."""
+    resultado = {
+        "GMAIL_CLIENT_ID": "OK" if settings.GMAIL_CLIENT_ID else "VACIO",
+        "GMAIL_CLIENT_SECRET": "OK" if settings.GMAIL_CLIENT_SECRET else "VACIO",
+        "GMAIL_REFRESH_TOKEN": "OK" if settings.GMAIL_REFRESH_TOKEN else "VACIO",
+        "DRIVE_FOLDER_ID": settings.DRIVE_FOLDER_ID or "(sin carpeta, se sube al raíz)",
+        "gmail_token_test": None,
+        "drive_token_test": None,
+    }
+    try:
+        from services.gmail_service import _get_service as gmail_svc
+        gmail_svc()
+        resultado["gmail_token_test"] = "OK"
+    except Exception as e:
+        resultado["gmail_token_test"] = f"ERROR: {e}"
+
+    try:
+        from services.drive_service import _get_service as drive_svc
+        drive_svc()
+        resultado["drive_token_test"] = "OK"
+    except Exception as e:
+        resultado["drive_token_test"] = f"ERROR: {e}"
+
+    return resultado
