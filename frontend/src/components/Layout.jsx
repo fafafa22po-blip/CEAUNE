@@ -447,6 +447,16 @@ export default function Layout() {
           ))}
         </nav>
 
+        {/* Cerrar sesión */}
+        <button
+          onClick={handleLogout}
+          className={`flex items-center gap-3 px-3 py-2.5 mx-2 mb-2 rounded-xl transition-all text-sm font-medium text-white/60 hover:bg-red-500/20 hover:text-red-300`}
+          title={colapsado ? 'Cerrar sesión' : undefined}
+        >
+          <LogOut size={17} className="flex-shrink-0" />
+          {!colapsado && <span>Cerrar sesión</span>}
+        </button>
+
         {/* Colapsar */}
         <button
           onClick={() => setColapsado(!colapsado)}
