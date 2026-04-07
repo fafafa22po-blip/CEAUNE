@@ -233,10 +233,17 @@ function RelojDigital() {
     const t = setInterval(() => setHora(new Date()), 1000)
     return () => clearInterval(t)
   }, [])
+  const hhmm = hora.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })
+  const ss   = hora.toLocaleTimeString('es-PE', { second: '2-digit' })
   return (
-    <span className="font-mono text-xs text-white/60 tabular-nums hidden sm:inline tracking-tight">
-      {hora.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-    </span>
+    <div className="flex items-baseline gap-0.5 bg-white/10 border border-white/15 rounded-xl px-3 py-1.5">
+      <span className="font-mono font-bold text-white text-base tabular-nums tracking-tight leading-none">
+        {hhmm}
+      </span>
+      <span className="font-mono text-white/50 text-[10px] tabular-nums leading-none">
+        {ss}
+      </span>
+    </div>
   )
 }
 
@@ -406,9 +413,11 @@ export default function Layout() {
       }`}>
         {/* Logo */}
         <div className="flex items-center gap-3 px-4 py-5 border-b border-white/10">
-          <div className="w-8 h-8 bg-dorado rounded-xl flex items-center justify-center flex-shrink-0 shadow-scan">
-            <span className="text-white font-bold text-xs tracking-tight">CE</span>
-          </div>
+          <img
+            src={logoImg}
+            alt="CEAUNE"
+            className="w-8 h-8 rounded-xl object-contain flex-shrink-0 bg-white/10 p-0.5"
+          />
           {!colapsado && (
             <div>
               <p className="font-bold text-sm leading-tight tracking-tight">CEAUNE</p>
@@ -457,9 +466,11 @@ export default function Layout() {
           {/* Izquierda: logo + info */}
           <div className="flex items-center gap-3 min-w-0">
             {/* Logo mark — solo móvil */}
-            <div className="flex lg:hidden w-8 h-8 bg-dorado rounded-xl items-center justify-center flex-shrink-0 shadow-scan">
-              <span className="text-white font-bold text-[11px] tracking-tight">CE</span>
-            </div>
+            <img
+              src={logoImg}
+              alt="CEAUNE"
+              className="lg:hidden w-8 h-8 rounded-xl object-contain flex-shrink-0 bg-white/10 p-0.5"
+            />
             <div className="min-w-0">
               <p className="text-[10px] font-semibold text-white/40 uppercase tracking-wider leading-none truncate">
                 {NIVEL_LABEL[rolEfectivo]}
@@ -473,14 +484,10 @@ export default function Layout() {
           {/* Derecha: reloj + avatar */}
           <div className="flex items-center gap-2.5 flex-shrink-0 ml-3">
             <RelojDigital />
-            {/* Avatar / Logout */}
-            <button
-              onClick={handleLogout}
-              title="Cerrar sesión"
-              className="w-9 h-9 rounded-full bg-white/15 border border-white/20 flex items-center justify-center text-white text-xs font-bold active:bg-white/25 transition-colors select-none"
-            >
-              {iniciales || <LogOut size={15} />}
-            </button>
+            {/* Avatar estático */}
+            <div className="w-9 h-9 rounded-full bg-white/15 border border-white/20 flex items-center justify-center text-white text-xs font-bold select-none">
+              {iniciales || <User size={15} />}
+            </div>
           </div>
         </header>
 
