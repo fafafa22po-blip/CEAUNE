@@ -607,11 +607,12 @@ export default function Asistencia() {
     puntual:      lista.filter(a => a.estado_dia === 'puntual').length,
     tardanza:     lista.filter(a => a.estado_dia === 'tardanza').length,
     falta:        lista.filter(a => a.estado_dia === 'falta').length,
-    especial:     lista.filter(a => a.estado_dia === 'especial').length,
+    especial:     lista.filter(a => a.estado_dia === 'especial' || a.salida?.tipo?.includes('especial')).length,
   }
   const grados        = [...new Set(lista.map(a => a.estudiante?.grado).filter(Boolean))].sort()
   const listaFiltrada = lista.filter(a => {
-    if (filtroEstado && a.estado_dia !== filtroEstado) return false
+    if (filtroEstado === 'especial' && !(a.estado_dia === 'especial' || a.salida?.tipo?.includes('especial'))) return false
+    if (filtroEstado && filtroEstado !== 'especial' && a.estado_dia !== filtroEstado) return false
     if (filtroGrado  && a.estudiante?.grado !== filtroGrado) return false
     return true
   })
