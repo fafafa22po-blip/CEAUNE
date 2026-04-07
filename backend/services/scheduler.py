@@ -13,6 +13,8 @@ REGLA CRÍTICA: todos los jobs verifican es_dia_laborable() antes de ejecutarse.
 import logging
 from datetime import date, datetime, timedelta, time
 
+from core.tz import ahora as _ahora, hoy as _hoy
+
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
 
@@ -63,7 +65,7 @@ def registrar_faltas_nivel(nivel: str):
         from models.asistencia import Asistencia
         from models.estudiante import Estudiante
 
-        hoy = date.today()
+        hoy = _hoy()
 
         if not _es_dia_laborable(hoy, db):
             logger.info("[Faltas %s] %s no es día laborable — omitido", nivel, hoy)
@@ -75,7 +77,7 @@ def registrar_faltas_nivel(nivel: str):
             horario_efe = get_horario_efectivo(nivel, hoy, db)
             if horario_efe and horario_efe.tiene_excepcion and horario_efe.hora_cierre_faltas:
                 h_cierre_efe = _parse_hora(horario_efe.hora_cierre_faltas)
-                if datetime.now().time() < h_cierre_efe:
+                if _ahora().time() < h_cierre_efe:
                     logger.info(
                         "[Faltas %s] Excepción activa — cierre efectivo %s aún no alcanzado, omitido",
                         nivel, horario_efe.hora_cierre_faltas,
@@ -107,7 +109,7 @@ def registrar_faltas_nivel(nivel: str):
             .all()
         }
 
-        ahora = datetime.now()
+        ahora = _ahora()
         faltas_nuevas = 0
 
         for est in estudiantes:
@@ -172,7 +174,7 @@ def generar_reportes_semanales():
         from models.dia_no_laborable import ReporteSemanal
         from models.estudiante import Estudiante
 
-        hoy = date.today()
+        hoy = _hoy()
 
         # Calcular lunes y viernes de la semana actual
         dias_desde_lunes = hoy.weekday()          # 0=lun … 4=vie

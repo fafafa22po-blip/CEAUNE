@@ -1003,3 +1003,27 @@ def listar_jobs(
         }
         for j in scheduler.get_jobs()
     ]
+
+
+@router.delete("/asistencia/hoy", status_code=200)
+def borrar_asistencia_hoy(
+    estudiante_id: Optional[str] = Query(None, description="Si se omite, borra TODOS los registros de hoy"),
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(require_roles("admin")),
+):
+    """
+    Elimina registros de asistencia de HOY (solo admin).
+    Útil para pruebas — permite re-escanear el mismo día.
+    """
+    from models.asistencia import Asistencia
+    from core.tz import hoy as _hoy
+
+    fecha_hoy = _hoy()
+    q = db.query(Asistencia).filter(Asistencia.fecha == fecha_hoy)
+    if estudiante_id:
+        q = q.filter(Asistencia.estudiante_id == estudiante_id)
+
+    total = q.count()
+    q.delete(synchronize_session=False)
+    db.commit()
+    return {"eliminados": total, "fecha": str(fecha_hoy), "estudiante_id": estudiante_id or "todos"}

@@ -7,6 +7,7 @@ from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
 
 from core.dependencies import get_current_user, get_db
+from core.tz import ahora as _ahora, hoy as _hoy
 from models.asistencia import Asistencia, Horario
 from models.dia_no_laborable import DiasNoLaborables
 from models.estudiante import Estudiante
@@ -212,8 +213,8 @@ def previsualizar_escaneo(
                 f"Este estudiante pertenece a {estudiante.nivel}, tú gestionas {nivel_permitido}",
             )
 
-    fecha_hoy = date.today()
-    ahora     = datetime.now()
+    fecha_hoy = _hoy()
+    ahora     = _ahora()
 
     if not es_dia_laborable(fecha_hoy, db):
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Hoy no es un día laborable")
@@ -323,7 +324,7 @@ def escanear(
             )
 
     # Fecha y hora actuales
-    ahora = datetime.now()
+    ahora = _ahora()
     fecha_hoy = ahora.date()
     hora_actual = ahora.time()
 
@@ -507,7 +508,7 @@ def hoy(
     current_user: Usuario = Depends(get_current_user),
 ):
     if fecha is None:
-        fecha = date.today()
+        fecha = _hoy()
 
     # Auxiliares sólo ven su nivel
     if current_user.rol in NIVEL_POR_ROL and nivel is None:
@@ -591,7 +592,7 @@ def hoy(
                 estado_dia=estado_dia,
                 tardanzas_mes=tardanzas_batch.get(est.id, 0),
                 faltas_mes=faltas_batch.get(est.id, 0) + (
-                    1 if fecha == date.today() and ingreso is None else 0
+                    1 if fecha == _hoy() and ingreso is None else 0
                 ),
             )
         )
@@ -611,7 +612,7 @@ def resumen_hoy(
     current_user: Usuario = Depends(get_current_user),
 ):
     if fecha is None:
-        fecha = date.today()
+        fecha = _hoy()
     if current_user.rol in NIVEL_POR_ROL and nivel is None:
         nivel = NIVEL_POR_ROL[current_user.rol]
 
@@ -677,7 +678,7 @@ def resumen_mes_estudiante(
     if not est:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Estudiante no encontrado")
 
-    hoy  = date.today()
+    hoy  = _hoy()
     mes  = mes  or hoy.month
     anio = anio or hoy.year
 
@@ -694,7 +695,7 @@ def _build_perfil(estudiante: Estudiante, db: Session):
     from models.estudiante import ApoderadoEstudiante
     from models.usuario import Usuario as UsuarioModel
 
-    fecha_hoy = date.today()
+    fecha_hoy = _hoy()
     inicio_mes = fecha_hoy.replace(day=1)
 
     tardanzas_mes = db.query(func.count(func.distinct(Asistencia.fecha))).filter(
@@ -819,8 +820,8 @@ def manual(
                 f"Motivo inválido. Valores permitidos: {', '.join(MOTIVO_LABEL.keys())}",
             )
 
-    fecha = data.fecha or date.today()
-    hora  = data.hora or datetime.now()
+    fecha = data.fecha or _hoy()
+    hora  = data.hora or _ahora()
 
     nuevo = Asistencia(
         estudiante_id=data.estudiante_id,
@@ -862,7 +863,7 @@ def horario_hoy(
     if not nivel_uso:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "Especifica el nivel")
 
-    horario = get_horario_efectivo(nivel_uso, date.today(), db)
+    horario = get_horario_efectivo(nivel_uso, _hoy(), db)
     if not horario:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Sin horario configurado")
 

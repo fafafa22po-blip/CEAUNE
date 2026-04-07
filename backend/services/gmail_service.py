@@ -37,6 +37,7 @@ from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 
 from core.config import settings
+from core.tz import ahora as _ahora
 
 logger = logging.getLogger(__name__)
 
@@ -290,7 +291,7 @@ def notificar_asistencia(asistencia_id: str):
 
         if enviado:
             asistencia.correo_enviado = True
-            asistencia.correo_enviado_at = datetime.now()
+            asistencia.correo_enviado_at = _ahora()
             db.commit()
 
     except Exception as exc:
@@ -363,7 +364,7 @@ def enviar_correos_faltas(nivel: str, fecha: date, db):
 
         if enviado:
             asistencia.correo_enviado = True
-            asistencia.correo_enviado_at = datetime.now()
+            asistencia.correo_enviado_at = _ahora()
             total_enviados += 1
 
     if total_enviados:
@@ -434,7 +435,7 @@ correspondiente a la semana del <strong>{ini_str}</strong> al <strong>{fin_str}<
 
         if enviado:
             reporte.correo_enviado = True
-            reporte.correo_enviado_at = datetime.now()
+            reporte.correo_enviado_at = _ahora()
             total_enviados += 1
 
     if total_enviados:
