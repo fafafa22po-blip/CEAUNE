@@ -268,6 +268,25 @@ def _notificar_reportes(semana_inicio: date, semana_fin: date, db):
 
 
 # ---------------------------------------------------------------------------
+# Reagendar job de un nivel específico (cuando el admin cambia el horario)
+# ---------------------------------------------------------------------------
+
+def reschedule_faltas(nivel: str, hora_cierre_faltas) -> None:
+    """Reagenda el job de faltas para `nivel` con la nueva hora. Seguro llamarlo en caliente."""
+    t = _parse_hora(hora_cierre_faltas)
+    job_id = f"faltas_{nivel}"
+    scheduler.add_job(
+        registrar_faltas_nivel,
+        trigger=CronTrigger(hour=t.hour, minute=t.minute, timezone=TIMEZONE),
+        args=[nivel],
+        id=job_id,
+        replace_existing=True,
+        misfire_grace_time=300,
+    )
+    logger.info("[Scheduler] Reagendado %s → %02d:%02d %s", job_id, t.hour, t.minute, TIMEZONE)
+
+
+# ---------------------------------------------------------------------------
 # Inicialización
 # ---------------------------------------------------------------------------
 

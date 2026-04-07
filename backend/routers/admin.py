@@ -470,12 +470,13 @@ def actualizar_horario(
     db.commit()
     db.refresh(horario)
 
-    # Reiniciar scheduler con nuevos horarios
+    # Reagendar el job de faltas con la nueva hora_cierre_faltas
     try:
-        from services.scheduler import init_scheduler
-        init_scheduler()
-    except Exception:
-        pass
+        from services.scheduler import reschedule_faltas
+        reschedule_faltas(nivel, horario.hora_cierre_faltas)
+    except Exception as exc:
+        import logging
+        logging.getLogger(__name__).warning("[Scheduler] No se pudo reagendar faltas_%s: %s", nivel, exc)
 
     return horario
 
