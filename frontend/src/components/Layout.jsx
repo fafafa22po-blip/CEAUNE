@@ -416,7 +416,7 @@ export default function Layout() {
           <img
             src={logoImg}
             alt="CEAUNE"
-            className="w-8 h-8 rounded-xl object-contain flex-shrink-0 bg-white/10 p-0.5"
+            className="h-9 w-auto object-contain flex-shrink-0"
           />
           {!colapsado && (
             <div>
