@@ -253,7 +253,7 @@ export default function LoginApoderado() {
                   >
                     <div className="absolute inset-0 opacity-20"
                       style={{ background: 'radial-gradient(ellipse at 85% 50%, #c9a227 0%, transparent 55%)' }} />
-                    <img src={mascotaImg} alt="" className="relative w-12 h-12 object-contain drop-shadow-lg flex-shrink-0" />
+                    <img src={mascotaImg} alt="" className="relative w-12 h-12 object-contain rounded-2xl flex-shrink-0" />
                     <div className="relative flex-1 min-w-0">
                       <p className="text-white font-bold text-xs leading-tight">¡Descarga la App CEAUNE!</p>
                       <p className="text-white/50 text-[11px] mt-0.5">Notificaciones push · Acceso rápido</p>
@@ -270,7 +270,7 @@ export default function LoginApoderado() {
                   >
                     <div className="absolute inset-0 opacity-15"
                       style={{ background: 'radial-gradient(ellipse at 85% 50%, #c9a227 0%, transparent 55%)' }} />
-                    <img src={mascotaImg} alt="" className="relative w-12 h-12 object-contain drop-shadow-lg flex-shrink-0" />
+                    <img src={mascotaImg} alt="" className="relative w-12 h-12 object-contain rounded-2xl flex-shrink-0" />
                     <div className="relative min-w-0">
                       <p className="text-white font-bold text-xs leading-tight">App CEAUNE disponible</p>
                       <p className="text-white/50 text-[11px] mt-0.5">Pídela al administrador del colegio</p>

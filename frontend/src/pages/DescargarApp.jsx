@@ -33,7 +33,7 @@ export default function DescargarApp() {
           <img
             src={mascotaImg}
             alt="Mascota CEAUNE"
-            className="relative w-40 h-40 object-contain drop-shadow-2xl"
+            className="relative w-40 h-40 object-contain rounded-3xl"
             style={{ animation: 'float 3s ease-in-out infinite' }}
           />
         </div>
@@ -62,7 +62,7 @@ export default function DescargarApp() {
 
   /* ── Versión web ── */
   return (
-    <div className="max-w-md mx-auto pb-8">
+    <div className="max-w-2xl pb-8">
 
       {/* ══ HERO ══════════════════════════════════════════════════════ */}
       <div
@@ -90,7 +90,7 @@ export default function DescargarApp() {
           <img
             src={mascotaImg}
             alt="Mascota CEAUNE"
-            className="relative w-36 h-36 object-contain drop-shadow-2xl mx-auto"
+            className="relative w-36 h-36 object-contain rounded-3xl mx-auto"
             style={{ animation: 'float 3s ease-in-out infinite' }}
           />
         </div>
@@ -163,7 +163,7 @@ export default function DescargarApp() {
           {/* App */}
           <div className="px-4 py-4" style={{ background: 'rgba(10,31,61,0.03)' }}>
             <div className="flex items-center gap-2 mb-3">
-              <img src={mascotaImg} alt="" className="w-5 h-5 object-contain" />
+              <img src={mascotaImg} alt="" className="w-5 h-5 object-contain rounded-lg" />
               <p className="text-xs font-bold uppercase tracking-wide" style={{ color: '#0a1f3d' }}>App CEAUNE</p>
             </div>
             {['Asistencias', 'Comunicados', 'Justificar', 'Horario', 'Notificaciones push', 'Acceso rápido'].map(f => (
@@ -226,7 +226,7 @@ export default function DescargarApp() {
               style={{ background: 'radial-gradient(ellipse at 80% 50%, #c9a227 0%, transparent 60%)' }}
             />
             <div className="relative flex items-center gap-3">
-              <img src={mascotaImg} alt="" className="w-10 h-10 object-contain drop-shadow" />
+              <img src={mascotaImg} alt="" className="w-10 h-10 object-contain rounded-xl" />
               <div>
                 <p className="font-black text-white text-sm leading-tight">Descargar App CEAUNE</p>
                 <p className="text-white/50 text-[11px] mt-0.5">Android · APK · Gratis</p>
@@ -254,7 +254,7 @@ export default function DescargarApp() {
               className="absolute inset-0 opacity-15"
               style={{ background: 'radial-gradient(ellipse at 80% 50%, #c9a227 0%, transparent 60%)' }}
             />
-            <img src={mascotaImg} alt="" className="relative w-14 h-14 object-contain drop-shadow-lg flex-shrink-0" />
+            <img src={mascotaImg} alt="" className="relative w-14 h-14 object-contain rounded-2xl flex-shrink-0" />
             <div className="relative">
               <p className="font-black text-white text-sm">¡Próximamente disponible!</p>
               <p className="text-white/50 text-xs mt-1 leading-snug">
