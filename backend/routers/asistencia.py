@@ -199,11 +199,14 @@ def previsualizar_escaneo(
 
     estudiante = (
         db.query(Estudiante)
-        .filter(Estudiante.qr_token == data.qr_token, Estudiante.activo == True)
+        .filter(
+            (Estudiante.qr_token == data.qr_token) | (Estudiante.dni == data.qr_token),
+            Estudiante.activo == True,
+        )
         .first()
     )
     if not estudiante:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "QR no reconocido o estudiante inactivo")
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "QR o DNI no reconocido / estudiante inactivo")
 
     if current_user.rol != "admin":
         nivel_permitido = NIVEL_POR_ROL[current_user.rol]
@@ -308,11 +311,14 @@ def escanear(
     # Buscar estudiante por QR token
     estudiante = (
         db.query(Estudiante)
-        .filter(Estudiante.qr_token == data.qr_token, Estudiante.activo == True)
+        .filter(
+            (Estudiante.qr_token == data.qr_token) | (Estudiante.dni == data.qr_token),
+            Estudiante.activo == True,
+        )
         .first()
     )
     if not estudiante:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "QR no reconocido o estudiante inactivo")
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "QR o DNI no reconocido / estudiante inactivo")
 
     # Verificar nivel del auxiliar
     if current_user.rol != "admin":
