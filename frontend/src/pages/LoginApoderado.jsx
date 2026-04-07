@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Eye, EyeOff, CheckCircle, CalendarCheck, Bell, FileText, Smartphone, Download } from 'lucide-react'
+import { Eye, EyeOff, CheckCircle, CalendarCheck, Bell, FileText, Download } from 'lucide-react'
+import mascotaImg from '../assets/mascota.png'
 
 const APK_URL = import.meta.env.VITE_APK_URL || null
 const esNativo = window.Capacitor?.isNativePlatform?.() === true
@@ -242,36 +243,41 @@ export default function LoginApoderado() {
 
             {/* Banner APK — solo en navegador web */}
             {!esNativo && (
-              APK_URL ? (
-                <a
-                  href={APK_URL}
-                  download
-                  className="mt-4 flex items-center gap-3 p-3.5 rounded-xl transition-colors active:opacity-80"
-                  style={{ background: 'rgba(10,31,61,0.05)', border: '1px solid rgba(10,31,61,0.1)' }}
-                >
-                  <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: '#0a1f3d' }}>
-                    <Smartphone size={17} className="text-dorado" />
+              <div className="mt-4">
+                {APK_URL ? (
+                  <a
+                    href={APK_URL}
+                    download
+                    className="relative flex items-center gap-3 p-3.5 rounded-2xl overflow-hidden active:scale-[0.98] transition-transform"
+                    style={{ background: 'linear-gradient(135deg, #0d2547 0%, #0a1f3d 100%)' }}
+                  >
+                    <div className="absolute inset-0 opacity-20"
+                      style={{ background: 'radial-gradient(ellipse at 85% 50%, #c9a227 0%, transparent 55%)' }} />
+                    <img src={mascotaImg} alt="" className="relative w-12 h-12 object-contain drop-shadow-lg flex-shrink-0" />
+                    <div className="relative flex-1 min-w-0">
+                      <p className="text-white font-bold text-xs leading-tight">¡Descarga la App CEAUNE!</p>
+                      <p className="text-white/50 text-[11px] mt-0.5">Notificaciones push · Acceso rápido</p>
+                    </div>
+                    <div className="relative w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0"
+                      style={{ background: '#c9a227' }}>
+                      <Download size={15} className="text-white" />
+                    </div>
+                  </a>
+                ) : (
+                  <div
+                    className="relative flex items-center gap-3 p-3.5 rounded-2xl overflow-hidden"
+                    style={{ background: 'linear-gradient(135deg, #0d2547 0%, #0a1f3d 100%)' }}
+                  >
+                    <div className="absolute inset-0 opacity-15"
+                      style={{ background: 'radial-gradient(ellipse at 85% 50%, #c9a227 0%, transparent 55%)' }} />
+                    <img src={mascotaImg} alt="" className="relative w-12 h-12 object-contain drop-shadow-lg flex-shrink-0" />
+                    <div className="relative min-w-0">
+                      <p className="text-white font-bold text-xs leading-tight">App CEAUNE disponible</p>
+                      <p className="text-white/50 text-[11px] mt-0.5">Pídela al administrador del colegio</p>
+                    </div>
                   </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-xs font-bold text-marino leading-tight">Descarga la App CEAUNE</p>
-                    <p className="text-[11px] text-gray-400 mt-0.5">Recibe notificaciones en tiempo real</p>
-                  </div>
-                  <Download size={14} className="text-gray-400 flex-shrink-0" />
-                </a>
-              ) : (
-                <div
-                  className="mt-4 flex items-center gap-3 p-3.5 rounded-xl"
-                  style={{ background: 'rgba(10,31,61,0.04)', border: '1px solid rgba(10,31,61,0.08)' }}
-                >
-                  <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: '#0a1f3d' }}>
-                    <Smartphone size={17} className="text-dorado" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-xs font-bold text-marino leading-tight">App CEAUNE disponible</p>
-                    <p className="text-[11px] text-gray-400 mt-0.5">Solicita la instalación al administrador</p>
-                  </div>
-                </div>
-              )
+                )}
+              </div>
             )}
           </div>
         </div>
