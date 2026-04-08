@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
-import { Hash, Camera, Mail, Clock, MessageCircle, X, Phone, Copy, AlertTriangle, Check } from 'lucide-react'
+import { Hash, Camera, Mail, Clock, MessageCircle, X, Phone, Copy, AlertTriangle, Check, ShieldCheck, UserX } from 'lucide-react'
 import toast from 'react-hot-toast'
 import QRScanner from '../../components/QRScanner'
 import api from '../../lib/api'
@@ -40,16 +40,17 @@ const ESTADO_CFG = {
   falta:    { label: 'FALTA',    cls: 'badge-rojo',     headerBg: 'bg-red-500',    modalLabel: 'Falta registrada',  ring: 'ring-red-400'    },
 }
 
-function FotoEstudiante({ foto_url, nombre, ring = 'ring-gray-200' }) {
+function FotoEstudiante({ foto_url, nombre, ring = 'ring-gray-200', size = 'md' }) {
+  const dim  = size === 'lg' ? 'w-28 h-28 rounded-3xl ring-4 text-5xl' : 'w-14 h-14 rounded-2xl ring-2 text-2xl'
   if (foto_url) {
     return (
-      <div className={`w-20 h-20 rounded-2xl overflow-hidden ring-2 ${ring} flex-shrink-0`}>
+      <div className={`${dim} overflow-hidden ${ring} flex-shrink-0`}>
         <img src={foto_url} alt={nombre} className="w-full h-full object-cover" />
       </div>
     )
   }
   return (
-    <div className={`w-20 h-20 rounded-2xl bg-gray-100 ring-2 ${ring} flex items-center justify-center text-3xl font-bold text-gray-400 flex-shrink-0`}>
+    <div className={`${dim} bg-gray-100 ${ring} flex items-center justify-center font-bold text-gray-400 flex-shrink-0`}>
       {nombre?.charAt(0) || 'A'}
     </div>
   )
@@ -378,63 +379,84 @@ export default function Escanear() {
         </div>
       </div>
 
-      {/* ── Modal: Preview (confirmación previa al registro) ─────────────── */}
+      {/* ── Modal: Preview (verificación de identidad) ──────────────────── */}
       {preview && previewHdr && (
         <div
-          className="fixed inset-0 bg-black/60 z-50 flex items-end sm:items-center justify-center"
+          className="fixed inset-0 bg-black/70 z-50 flex items-end sm:items-center justify-center"
           onClick={detenerAutoConfirm}
         >
           <div
             className="bg-white w-full sm:max-w-sm sm:rounded-2xl overflow-hidden shadow-2xl"
             onClick={e => e.stopPropagation()}
           >
-            {/* Barra de progreso auto-confirm */}
-            <div className="h-1.5 bg-gray-100">
+            {/* Barra auto-confirm */}
+            <div className={`h-1 ${previewHdr.bg} opacity-30`}>
               {autoConfirm > 0 && (
                 <div
-                  className="h-1.5 bg-white/60 transition-all duration-1000 ease-linear"
+                  className={`h-1 ${previewHdr.bg} transition-all duration-1000 ease-linear`}
                   style={{ width: `${(autoConfirm / AUTO_CONFIRM_SEG) * 100}%` }}
                 />
               )}
             </div>
 
-            {/* Header coloreado con acción detectada */}
-            <div className={`${previewHdr.bg} px-5 py-4`}>
-              <div className="flex items-center justify-between">
-                <p className="text-white font-bold text-2xl tracking-wide">{previewHdr.label}</p>
-                <button
-                  onClick={cancelarPreview}
-                  className="text-white/80 hover:text-white w-9 h-9 flex items-center justify-center rounded-full hover:bg-white/20 transition-colors"
-                >
-                  <X size={20} />
-                </button>
+            {/* Header compacto */}
+            <div className={`${previewHdr.bg} px-5 py-3 flex items-center justify-between`}>
+              <div className="flex items-center gap-2">
+                <p className="text-white font-black text-xl tracking-widest">{previewHdr.label}</p>
+                {autoConfirm > 0 && (
+                  <span className="bg-white/25 text-white text-xs font-bold px-2 py-0.5 rounded-full tabular-nums">
+                    {autoConfirm}s
+                  </span>
+                )}
               </div>
-              <p className="text-white/75 text-sm mt-0.5">{preview.sublabel}</p>
+              <button
+                onClick={cancelarPreview}
+                className="text-white/80 hover:text-white w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/20 transition-colors"
+              >
+                <X size={18} />
+              </button>
             </div>
 
-            <div className="p-5 space-y-4">
-              {/* Info del alumno */}
-              <div className="flex items-center gap-4">
+            <div className="px-5 pt-5 pb-4 space-y-4">
+
+              {/* ── Bloque central de identidad ── */}
+              <div className="flex flex-col items-center text-center gap-3">
+                {/* Label verificación */}
+                <div className="flex items-center gap-1.5 text-[11px] font-bold text-gray-400 uppercase tracking-widest">
+                  <ShieldCheck size={13} className="text-gray-300" />
+                  Verificar identidad
+                </div>
+
+                {/* Foto grande centrada */}
                 <FotoEstudiante
                   foto_url={preview.estudiante?.foto_url}
                   nombre={preview.estudiante?.nombre}
                   ring={previewHdr?.ring || 'ring-gray-200'}
+                  size="lg"
                 />
+
+                {/* Nombre y grado */}
                 <div>
-                  <p className="font-bold text-marino text-lg leading-tight">
+                  <p className="font-black text-marino text-xl leading-tight">
                     {preview.estudiante?.nombre} {preview.estudiante?.apellido}
                   </p>
-                  <p className="text-gray-500 text-sm">
+                  <p className="text-gray-500 text-sm mt-0.5">
                     {preview.estudiante?.grado}° {preview.estudiante?.seccion}
-                    <span className="text-gray-400"> · {preview.estudiante?.nivel}</span>
+                    <span className="text-gray-400 mx-1">·</span>
+                    <span className="capitalize">{preview.estudiante?.nivel}</span>
                   </p>
                 </div>
+
+                {/* Sublabel del estado */}
+                {preview.sublabel && (
+                  <p className="text-xs text-gray-400 italic">{preview.sublabel}</p>
+                )}
               </div>
 
               {/* CASO: salida_especial → chips de motivo */}
               {preview.requiere_motivo && (
                 <div className="space-y-2">
-                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide text-center">
                     ¿Por qué sale antes?
                   </p>
                   <div className="grid grid-cols-2 gap-2">
@@ -459,7 +481,7 @@ export default function Escanear() {
               {/* CASO: tardanza → campo de observación */}
               {preview.requiere_observacion && (
                 <div className="space-y-2">
-                  <p className="text-xs font-semibold text-amber-600 uppercase tracking-wide">
+                  <p className="text-xs font-semibold text-amber-600 uppercase tracking-wide text-center">
                     ¿Por qué llegó tarde?
                   </p>
                   <textarea
@@ -473,7 +495,7 @@ export default function Escanear() {
                 </div>
               )}
 
-              {/* CASO: regreso tras salida especial → muestra motivo heredado */}
+              {/* CASO: regreso tras salida especial */}
               {preview.tipo_a_enviar === 'ingreso_especial' && preview.motivo_auto && (
                 <div className="flex items-center gap-2 bg-violet-50 border border-violet-100 rounded-xl px-3.5 py-2.5">
                   <div className="w-2 h-2 rounded-full bg-violet-400 flex-shrink-0" />
@@ -484,7 +506,7 @@ export default function Escanear() {
               )}
 
               {/* Botones */}
-              <div className="space-y-2 pt-1">
+              <div className="space-y-2.5">
                 <button
                   onClick={confirmarRegistro}
                   disabled={
@@ -492,25 +514,24 @@ export default function Escanear() {
                     (preview.requiere_motivo && !motivoEspecial) ||
                     (preview.requiere_observacion && !observacion.trim())
                   }
-                  className="w-full btn-primary py-3 flex items-center justify-center gap-2 disabled:opacity-40"
-                  style={{ background: cargando ? '#999' : undefined }}
+                  className={`w-full py-3.5 rounded-xl font-bold text-white flex items-center justify-center gap-2 transition-all disabled:opacity-40 active:scale-[0.98] hover:opacity-90 ${cargando ? 'bg-gray-400' : previewHdr.bg}`}
                 >
                   {cargando
                     ? <span className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full" />
-                    : <Check size={16} />}
-                  {cargando
-                    ? 'Registrando...'
-                    : autoConfirm > 0
-                    ? `Confirmar (${autoConfirm}s)`
-                    : 'Confirmar registro'}
+                    : <Check size={17} />}
+                  {cargando ? 'Registrando...' : autoConfirm > 0 ? `Confirmar (${autoConfirm}s)` : 'Confirmar registro'}
                 </button>
+
+                {/* Botón de seguridad — no es este alumno */}
                 <button
                   onClick={cancelarPreview}
-                  className="w-full text-sm text-gray-400 hover:text-gray-600 py-1.5 transition-colors"
+                  className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border-2 border-red-200 text-red-500 hover:bg-red-50 hover:border-red-300 text-sm font-semibold transition-all active:scale-[0.98]"
                 >
-                  Cancelar — no es este alumno
+                  <UserX size={15} />
+                  No es este alumno
                 </button>
               </div>
+
             </div>
           </div>
         </div>
@@ -518,148 +539,154 @@ export default function Escanear() {
 
       {/* ── Modal: Resultado ─────────────────────────────────────────────── */}
       {resultado && resultCfg && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
           <div
-            className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden animate-in"
+            className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden"
             onClick={cancelarAutoClose}
           >
-            {/* Barra de auto-cierre */}
-            <div className="h-1 bg-gray-100">
-              <div
-                className="h-1 transition-all duration-1000"
-                style={{
-                  width: autoActivo ? `${(cuentaRegresiva / AUTO_CIERRE_SEG) * 100}%` : '0%',
-                  backgroundColor: 'rgba(255,255,255,0.5)',
-                }}
-              />
-            </div>
-
+            {/* Header con hora + cuenta regresiva */}
             <div className={`${resultCfg.headerBg} px-5 py-4`}>
+              {/* Barra de auto-cierre dentro del header */}
+              <div className="h-0.5 bg-white/20 rounded-full mb-3 overflow-hidden">
+                <div
+                  className="h-0.5 bg-white/60 rounded-full transition-all duration-1000"
+                  style={{ width: autoActivo ? `${(cuentaRegresiva / AUTO_CIERRE_SEG) * 100}%` : '0%' }}
+                />
+              </div>
+
               <div className="flex items-start justify-between">
                 <div>
-                  <p className="text-white font-bold text-xl">{resultCfg.modalLabel}</p>
-                  <p className="text-white/75 text-sm capitalize">
-                    {resultado.asistencia?.tipo?.replace(/_/g, ' ')}
-                  </p>
-                  {resultado.asistencia?.motivo_especial && (
-                    <span className="inline-block mt-2 px-2.5 py-1 bg-white/20 rounded-lg text-white text-xs font-semibold">
-                      {MOTIVO_LABEL[resultado.asistencia.motivo_especial]}
+                  <p className="text-white font-black text-2xl leading-none">{resultCfg.modalLabel}</p>
+                  <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                    <span className="text-white/80 text-sm flex items-center gap-1">
+                      <Clock size={12} />
+                      {resultado.asistencia?.hora?.substring(11, 16)}
                     </span>
-                  )}
+                    {resultado.asistencia?.motivo_especial && (
+                      <span className="bg-white/20 text-white text-xs font-semibold px-2 py-0.5 rounded-full">
+                        {MOTIVO_LABEL[resultado.asistencia.motivo_especial]}
+                      </span>
+                    )}
+                    {resultado.asistencia?.correo_enviado && (
+                      <span className="bg-white/20 text-white text-xs font-semibold px-2 py-0.5 rounded-full flex items-center gap-1">
+                        <Mail size={10} /> Correo enviado
+                      </span>
+                    )}
+                  </div>
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0">
                   {autoActivo && (
-                    <span className="text-white/60 text-xs font-mono w-5 text-center">
-                      {cuentaRegresiva}
-                    </span>
+                    <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
+                      <span className="text-white font-bold text-sm tabular-nums">{cuentaRegresiva}</span>
+                    </div>
                   )}
                   <button
                     onClick={cerrarModal}
-                    className="text-white/80 hover:text-white w-9 h-9 flex items-center justify-center rounded-full hover:bg-white/20 transition-colors"
+                    className="text-white/80 hover:text-white w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/20 transition-colors"
                   >
-                    <X size={20} />
+                    <X size={18} />
                   </button>
                 </div>
               </div>
             </div>
 
-            <div className="p-5 space-y-4">
-              <div className="flex items-center gap-4">
-                <FotoEstudiante
-                  foto_url={resultado.estudiante?.foto_url}
-                  nombre={resultado.estudiante?.nombre}
-                  ring={resultCfg?.ring || 'ring-gray-200'}
-                />
-                <div>
-                  <p className="font-bold text-marino text-lg leading-tight">
-                    {resultado.estudiante?.nombre} {resultado.estudiante?.apellido}
-                  </p>
-                  <p className="text-gray-500 text-sm">
-                    {resultado.estudiante?.grado} {resultado.estudiante?.seccion}
-                  </p>
-                  <p className="text-gray-400 text-xs flex items-center gap-1 mt-0.5">
-                    <Clock size={11} />
-                    {resultado.asistencia?.hora?.substring(11, 19)}
-                  </p>
-                </div>
-              </div>
-
-              {resultado.asistencia?.observacion && (
-                <div className="bg-amber-50 border border-amber-100 rounded-xl px-3.5 py-3">
-                  <p className="text-xs font-semibold text-amber-600 uppercase tracking-wide mb-1">
-                    Observación
-                  </p>
-                  <p className="text-sm text-gray-700">{resultado.asistencia.observacion}</p>
-                </div>
-              )}
-
-              <div className="flex gap-2">
-                <StatBadge
-                  valor={tardanzas}
-                  label="tardanzas mes"
-                  color={tardanzas >= 3 ? 'bg-amber-50 text-amber-700' : 'bg-gray-50 text-gray-500'}
-                />
-                <StatBadge
-                  valor={faltas}
-                  label="faltas mes"
-                  color={faltas >= 3 ? 'bg-red-50 text-red-700' : 'bg-gray-50 text-gray-500'}
-                />
-              </div>
-
-              {hayAlerta && (
-                <div className="bg-red-50 border border-red-200 rounded-xl p-3">
-                  <p className="text-red-700 font-semibold text-sm">Patrón frecuente detectado</p>
-                  <p className="text-red-600 text-xs mt-0.5">Se recomienda notificar al apoderado</p>
-                </div>
-              )}
-
-              {resultado.asistencia?.correo_enviado && (
-                <span className="badge-verde flex items-center gap-1 text-xs w-fit">
-                  <Mail size={11} /> Correo enviado al apoderado
-                </span>
-              )}
-
-              <div className="border-t border-gray-100 pt-4 space-y-3">
-                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">
-                  Contactar apoderado
+            {/* Estudiante — foto pequeña inline */}
+            <div className="px-5 py-4 flex items-center gap-3 border-b border-gray-100">
+              <FotoEstudiante
+                foto_url={resultado.estudiante?.foto_url}
+                nombre={resultado.estudiante?.nombre}
+                ring={resultCfg?.ring || 'ring-gray-200'}
+                size="md"
+              />
+              <div className="flex-1 min-w-0">
+                <p className="font-bold text-marino text-base leading-tight truncate">
+                  {resultado.estudiante?.nombre} {resultado.estudiante?.apellido}
                 </p>
-                {apoderados.length === 0 ? (
-                  <div className="h-9 bg-gray-100 rounded-lg animate-pulse" />
-                ) : (
-                  <div className="space-y-2">
-                    {apoderados.map(apo => (
-                      <div key={apo.id} className="flex gap-2">
-                        <button
-                          onClick={() => copiarTelefono(apo)}
-                          className="flex items-center justify-center px-2 py-2 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-lg transition-colors"
-                          title="Copiar número"
-                        >
-                          <Copy size={13} />
-                        </button>
-                        <a
-                          href={`tel:+51${apo.telefono}`}
-                          onClick={cancelarAutoClose}
-                          className="flex items-center justify-center px-2 py-2 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-lg transition-colors"
-                          title="Llamar"
-                        >
-                          <Phone size={13} />
-                        </a>
-                        <button
-                          onClick={() => enviarWA(apo)}
-                          className="flex items-center gap-1.5 px-3 py-2 bg-green-500 hover:bg-green-600 text-white text-xs font-medium rounded-lg transition-colors flex-1"
-                        >
-                          <MessageCircle size={13} />
-                          {apo.nombre}
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
+                <p className="text-gray-500 text-sm">
+                  {resultado.estudiante?.grado}° {resultado.estudiante?.seccion}
+                  <span className="text-gray-400 mx-1">·</span>
+                  <span className="capitalize text-gray-400 text-xs">{resultado.estudiante?.nivel}</span>
+                </p>
               </div>
             </div>
 
+            {/* Observación si la hay */}
+            {resultado.asistencia?.observacion && (
+              <div className="px-5 pt-3 pb-0">
+                <div className="bg-amber-50 border border-amber-100 rounded-xl px-3.5 py-2.5">
+                  <p className="text-xs font-semibold text-amber-600 uppercase tracking-wide mb-1">Observación</p>
+                  <p className="text-sm text-gray-700 leading-snug">{resultado.asistencia.observacion}</p>
+                </div>
+              </div>
+            )}
+
+            {/* Stats + alerta */}
+            <div className="px-5 py-3 space-y-2">
+              <div className="flex gap-2">
+                <div className={`flex-1 rounded-xl px-3 py-2.5 flex items-center gap-2.5 ${tardanzas >= 3 ? 'bg-amber-50' : 'bg-gray-50'}`}>
+                  <p className={`text-2xl font-black tabular-nums ${tardanzas >= 3 ? 'text-amber-600' : 'text-gray-500'}`}>{tardanzas}</p>
+                  <p className={`text-xs leading-tight ${tardanzas >= 3 ? 'text-amber-600' : 'text-gray-400'}`}>tardanzas<br/>este mes</p>
+                </div>
+                <div className={`flex-1 rounded-xl px-3 py-2.5 flex items-center gap-2.5 ${faltas >= 3 ? 'bg-red-50' : 'bg-gray-50'}`}>
+                  <p className={`text-2xl font-black tabular-nums ${faltas >= 3 ? 'text-red-600' : 'text-gray-500'}`}>{faltas}</p>
+                  <p className={`text-xs leading-tight ${faltas >= 3 ? 'text-red-600' : 'text-gray-400'}`}>faltas<br/>este mes</p>
+                </div>
+              </div>
+
+              {hayAlerta && (
+                <div className="flex items-center gap-2.5 bg-red-50 border border-red-200 rounded-xl px-3.5 py-2.5">
+                  <AlertTriangle size={15} className="text-red-500 flex-shrink-0" />
+                  <div>
+                    <p className="text-red-700 font-semibold text-xs">Patrón frecuente detectado</p>
+                    <p className="text-red-500 text-[11px]">Notifica al apoderado</p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Contactar apoderado */}
+            <div className="px-5 pb-3 space-y-2 border-t border-gray-100 pt-3">
+              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Contactar apoderado</p>
+              {apoderados.length === 0 ? (
+                <div className="h-11 bg-gray-100 rounded-xl animate-pulse" />
+              ) : (
+                <div className="space-y-2">
+                  {apoderados.map(apo => (
+                    <div key={apo.id} className="flex gap-2">
+                      <button
+                        onClick={() => copiarTelefono(apo)}
+                        className="w-11 h-11 flex items-center justify-center bg-gray-100 hover:bg-gray-200 text-gray-500 rounded-xl transition-colors flex-shrink-0"
+                        title="Copiar número"
+                      >
+                        <Copy size={14} />
+                      </button>
+                      <a
+                        href={`tel:+51${apo.telefono}`}
+                        onClick={cancelarAutoClose}
+                        className="w-11 h-11 flex items-center justify-center bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-xl transition-colors flex-shrink-0"
+                        title="Llamar"
+                      >
+                        <Phone size={14} />
+                      </a>
+                      <button
+                        onClick={() => enviarWA(apo)}
+                        className="flex items-center justify-center gap-2 h-11 bg-green-500 hover:bg-green-600 text-white text-sm font-semibold rounded-xl transition-colors flex-1 active:scale-[0.98]"
+                      >
+                        <MessageCircle size={14} />
+                        {apo.nombre}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Botón cerrar */}
             <div className="px-5 pb-5">
-              <button onClick={cerrarModal} className="w-full btn-primary">
+              <button
+                onClick={cerrarModal}
+                className="w-full py-3 rounded-xl bg-marino text-white font-semibold text-sm hover:bg-marino/90 active:scale-[0.98] transition-all"
+              >
                 Cerrar y continuar {autoActivo && `(${cuentaRegresiva}s)`}
               </button>
             </div>
