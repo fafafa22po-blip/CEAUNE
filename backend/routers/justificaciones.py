@@ -45,12 +45,12 @@ async def crear(
     if current_user.rol != "apoderado":
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Solo los apoderados pueden enviar justificaciones")
 
-    # Verificar que la asistencia existe y es una falta
+    # Verificar que la asistencia existe y es una falta o tardanza
     asistencia = db.query(Asistencia).filter(Asistencia.id == asistencia_id).first()
     if not asistencia:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Registro de asistencia no encontrado")
-    if asistencia.estado != "falta":
-        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "Solo se pueden justificar faltas")
+    if asistencia.estado not in ("falta", "tardanza"):
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "Solo se pueden justificar faltas y tardanzas")
 
     # Verificar que el apoderado tiene relación con el estudiante
     vinculo = db.query(ApoderadoEstudiante).filter(
@@ -139,7 +139,7 @@ async def crear_por_fecha(
     ).first()
 
     if asistencia:
-        if asistencia.estado != "falta":
+        if asistencia.estado not in ("falta", "tardanza"):
             raise HTTPException(
                 status.HTTP_422_UNPROCESSABLE_ENTITY,
                 f"El estudiante sí asistió ese día ({asistencia.estado})",

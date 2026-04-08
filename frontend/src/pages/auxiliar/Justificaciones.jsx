@@ -71,9 +71,16 @@ function FilaJustificacion({ j, activa, onClick }) {
             )}
           </div>
 
-          {/* Fecha de falta */}
-          <p className="text-xs text-gray-500 mt-0.5">
-            Falta: {formatFechaFalta(j.asistencia?.fecha)}
+          {/* Fecha + tipo */}
+          <p className="text-xs text-gray-500 mt-0.5 flex items-center gap-1.5">
+            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
+              j.asistencia?.estado === 'tardanza'
+                ? 'bg-amber-100 text-amber-700'
+                : 'bg-red-100 text-red-600'
+            }`}>
+              {j.asistencia?.estado === 'tardanza' ? 'Tardanza' : 'Falta'}
+            </span>
+            {formatFechaFalta(j.asistencia?.fecha)}
           </p>
 
           {/* Motivo preview */}
@@ -170,18 +177,25 @@ function PanelDetalle({ j, onVolver, onAprobar, onRechazar, procesando }) {
       {/* ── Contenido scrollable ── */}
       <div className="flex-1 overflow-y-auto px-5 py-5 space-y-4">
 
-        {/* Fecha de la falta */}
-        <div className="flex items-center gap-3 bg-red-50 border border-red-100 rounded-xl px-4 py-3">
-          <Calendar size={18} className="text-red-400 flex-shrink-0" />
-          <div>
-            <p className="text-[10px] font-bold text-red-400 uppercase tracking-wide">
-              Fecha de inasistencia
-            </p>
-            <p className="text-sm font-bold text-red-700 capitalize mt-0.5">
-              {formatFechaFalta(j.asistencia?.fecha)}
-            </p>
-          </div>
-        </div>
+        {/* Fecha de la falta / tardanza */}
+        {(() => {
+          const esTardanza = j.asistencia?.estado === 'tardanza'
+          return (
+            <div className={`flex items-center gap-3 rounded-xl px-4 py-3 border ${
+              esTardanza ? 'bg-amber-50 border-amber-100' : 'bg-red-50 border-red-100'
+            }`}>
+              <Calendar size={18} className={`flex-shrink-0 ${esTardanza ? 'text-amber-400' : 'text-red-400'}`} />
+              <div>
+                <p className={`text-[10px] font-bold uppercase tracking-wide ${esTardanza ? 'text-amber-500' : 'text-red-400'}`}>
+                  {esTardanza ? 'Fecha de tardanza' : 'Fecha de inasistencia'}
+                </p>
+                <p className={`text-sm font-bold capitalize mt-0.5 ${esTardanza ? 'text-amber-700' : 'text-red-700'}`}>
+                  {formatFechaFalta(j.asistencia?.fecha)}
+                </p>
+              </div>
+            </div>
+          )
+        })()}
 
         {/* Motivo */}
         <div>
@@ -296,7 +310,8 @@ function ModalAprobar({ j, onConfirmar, onCancelar, procesando }) {
               {j.estudiante?.nombre} {j.estudiante?.apellido}
             </p>
             <p className="text-xs text-gray-400 mt-0.5 capitalize">
-              Falta del {formatFechaFalta(j.asistencia?.fecha)}
+              {j.asistencia?.estado === 'tardanza' ? 'Tardanza del' : 'Falta del'}{' '}
+              {formatFechaFalta(j.asistencia?.fecha)}
             </p>
           </div>
 

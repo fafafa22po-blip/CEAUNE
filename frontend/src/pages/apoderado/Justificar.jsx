@@ -19,6 +19,8 @@ function ModalJustificar({ falta, hijoId, onCerrar, onEnviado }) {
   const [enviando, setEnviando] = useState(false)
   const fileRef = useRef()
 
+  const esTardanza = falta.tipo === 'tardanza'
+
   const handleEnviar = async (e) => {
     e.preventDefault()
     if (!motivo.trim()) return toast.error('El motivo es obligatorio')
@@ -46,10 +48,7 @@ function ModalJustificar({ falta, hijoId, onCerrar, onEnviado }) {
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center animate-fade-in">
       {/* Backdrop */}
-      <div
-        className="absolute inset-0 bg-black/50"
-        onClick={onCerrar}
-      />
+      <div className="absolute inset-0 bg-black/50" onClick={onCerrar} />
 
       {/* Panel */}
       <div className="relative bg-white w-full sm:max-w-md sm:rounded-2xl rounded-t-2xl shadow-2xl animate-slide-up sm:animate-in z-10">
@@ -62,8 +61,8 @@ function ModalJustificar({ falta, hijoId, onCerrar, onEnviado }) {
         {/* Header */}
         <div className="flex items-start justify-between px-5 pt-4 pb-4 border-b border-gray-100">
           <div>
-            <p className="text-[11px] font-bold text-red-500 uppercase tracking-widest mb-1">
-              Justificar inasistencia
+            <p className={`text-[11px] font-bold uppercase tracking-widest mb-1 ${esTardanza ? 'text-amber-500' : 'text-red-500'}`}>
+              {esTardanza ? 'Justificar tardanza' : 'Justificar inasistencia'}
             </p>
             <p className="text-lg font-bold text-marino capitalize leading-tight">
               {format(fecha, "EEEE d 'de' MMMM", { locale: es })}
@@ -83,14 +82,17 @@ function ModalJustificar({ falta, hijoId, onCerrar, onEnviado }) {
           {/* Motivo */}
           <div>
             <label className="block text-xs font-semibold text-gray-600 mb-1.5">
-              Motivo de la inasistencia <span className="text-red-500">*</span>
+              {esTardanza ? 'Motivo de la tardanza' : 'Motivo de la inasistencia'}{' '}
+              <span className="text-red-500">*</span>
             </label>
             <textarea
               className="input resize-none"
               rows={4}
               value={motivo}
               onChange={(e) => setMotivo(e.target.value)}
-              placeholder="Ej: El estudiante presentó fiebre y fue al médico..."
+              placeholder={esTardanza
+                ? 'Ej: El estudiante tuvo cita médica por la mañana...'
+                : 'Ej: El estudiante presentó fiebre y fue al médico...'}
               autoFocus
             />
           </div>
@@ -166,26 +168,32 @@ function ModalJustificar({ falta, hijoId, onCerrar, onEnviado }) {
   )
 }
 
-// ── Card de falta pendiente ───────────────────────────────────────────────────
+// ── Card de falta / tardanza pendiente ───────────────────────────────────────
 function CardFalta({ falta, onClick }) {
-  const fecha = parseISO(falta.fecha)
+  const fecha      = parseISO(falta.fecha)
+  const esTardanza = falta.tipo === 'tardanza'
+
+  const color = esTardanza
+    ? { bg: 'bg-amber-50 hover:bg-amber-100 border-amber-200', num: 'text-amber-600', mes: 'text-amber-400', sep: 'bg-amber-200', dot: 'bg-amber-400', label: 'text-amber-600', arrow: 'text-amber-300 group-hover:text-amber-500' }
+    : { bg: 'bg-red-50 hover:bg-red-100 border-red-200',       num: 'text-red-600',   mes: 'text-red-400',   sep: 'bg-red-200',   dot: 'bg-red-400',   label: 'text-red-500',   arrow: 'text-red-300 group-hover:text-red-500' }
+
   return (
     <button
       onClick={onClick}
-      className="w-full flex items-center gap-4 bg-red-50 hover:bg-red-100 active:scale-[0.98] border border-red-200 rounded-2xl px-4 py-3.5 transition-all group text-left"
+      className={`w-full flex items-center gap-4 active:scale-[0.98] border rounded-2xl px-4 py-3.5 transition-all group text-left ${color.bg}`}
     >
       {/* Número de día */}
       <div className="flex-shrink-0 text-center w-11">
-        <p className="text-[28px] font-black text-red-600 leading-none">
+        <p className={`text-[28px] font-black leading-none ${color.num}`}>
           {format(fecha, 'd')}
         </p>
-        <p className="text-[10px] font-bold text-red-400 uppercase tracking-wide mt-0.5">
+        <p className={`text-[10px] font-bold uppercase tracking-wide mt-0.5 ${color.mes}`}>
           {format(fecha, 'MMM', { locale: es })}
         </p>
       </div>
 
       {/* Separador */}
-      <div className="w-px h-10 bg-red-200 flex-shrink-0" />
+      <div className={`w-px h-10 flex-shrink-0 ${color.sep}`} />
 
       {/* Info */}
       <div className="flex-1 min-w-0">
@@ -193,13 +201,15 @@ function CardFalta({ falta, onClick }) {
           {format(fecha, 'EEEE', { locale: es })}
         </p>
         <div className="flex items-center gap-1.5 mt-0.5">
-          <span className="w-1.5 h-1.5 rounded-full bg-red-400 flex-shrink-0" />
-          <span className="text-xs text-red-500 font-medium">Falta sin justificar</span>
+          <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${color.dot}`} />
+          <span className={`text-xs font-medium ${color.label}`}>
+            {esTardanza ? 'Tardanza sin justificar' : 'Falta sin justificar'}
+          </span>
         </div>
       </div>
 
       {/* Flecha */}
-      <ChevronRight size={16} className="text-red-300 group-hover:text-red-500 transition-colors flex-shrink-0" />
+      <ChevronRight size={16} className={`flex-shrink-0 transition-colors ${color.arrow}`} />
     </button>
   )
 }
@@ -250,9 +260,18 @@ function ItemHistorial({ j, esUltimo }) {
         <div className={`rounded-2xl border ${cfg.cardBg} ${cfg.cardBorder} px-4 py-3 space-y-1.5`}>
           <div className="flex items-start justify-between gap-2">
             <div className="flex-1 min-w-0">
-              <span className={`text-[10px] font-bold uppercase tracking-widest ${cfg.labelColor}`}>
-                {cfg.label}
-              </span>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className={`text-[10px] font-bold uppercase tracking-widest ${cfg.labelColor}`}>
+                  {cfg.label}
+                </span>
+                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
+                  j.asistencia?.estado === 'tardanza'
+                    ? 'bg-amber-100 text-amber-700'
+                    : 'bg-red-100 text-red-700'
+                }`}>
+                  {j.asistencia?.estado === 'tardanza' ? 'Tardanza' : 'Falta'}
+                </span>
+              </div>
               <p className="text-sm font-semibold text-gray-800 capitalize mt-0.5">
                 {fechaStr
                   ? format(parseISO(fechaStr), "EEEE d 'de' MMMM", { locale: es })
@@ -344,13 +363,17 @@ export default function Justificar() {
         .filter(d => {
           const dow  = getDay(d)
           if (dow < 1 || dow > 5) return false
-          const dStr = format(d, 'yyyy-MM-dd')
-          // Excluir solo si tiene ingreso válido (puntual/tardanza/especial), no si es falta explícita
-          if (mapa[dStr] && mapa[dStr] !== 'falta') return false
+          const dStr     = format(d, 'yyyy-MM-dd')
+          const estadoDia = mapa[dStr]
+          // Excluir solo si vino puntual o con registro especial (no falta ni tardanza)
+          if (estadoDia && estadoDia !== 'falta' && estadoDia !== 'tardanza') return false
           if (fechasJustificadas.has(dStr)) return false
           return true
         })
-        .map(d => ({ fecha: format(d, 'yyyy-MM-dd') }))
+        .map(d => {
+          const dStr = format(d, 'yyyy-MM-dd')
+          return { fecha: dStr, tipo: mapa[dStr] || 'falta' }
+        })
         .reverse()
 
       setFaltasSinJustificar(faltasDias)
@@ -374,7 +397,7 @@ export default function Justificar() {
 
       {/* Título */}
       <div>
-        <h1 className="text-xl font-bold text-marino">Justificar Inasistencias</h1>
+        <h1 className="text-xl font-bold text-marino">Justificaciones</h1>
         <p className="text-sm text-gray-400 mt-0.5 capitalize">
           {format(new Date(), "MMMM yyyy", { locale: es })}
         </p>
@@ -400,10 +423,10 @@ export default function Justificar() {
       {/* Layout 2 columnas */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
-        {/* ── Faltas sin justificar ── */}
+        {/* ── Faltas y tardanzas sin justificar ── */}
         <div className="space-y-3">
           <div className="flex items-center gap-2">
-            <h2 className="font-semibold text-marino">Faltas pendientes</h2>
+            <h2 className="font-semibold text-marino">Por justificar</h2>
             {!cargando && faltasSinJustificar.length > 0 && (
               <span className="bg-red-100 text-red-600 text-xs font-bold px-2 py-0.5 rounded-full">
                 {faltasSinJustificar.length}
@@ -421,15 +444,15 @@ export default function Justificar() {
                 <CheckCircle2 size={24} className="text-green-500" />
               </div>
               <div>
-                <p className="text-gray-700 font-semibold">Sin faltas pendientes</p>
-                <p className="text-gray-400 text-sm mt-0.5">No hay inasistencias que justificar</p>
+                <p className="text-gray-700 font-semibold">Todo justificado</p>
+                <p className="text-gray-400 text-sm mt-0.5">No hay faltas ni tardanzas que justificar</p>
               </div>
             </div>
           ) : (
             <div className="space-y-2">
               <p className="text-xs text-gray-400 flex items-center gap-1.5">
                 <AlertTriangle size={11} className="text-amber-400" />
-                Toca una fecha para enviar la justificación
+                Toca una fecha para justificar la falta o tardanza
               </p>
               {faltasSinJustificar.map((f) => (
                 <CardFalta
