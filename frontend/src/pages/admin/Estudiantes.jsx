@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { Search, Upload, Plus, X, Pencil, UserX, UserCheck, AlertTriangle, Printer, FileDown, CheckCircle, XCircle, Heart, GraduationCap, User } from 'lucide-react'
+import { Search, Upload, Plus, X, Pencil, UserX, UserCheck, AlertTriangle, Printer, FileDown, CheckCircle, XCircle, Heart, GraduationCap, User, Camera, Trash2 } from 'lucide-react'
 import api from '../../lib/api'
 import toast from 'react-hot-toast'
 import ModalImprimirCarnets from './ModalImprimirCarnets'
@@ -105,6 +105,44 @@ export default function Estudiantes() {
 
   // null = cerrado | { estudianteInicial, filtroInicial }
   const [modalImprimir, setModalImprimir] = useState(null)
+
+  const [fotoSubiendo, setFotoSubiendo] = useState(false)
+
+  const handleSubirFoto = async (e) => {
+    const archivo = e.target.files[0]
+    if (!archivo || !modalEditar) return
+    setFotoSubiendo(true)
+    try {
+      const formData = new FormData()
+      formData.append('archivo', archivo)
+      const { data } = await api.post(`/estudiantes/${modalEditar.id}/foto`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      })
+      setFormEditar(f => ({ ...f, foto_url: data.foto_url }))
+      setLista(prev => prev.map(est => est.id === modalEditar.id ? { ...est, foto_url: data.foto_url } : est))
+      toast.success('Foto actualizada')
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Error al subir la foto')
+    } finally {
+      setFotoSubiendo(false)
+      e.target.value = ''
+    }
+  }
+
+  const handleEliminarFoto = async () => {
+    if (!modalEditar) return
+    setFotoSubiendo(true)
+    try {
+      await api.delete(`/estudiantes/${modalEditar.id}/foto`)
+      setFormEditar(f => ({ ...f, foto_url: null }))
+      setLista(prev => prev.map(est => est.id === modalEditar.id ? { ...est, foto_url: null } : est))
+      toast.success('Foto eliminada')
+    } catch {
+      toast.error('Error al eliminar la foto')
+    } finally {
+      setFotoSubiendo(false)
+    }
+  }
 
   const cargar = async () => {
     setCargando(true)
@@ -293,6 +331,7 @@ export default function Estudiantes() {
       nombre: est.nombre, apellido: est.apellido, dni: est.dni,
       sexo: est.sexo || '',
       nivel: est.nivel, grado: est.grado, seccion: est.seccion,
+      foto_url: est.foto_url || null,
       atencion_medica:      est.atencion_medica      || '',
       tiene_alergias:       est.tiene_alergias       || false,
       alergias_detalle:     est.alergias_detalle     || '',
@@ -911,6 +950,56 @@ export default function Estudiantes() {
               {/* ── Tab: Personal ── */}
               {tabEditar === 'personal' && (
                 <div className="px-6 py-4 space-y-4">
+
+                  {/* Foto */}
+                  <div className="flex items-center gap-4 p-3 bg-gray-50 rounded-xl border border-gray-100">
+                    <div className="w-16 h-16 rounded-xl overflow-hidden bg-gray-200 flex-shrink-0 border border-gray-200">
+                      {formEditar.foto_url ? (
+                        <img src={formEditar.foto_url} alt="Foto" className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-2xl font-bold text-gray-400">
+                          {formEditar.nombre?.charAt(0) || '?'}
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-semibold text-gray-600 mb-1.5">Foto del estudiante</p>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <label className={`flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg border transition-colors cursor-pointer ${
+                          fotoSubiendo ? 'opacity-50 cursor-not-allowed border-gray-200 text-gray-400' : 'border-marino text-marino hover:bg-marino hover:text-white'
+                        }`}>
+                          <Camera size={12} />
+                          {formEditar.foto_url ? 'Cambiar foto' : 'Subir foto'}
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={handleSubirFoto}
+                            disabled={fotoSubiendo}
+                          />
+                        </label>
+                        {formEditar.foto_url && !fotoSubiendo && (
+                          <button
+                            type="button"
+                            onClick={handleEliminarFoto}
+                            className="flex items-center gap-1.5 text-xs font-medium text-red-400 hover:text-red-600 px-2 py-1.5 rounded-lg hover:bg-red-50 transition-colors"
+                          >
+                            <Trash2 size={11} /> Eliminar
+                          </button>
+                        )}
+                      </div>
+                      {fotoSubiendo && (
+                        <p className="text-xs text-gray-400 mt-1.5 flex items-center gap-1.5">
+                          <span className="animate-spin w-3 h-3 border border-gray-400 border-t-transparent rounded-full" />
+                          Procesando foto...
+                        </p>
+                      )}
+                      {!formEditar.foto_url && !fotoSubiendo && (
+                        <p className="text-xs text-gray-400 mt-1">jpg, png o webp · máx. 5 MB</p>
+                      )}
+                    </div>
+                  </div>
+
                   <div className="grid grid-cols-2 gap-3">
                     {[
                       { name: 'nombre',   label: 'Nombre',   placeholder: 'Juan' },

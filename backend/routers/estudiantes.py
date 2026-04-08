@@ -291,6 +291,73 @@ def obtener(
 
 
 # ---------------------------------------------------------------------------
+# POST /estudiantes/{id}/foto  →  Subir / reemplazar foto del estudiante
+# ---------------------------------------------------------------------------
+
+@router.post("/{estudiante_id}/foto")
+async def subir_foto(
+    estudiante_id: str,
+    archivo: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(require_roles("admin")),
+):
+    import base64 as b64lib
+    from io import BytesIO
+    from PIL import Image
+
+    est = db.query(Estudiante).filter(Estudiante.id == estudiante_id).first()
+    if not est:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Estudiante no encontrado")
+
+    if not archivo.content_type or not archivo.content_type.startswith("image/"):
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Solo se aceptan imágenes (jpg, png, webp...)")
+
+    contenido = await archivo.read()
+    if len(contenido) > 5 * 1024 * 1024:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "La imagen supera el límite de 5 MB")
+
+    try:
+        img = Image.open(BytesIO(contenido)).convert("RGB")
+    except Exception:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "No se pudo leer la imagen")
+
+    # Recorte cuadrado centrado
+    w, h = img.size
+    min_dim = min(w, h)
+    left = (w - min_dim) // 2
+    top  = (h - min_dim) // 2
+    img  = img.crop((left, top, left + min_dim, top + min_dim))
+
+    # Redimensionar a 200×200 px
+    img = img.resize((200, 200), Image.LANCZOS)
+
+    buf = BytesIO()
+    img.save(buf, format="JPEG", quality=75, optimize=True)
+    foto_b64 = "data:image/jpeg;base64," + b64lib.b64encode(buf.getvalue()).decode()
+
+    est.foto_url = foto_b64
+    db.commit()
+    return {"foto_url": foto_b64}
+
+
+# ---------------------------------------------------------------------------
+# DELETE /estudiantes/{id}/foto  →  Eliminar foto del estudiante
+# ---------------------------------------------------------------------------
+
+@router.delete("/{estudiante_id}/foto", status_code=status.HTTP_204_NO_CONTENT)
+def eliminar_foto(
+    estudiante_id: str,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(require_roles("admin")),
+):
+    est = db.query(Estudiante).filter(Estudiante.id == estudiante_id).first()
+    if not est:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Estudiante no encontrado")
+    est.foto_url = None
+    db.commit()
+
+
+# ---------------------------------------------------------------------------
 # GET /estudiantes/{id}/qr  →  PNG image
 # ---------------------------------------------------------------------------
 

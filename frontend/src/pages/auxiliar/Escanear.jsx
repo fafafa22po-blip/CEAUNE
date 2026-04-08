@@ -26,18 +26,33 @@ export const MOTIVO_LABEL = {
 
 // ─── Config visual por acción detectada ──────────────────────────────────────
 const PREVIEW_HEADER = {
-  ingreso:          { bg: 'bg-green-500',  label: 'INGRESO'           },
-  tardanza:         { bg: 'bg-amber-500',  label: 'TARDANZA'          },
-  salida:           { bg: 'bg-blue-500',   label: 'SALIDA'            },
-  salida_especial:  { bg: 'bg-orange-500', label: 'SALIDA ANTICIPADA' },
-  ingreso_especial: { bg: 'bg-violet-600', label: 'REGRESO'           },
+  ingreso:          { bg: 'bg-green-500',  label: 'INGRESO',           ring: 'ring-green-400'  },
+  tardanza:         { bg: 'bg-amber-500',  label: 'TARDANZA',          ring: 'ring-amber-400'  },
+  salida:           { bg: 'bg-blue-500',   label: 'SALIDA',            ring: 'ring-blue-400'   },
+  salida_especial:  { bg: 'bg-orange-500', label: 'SALIDA ANTICIPADA', ring: 'ring-orange-400' },
+  ingreso_especial: { bg: 'bg-violet-600', label: 'REGRESO',           ring: 'ring-violet-400' },
 }
 
 const ESTADO_CFG = {
-  puntual:  { label: 'PUNTUAL',  cls: 'badge-verde',    headerBg: 'bg-green-500',  modalLabel: 'Llegó a tiempo'     },
-  tardanza: { label: 'TARDANZA', cls: 'badge-amarillo', headerBg: 'bg-amber-500',  modalLabel: 'Tardanza detectada' },
-  especial: { label: 'ESPECIAL', cls: 'badge-naranja',  headerBg: 'bg-violet-600', modalLabel: 'Registro especial'  },
-  falta:    { label: 'FALTA',    cls: 'badge-rojo',     headerBg: 'bg-red-500',    modalLabel: 'Falta registrada'   },
+  puntual:  { label: 'PUNTUAL',  cls: 'badge-verde',    headerBg: 'bg-green-500',  modalLabel: 'Llegó a tiempo',    ring: 'ring-green-400'  },
+  tardanza: { label: 'TARDANZA', cls: 'badge-amarillo', headerBg: 'bg-amber-500',  modalLabel: 'Tardanza detectada',ring: 'ring-amber-400'  },
+  especial: { label: 'ESPECIAL', cls: 'badge-naranja',  headerBg: 'bg-violet-600', modalLabel: 'Registro especial', ring: 'ring-violet-400' },
+  falta:    { label: 'FALTA',    cls: 'badge-rojo',     headerBg: 'bg-red-500',    modalLabel: 'Falta registrada',  ring: 'ring-red-400'    },
+}
+
+function FotoEstudiante({ foto_url, nombre, ring = 'ring-gray-200' }) {
+  if (foto_url) {
+    return (
+      <div className={`w-20 h-20 rounded-2xl overflow-hidden ring-2 ${ring} flex-shrink-0`}>
+        <img src={foto_url} alt={nombre} className="w-full h-full object-cover" />
+      </div>
+    )
+  }
+  return (
+    <div className={`w-20 h-20 rounded-2xl bg-gray-100 ring-2 ${ring} flex items-center justify-center text-3xl font-bold text-gray-400 flex-shrink-0`}>
+      {nombre?.charAt(0) || 'A'}
+    </div>
+  )
 }
 
 const AUTO_CONFIRM_SEG = 3
@@ -400,9 +415,11 @@ export default function Escanear() {
             <div className="p-5 space-y-4">
               {/* Info del alumno */}
               <div className="flex items-center gap-4">
-                <div className="w-14 h-14 rounded-2xl bg-gray-100 flex items-center justify-center text-2xl font-bold text-gray-400 flex-shrink-0">
-                  {preview.estudiante?.nombre?.charAt(0) || 'A'}
-                </div>
+                <FotoEstudiante
+                  foto_url={preview.estudiante?.foto_url}
+                  nombre={preview.estudiante?.nombre}
+                  ring={previewHdr?.ring || 'ring-gray-200'}
+                />
                 <div>
                   <p className="font-bold text-marino text-lg leading-tight">
                     {preview.estudiante?.nombre} {preview.estudiante?.apellido}
@@ -548,9 +565,11 @@ export default function Escanear() {
 
             <div className="p-5 space-y-4">
               <div className="flex items-center gap-4">
-                <div className="w-14 h-14 rounded-2xl bg-gray-100 flex items-center justify-center text-2xl font-bold text-gray-400 flex-shrink-0">
-                  {resultado.estudiante?.nombre?.charAt(0) || 'A'}
-                </div>
+                <FotoEstudiante
+                  foto_url={resultado.estudiante?.foto_url}
+                  nombre={resultado.estudiante?.nombre}
+                  ring={resultCfg?.ring || 'ring-gray-200'}
+                />
                 <div>
                   <p className="font-bold text-marino text-lg leading-tight">
                     {resultado.estudiante?.nombre} {resultado.estudiante?.apellido}
