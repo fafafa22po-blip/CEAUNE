@@ -9,13 +9,7 @@ import { es } from 'date-fns/locale'
 const ROL_TO_NIVEL = { 'i-auxiliar': 'inicial', 'p-auxiliar': 'primaria', 's-auxiliar': 'secundaria' }
 const NIVEL_LABEL  = { inicial: 'Inicial', primaria: 'Primaria', secundaria: 'Secundaria' }
 
-const GRADOS_POR_NIVEL = {
-  inicial:    ['3', '4', '5'],
-  primaria:   ['1', '2', '3', '4', '5', '6'],
-  secundaria: ['1', '2', '3', '4', '5'],
-}
-
-const SECCIONES = ['A', 'B', 'C', 'D', 'E']
+import { GRADOS_POR_NIVEL, getSecciones, formatGrado } from '../../lib/nivelAcademico'
 
 const TIPOS_ACEPTADOS = ['application/pdf', 'image/png', 'image/jpeg', 'image/jpg', 'image/webp']
 const MAX_MB = 8
@@ -29,8 +23,9 @@ export default function AuxiliarHorarioClases() {
   const nivel   = ROL_TO_NIVEL[usuario?.rol] || 'primaria'
   const anio    = new Date().getFullYear()
 
-  const [grado,      setGrado]     = useState(GRADOS_POR_NIVEL[nivel][0])
-  const [seccion,    setSeccion]   = useState('A')
+  const gradosNivel = GRADOS_POR_NIVEL[nivel] || []
+  const [grado,      setGrado]     = useState(gradosNivel[0] || '')
+  const [seccion,    setSeccion]   = useState(getSecciones(nivel, gradosNivel[0] || '')[0] || '')
   const [archivo,    setArchivo]   = useState(null)
   const [cargado,    setCargado]   = useState(false)
   const [buscando,   setBuscando]  = useState(false)
@@ -122,26 +117,34 @@ export default function AuxiliarHorarioClases() {
 
         <div className="flex flex-wrap gap-3 items-end">
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Grado</label>
+            <label className="block text-xs font-medium text-gray-600 mb-1">
+              {nivel === 'inicial' ? 'Edad' : 'Grado'}
+            </label>
             <select
               className="input"
               value={grado}
-              onChange={e => { setGrado(e.target.value); setCargado(false); setArchivo(null) }}
+              onChange={e => {
+                setGrado(e.target.value)
+                setSeccion(getSecciones(nivel, e.target.value)[0] || '')
+                setCargado(false); setArchivo(null)
+              }}
             >
               {GRADOS_POR_NIVEL[nivel].map(g => (
-                <option key={g} value={g}>{g}°</option>
+                <option key={g} value={g}>{formatGrado(nivel, g)}</option>
               ))}
             </select>
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Sección</label>
+            <label className="block text-xs font-medium text-gray-600 mb-1">
+              {nivel === 'inicial' ? 'Aula' : 'Sección'}
+            </label>
             <select
               className="input"
               value={seccion}
               onChange={e => { setSeccion(e.target.value); setCargado(false); setArchivo(null) }}
             >
-              {SECCIONES.map(s => <option key={s} value={s}>{s}</option>)}
+              {getSecciones(nivel, grado).map(s => <option key={s} value={s}>{s}</option>)}
             </select>
           </div>
 

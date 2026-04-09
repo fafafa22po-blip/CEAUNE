@@ -6,6 +6,7 @@ import {
 } from 'lucide-react'
 import api from '../../lib/api'
 import toast from 'react-hot-toast'
+import { formatGradoSeccion } from '../../lib/nivelAcademico'
 import { abrirWhatsApp } from '../../lib/externo'
 
 function IconWhatsApp({ size = 16 }) {
@@ -146,7 +147,7 @@ function PanelContacto({ apo, onClose, onGestionarHijos }) {
                     </div>
                     <div>
                       <p className="text-sm font-medium text-gray-800">{h.nombre} {h.apellido}</p>
-                      <p className="text-xs text-gray-400">{h.grado}° {h.seccion} · {h.nivel}</p>
+                      <p className="text-xs text-gray-400">{formatGradoSeccion(h.nivel, h.grado, h.seccion)} · {h.nivel}</p>
                     </div>
                   </div>
                 ))}
@@ -511,7 +512,7 @@ export default function Apoderados() {
                             key={h.id}
                             className={`text-xs font-medium px-2 py-0.5 rounded-full ${NIVEL_BADGE[h.nivel]?.cls || 'bg-gray-100 text-gray-600'}`}
                           >
-                            {h.nombre} {h.grado}°{h.seccion}
+                            {h.nombre} · {formatGradoSeccion(h.nivel, h.grado, h.seccion)}
                           </span>
                         ))}
                       </div>
@@ -780,7 +781,7 @@ export default function Apoderados() {
                         <div>
                           <p className="font-medium text-gray-800 text-sm">{h.nombre} {h.apellido}</p>
                           <p className="text-xs text-gray-400 mt-0.5">
-                            {h.grado}° {h.seccion}
+                            {formatGradoSeccion(h.nivel, h.grado, h.seccion)}
                             {badge && (
                               <span className={`ml-1.5 px-1.5 py-0.5 rounded-full text-[10px] font-medium ${badge.cls}`}>
                                 {badge.label}
@@ -839,7 +840,7 @@ export default function Apoderados() {
                         <div>
                           <p className="font-medium text-gray-800 text-sm">{est.nombre} {est.apellido}</p>
                           <p className="text-xs text-gray-400 mt-0.5">
-                            {est.grado}° {est.seccion}
+                            {formatGradoSeccion(est.nivel, est.grado, est.seccion)}
                             {badge && (
                               <span className={`ml-1.5 px-1.5 py-0.5 rounded-full text-[10px] font-medium ${badge.cls}`}>
                                 {badge.label}

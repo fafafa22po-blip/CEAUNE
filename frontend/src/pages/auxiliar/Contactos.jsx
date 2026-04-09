@@ -7,6 +7,7 @@ import toast from 'react-hot-toast'
 import api from '../../lib/api'
 import { abrirWhatsApp } from '../../lib/externo'
 import { obtenerUsuario } from '../../lib/auth'
+import { formatGradoSeccion } from '../../lib/nivelAcademico'
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 
@@ -36,7 +37,7 @@ function ModalContacto({ est, onClose }) {
 
   const mensajeDefault = useMemo(() =>
     `Estimado/a apoderado/a,\nLe contactamos por asuntos relacionados a *${est.nombre} ${est.apellido}* ` +
-    `(${cfg.label} — ${est.grado} "${est.seccion}").\n\n_Colegio CEAUNE_`
+    `(${cfg.label} — ${formatGradoSeccion(est.nivel, est.grado, est.seccion)}).\n\n_Colegio CEAUNE_`
   , [est.id]) // eslint-disable-line
 
   useEffect(() => {
@@ -79,7 +80,7 @@ function ModalContacto({ est, onClose }) {
                 <p className="text-white font-bold text-base leading-tight">{est.nombre} {est.apellido}</p>
                 <div className="flex items-center gap-2 mt-1">
                   <span className="text-white/80 text-xs flex items-center gap-1">
-                    <GraduationCap size={11} /> {est.grado} · Sec. {est.seccion}
+                    <GraduationCap size={11} /> {formatGradoSeccion(est.nivel, est.grado, est.seccion)}
                   </span>
                   <span className="text-white/60 text-xs font-mono">DNI {est.dni}</span>
                 </div>

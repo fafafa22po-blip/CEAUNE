@@ -3,6 +3,7 @@ import {
   CheckCircle2, XCircle, Paperclip, X, Clock,
   AlertCircle, ChevronLeft, ChevronRight, Calendar, FileText,
 } from 'lucide-react'
+import { formatGradoSeccion } from '../../lib/nivelAcademico'
 import api from '../../lib/api'
 import toast from 'react-hot-toast'
 import { format, formatDistanceToNow, isToday, isYesterday, differenceInHours } from 'date-fns'
@@ -66,7 +67,7 @@ function FilaJustificacion({ j, activa, onClick }) {
             </p>
             {j.estudiante?.grado && (
               <span className="text-[10px] font-bold px-2 py-0.5 rounded-full flex-shrink-0 bg-marino text-white tabular-nums">
-                {j.estudiante.grado}° {j.estudiante.seccion}
+                {formatGradoSeccion(j.estudiante.nivel, j.estudiante.grado, j.estudiante.seccion)}
               </span>
             )}
           </div>
@@ -160,7 +161,7 @@ function PanelDetalle({ j, onVolver, onAprobar, onRechazar, procesando }) {
           <p className="text-xs text-white/70 mt-0.5 flex items-center gap-1.5">
             {NIVEL_LABEL[nivel]}
             <span className="bg-dorado text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
-              {j.estudiante?.grado}° {j.estudiante?.seccion}
+              {formatGradoSeccion(j.estudiante?.nivel, j.estudiante?.grado, j.estudiante?.seccion)}
             </span>
           </p>
         </div>

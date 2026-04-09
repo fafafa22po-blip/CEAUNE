@@ -3,6 +3,7 @@ import { Hash, Camera, Mail, Clock, MessageCircle, X, Phone, Copy, AlertTriangle
 import toast from 'react-hot-toast'
 import QRScanner from '../../components/QRScanner'
 import api from '../../lib/api'
+import { formatGradoSeccion } from '../../lib/nivelAcademico'
 import { abrirWhatsApp } from '../../lib/externo'
 
 // ─── Motivos para salida anticipada ──────────────────────────────────────────
@@ -441,7 +442,7 @@ export default function Escanear() {
                     {preview.estudiante?.nombre} {preview.estudiante?.apellido}
                   </p>
                   <p className="text-gray-500 text-sm mt-0.5">
-                    {preview.estudiante?.grado}° {preview.estudiante?.seccion}
+                    {formatGradoSeccion(preview.estudiante?.nivel, preview.estudiante?.grado, preview.estudiante?.seccion)}
                     <span className="text-gray-400 mx-1">·</span>
                     <span className="capitalize">{preview.estudiante?.nivel}</span>
                   </p>
@@ -603,7 +604,7 @@ export default function Escanear() {
                   {resultado.estudiante?.nombre} {resultado.estudiante?.apellido}
                 </p>
                 <p className="text-gray-500 text-sm">
-                  {resultado.estudiante?.grado}° {resultado.estudiante?.seccion}
+                  {formatGradoSeccion(resultado.estudiante?.nivel, resultado.estudiante?.grado, resultado.estudiante?.seccion)}
                   <span className="text-gray-400 mx-1">·</span>
                   <span className="capitalize text-gray-400 text-xs">{resultado.estudiante?.nivel}</span>
                 </p>

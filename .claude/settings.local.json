@@ -10,7 +10,13 @@
       "Bash(npm install:*)",
       "Bash(npx cap:*)",
       "Bash(xargs grep:*)",
-      "Bash(docker compose:*)"
+      "Bash(docker compose:*)",
+      "Bash(git add:*)",
+      "Bash(git commit -m ':*)",
+      "Bash(git push:*)",
+      "Bash(mysql --version)",
+      "Bash(where mysql:*)",
+      "Bash(where mariadb:*)"
     ]
   }
 }

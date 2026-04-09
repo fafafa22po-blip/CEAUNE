@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { Plus, X, RefreshCw, Pencil, KeyRound, UserCheck, UserX, Users, Search, Trash2 } from 'lucide-react'
 import api from '../../lib/api'
 import toast from 'react-hot-toast'
+import { formatGradoSeccion } from '../../lib/nivelAcademico'
 
 const ROLES = [
   { v: 'i-auxiliar', label: 'Auxiliar Inicial' },
@@ -11,12 +12,7 @@ const ROLES = [
   { v: 'admin',      label: 'Administrador' },
 ]
 
-const GRADOS_POR_NIVEL = {
-  inicial:    ['3', '4', '5'],
-  primaria:   ['1', '2', '3', '4', '5', '6'],
-  secundaria: ['1', '2', '3', '4', '5'],
-}
-const SECCIONES = ['A', 'B', 'C', 'D', 'E']
+import { GRADOS_POR_NIVEL, getSecciones, formatGrado } from '../../lib/nivelAcademico'
 
 const NIVELES = [
   { v: 'inicial',    label: 'Inicial' },
@@ -366,7 +362,7 @@ export default function Usuarios() {
                       <p className="font-medium text-gray-800">
                         {u.nombre} {u.apellido}
                         {u.aula && (
-                          <span className="ml-2 text-xs text-gray-400">· {u.aula.grado}° {u.aula.seccion}</span>
+                          <span className="ml-2 text-xs text-gray-400">· {formatGradoSeccion(u.aula.nivel, u.aula.grado, u.aula.seccion)}</span>
                         )}
                       </p>
                       {u.es_apoderado && (
@@ -517,16 +513,16 @@ export default function Usuarios() {
             )}
             {esTutorForm && (
               <div className="grid grid-cols-2 gap-3">
-                <Campo label="Grado">
-                  <select className="input" value={form.grado} onChange={setField('grado')} disabled={!form.nivel}>
+                <Campo label={form.nivel === 'inicial' ? 'Edad' : 'Grado'}>
+                  <select className="input" value={form.grado} onChange={e => { setField('grado')(e); setField('seccion')({ target: { value: '' } }) }} disabled={!form.nivel}>
                     <option value="">Seleccionar...</option>
-                    {(GRADOS_POR_NIVEL[form.nivel] || []).map(g => <option key={g} value={g}>{g}</option>)}
+                    {(GRADOS_POR_NIVEL[form.nivel] || []).map(g => <option key={g} value={g}>{formatGrado(form.nivel, g)}</option>)}
                   </select>
                 </Campo>
-                <Campo label="Sección">
-                  <select className="input" value={form.seccion} onChange={setField('seccion')}>
+                <Campo label={form.nivel === 'inicial' ? 'Aula' : 'Sección'}>
+                  <select className="input" value={form.seccion} onChange={setField('seccion')} disabled={!form.grado}>
                     <option value="">Seleccionar...</option>
-                    {SECCIONES.map(s => <option key={s} value={s}>{s}</option>)}
+                    {getSecciones(form.nivel, form.grado).map(s => <option key={s} value={s}>{s}</option>)}
                   </select>
                 </Campo>
               </div>
@@ -593,16 +589,16 @@ export default function Usuarios() {
             )}
             {esTutorEdit && (
               <div className="grid grid-cols-2 gap-3">
-                <Campo label="Grado">
-                  <select className="input" value={formEditar.grado} onChange={setFieldEditar('grado')} disabled={!formEditar.nivel}>
+                <Campo label={formEditar.nivel === 'inicial' ? 'Edad' : 'Grado'}>
+                  <select className="input" value={formEditar.grado} onChange={e => { setFieldEditar('grado')(e); setFieldEditar('seccion')({ target: { value: '' } }) }} disabled={!formEditar.nivel}>
                     <option value="">Seleccionar...</option>
-                    {(GRADOS_POR_NIVEL[formEditar.nivel] || []).map(g => <option key={g} value={g}>{g}</option>)}
+                    {(GRADOS_POR_NIVEL[formEditar.nivel] || []).map(g => <option key={g} value={g}>{formatGrado(formEditar.nivel, g)}</option>)}
                   </select>
                 </Campo>
-                <Campo label="Sección">
-                  <select className="input" value={formEditar.seccion} onChange={setFieldEditar('seccion')}>
+                <Campo label={formEditar.nivel === 'inicial' ? 'Aula' : 'Sección'}>
+                  <select className="input" value={formEditar.seccion} onChange={setFieldEditar('seccion')} disabled={!formEditar.grado}>
                     <option value="">Seleccionar...</option>
-                    {SECCIONES.map(s => <option key={s} value={s}>{s}</option>)}
+                    {getSecciones(formEditar.nivel, formEditar.grado).map(s => <option key={s} value={s}>{s}</option>)}
                   </select>
                 </Campo>
               </div>
@@ -671,7 +667,7 @@ export default function Usuarios() {
                           <div key={h.id} className="flex items-center justify-between bg-white rounded-lg px-3 py-2 border border-dorado/10">
                             <div>
                               <p className="text-xs font-medium text-gray-800">{h.nombre} {h.apellido}</p>
-                              <p className="text-[10px] text-gray-400">{h.nivel} · {h.grado}° {h.seccion} · DNI {h.dni}</p>
+                              <p className="text-[10px] text-gray-400">{h.nivel} · {formatGradoSeccion(h.nivel, h.grado, h.seccion)} · DNI {h.dni}</p>
                             </div>
                             <button
                               type="button"
@@ -771,7 +767,7 @@ export default function Usuarios() {
                     >
                       <div>
                         <p className="text-sm font-medium text-gray-800">{est.nombre} {est.apellido}</p>
-                        <p className="text-xs text-gray-400">{est.nivel} · {est.grado}° {est.seccion} · DNI {est.dni}</p>
+                        <p className="text-xs text-gray-400">{est.nivel} · {formatGradoSeccion(est.nivel, est.grado, est.seccion)} · DNI {est.dni}</p>
                       </div>
                       <Plus size={15} className="text-dorado flex-shrink-0" />
                     </button>

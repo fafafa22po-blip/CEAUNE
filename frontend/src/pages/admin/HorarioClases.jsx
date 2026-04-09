@@ -7,13 +7,7 @@ import { es } from 'date-fns/locale'
 
 const NIVEL_LABEL = { inicial: 'Inicial', primaria: 'Primaria', secundaria: 'Secundaria' }
 
-const GRADOS_POR_NIVEL = {
-  inicial:    ['3', '4', '5'],
-  primaria:   ['1', '2', '3', '4', '5', '6'],
-  secundaria: ['1', '2', '3', '4', '5'],
-}
-
-const SECCIONES = ['A', 'B', 'C', 'D', 'E']
+import { GRADOS_POR_NIVEL, getSecciones, formatGrado } from '../../lib/nivelAcademico'
 
 const TIPOS_ACEPTADOS = ['application/pdf', 'image/png', 'image/jpeg', 'image/jpg', 'image/webp']
 const MAX_MB = 8
@@ -128,8 +122,10 @@ export default function HorarioClases() {
               className="input"
               value={nivel}
               onChange={e => {
-                setNivel(e.target.value)
-                setGrado(GRADOS_POR_NIVEL[e.target.value][0])
+                const newNivel = e.target.value
+                setNivel(newNivel)
+                setGrado(GRADOS_POR_NIVEL[newNivel][0])
+                setSeccion(getSecciones(newNivel, GRADOS_POR_NIVEL[newNivel][0])[0] || '')
                 setCargado(false)
                 setArchivo(null)
               }}
@@ -148,7 +144,7 @@ export default function HorarioClases() {
               onChange={e => { setGrado(e.target.value); setCargado(false); setArchivo(null) }}
             >
               {GRADOS_POR_NIVEL[nivel].map(g => (
-                <option key={g} value={g}>{g}°</option>
+                <option key={g} value={g}>{formatGrado(nivel, g)}</option>
               ))}
             </select>
           </div>
@@ -160,7 +156,7 @@ export default function HorarioClases() {
               value={seccion}
               onChange={e => { setSeccion(e.target.value); setCargado(false); setArchivo(null) }}
             >
-              {SECCIONES.map(s => <option key={s} value={s}>{s}</option>)}
+              {getSecciones(nivel, grado).map(s => <option key={s} value={s}>{s}</option>)}
             </select>
           </div>
 

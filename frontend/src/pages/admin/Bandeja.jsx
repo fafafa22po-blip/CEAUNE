@@ -3,6 +3,7 @@ import {
   ChevronLeft, Check, CheckCircle2, MessageSquare, Paperclip,
   Inbox, School, Users, User, Send,
 } from 'lucide-react'
+import { formatGradoSeccion } from '../../lib/nivelAcademico'
 import api from '../../lib/api'
 import toast from 'react-hot-toast'
 import { format, isToday, isYesterday } from 'date-fns'
@@ -195,7 +196,7 @@ function PanelDetalle({ com, onVolver, onMarcarLeida }) {
                           </p>
                           {est?.grado && (
                             <span className="text-[10px] font-bold bg-marino text-white px-1.5 py-0.5 rounded-full">
-                              {est.grado}° {est.seccion}
+                              {formatGradoSeccion(est.nivel, est.grado, est.seccion)}
                             </span>
                           )}
                         </div>
@@ -252,7 +253,7 @@ function PanelDetalle({ com, onVolver, onMarcarLeida }) {
                       <span className="text-xs text-gray-700 truncate">{est?.nombre} {est?.apellido}</span>
                       {est?.grado && (
                         <span className="text-[10px] font-bold bg-marino text-white px-1.5 py-0.5 rounded-full flex-shrink-0">
-                          {est.grado}° {est.seccion}
+                          {formatGradoSeccion(est.nivel, est.grado, est.seccion)}
                         </span>
                       )}
                     </div>

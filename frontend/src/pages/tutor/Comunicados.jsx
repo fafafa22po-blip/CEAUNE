@@ -8,6 +8,7 @@ import toast from 'react-hot-toast'
 import { format, isToday, isYesterday } from 'date-fns'
 import { es } from 'date-fns/locale'
 import api from '../../lib/api'
+import { formatGradoSeccion } from '../../lib/nivelAcademico'
 
 const MAX_CHARS = 1000
 
@@ -237,7 +238,7 @@ function FilaRespuesta({ r, activa, onClick }) {
           </div>
           {est?.grado && (
             <span className={`inline-block text-[10px] font-bold px-1.5 py-0.5 rounded-full mt-0.5 ${NIVEL_COLOR[nivel] ?? 'bg-gray-100 text-gray-600'}`}>
-              {est.grado}° {est.seccion}
+              {formatGradoSeccion(est.nivel, est.grado, est.seccion)}
             </span>
           )}
           <p className="text-[11px] text-gray-400 mt-1 truncate">Re: {r.asunto}</p>
@@ -291,7 +292,7 @@ function PanelRespuestaIndividual({ r, onVolver, onMarcarLeida }) {
         <div className="flex-1 min-w-0">
           <p className="font-semibold text-sm leading-tight truncate">{est?.nombre} {est?.apellido}</p>
           <p className="text-xs text-white/60 mt-0.5">
-            {est?.grado}° {est?.seccion}
+            {formatGradoSeccion(est?.nivel, est?.grado, est?.seccion)}
             {est?.nivel && <span className="ml-1 capitalize">· {est.nivel}</span>}
           </p>
         </div>
@@ -1101,7 +1102,7 @@ function FormEnviar({ aula, onEnviado }) {
               {tipoEnvio === 'aula' && aula && (
                 <p>
                   <span className="font-medium text-gray-700">Para:</span>{' '}
-                  Todos los estudiantes de {aula.grado}° {aula.seccion} — {aula.nivel}
+                  Todos los estudiantes de {formatGradoSeccion(aula.nivel, aula.grado, aula.seccion)} — {aula.nivel}
                 </p>
               )}
               {tipoEnvio === 'individual' && seleccionados.length > 0 && (
@@ -1171,7 +1172,7 @@ export default function TutorComunicados() {
           <h1 className="text-xl font-bold text-marino">Comunicados</h1>
           {aula && (
             <p className="text-sm text-gray-400 mt-0.5 capitalize">
-              {aula.nivel} — {aula.grado}° {aula.seccion}
+              {aula.nivel} — {formatGradoSeccion(aula.nivel, aula.grado, aula.seccion)}
             </p>
           )}
         </div>

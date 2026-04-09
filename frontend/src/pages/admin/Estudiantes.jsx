@@ -4,12 +4,7 @@ import api from '../../lib/api'
 import toast from 'react-hot-toast'
 import ModalImprimirCarnets from './ModalImprimirCarnets'
 
-const GRADOS_POR_NIVEL = {
-  inicial:    ['3', '4', '5'],
-  primaria:   ['1', '2', '3', '4', '5', '6'],
-  secundaria: ['1', '2', '3', '4', '5'],
-}
-const SECCIONES = ['A', 'B', 'C', 'D', 'E']
+import { GRADOS_POR_NIVEL, getSecciones, formatGradoSeccion, formatGrado, labelSeccion } from '../../lib/nivelAcademico'
 
 const NIVEL_BADGE = {
   inicial:    { label: 'Inicial',    cls: 'bg-green-100 text-green-700' },
@@ -480,8 +475,8 @@ export default function Estudiantes() {
           disabled={!filtroGrado}
           onChange={(e) => { setFiltroSeccion(e.target.value); setPagina(1) }}
         >
-          <option value="">Todas las secciones</option>
-          {SECCIONES.map(s => <option key={s} value={s}>{s}</option>)}
+          <option value="">{filtroNivel === 'inicial' ? 'Todas las aulas' : 'Todas las secciones'}</option>
+          {getSecciones(filtroNivel, filtroGrado).map(s => <option key={s} value={s}>{s}</option>)}
         </select>
 
         {hayFiltros && (
@@ -502,7 +497,7 @@ export default function Estudiantes() {
             className="btn-primary text-sm flex items-center gap-2 ml-auto"
           >
             <Printer size={13} />
-            Imprimir carnets — {filtroGrado}° {filtroSeccion}
+            Imprimir carnets — {formatGradoSeccion(filtroNivel, filtroGrado, filtroSeccion)}
           </button>
         )}
       </div>
@@ -548,7 +543,7 @@ export default function Estudiantes() {
                       <span className="ml-2 text-[10px] bg-gray-200 text-gray-500 px-1.5 py-0.5 rounded-full font-medium">Inactivo</span>
                     </td>
                     <td className="px-4 py-3 text-gray-400">{est.dni}</td>
-                    <td className="px-4 py-3 text-gray-400">{est.grado}° {est.seccion}</td>
+                    <td className="px-4 py-3 text-gray-400">{formatGradoSeccion(est.nivel, est.grado, est.seccion)}</td>
                     <td className="px-4 py-3">
                       {badge
                         ? <span className={`text-xs font-medium px-2 py-0.5 rounded-full opacity-50 ${badge.cls}`}>{badge.label}</span>
@@ -588,7 +583,7 @@ export default function Estudiantes() {
                 <tr key={est.id} className="border-b border-gray-50 hover:bg-gray-50">
                   <td className="px-4 py-3 font-medium text-gray-800">{est.nombre} {est.apellido}</td>
                   <td className="px-4 py-3 text-gray-500">{est.dni}</td>
-                  <td className="px-4 py-3 text-gray-700 font-medium">{est.grado}° {est.seccion}</td>
+                  <td className="px-4 py-3 text-gray-700 font-medium">{formatGradoSeccion(est.nivel, est.grado, est.seccion)}</td>
                   <td className="px-4 py-3">
                     {badge
                       ? <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${badge.cls}`}>{badge.label}</span>
@@ -732,27 +727,34 @@ export default function Estudiantes() {
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-xs font-medium text-gray-600 mb-1">Grado</label>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">
+                        {formNuevo.nivel === 'inicial' ? 'Edad' : 'Grado'}
+                      </label>
                       <select
                         className="input"
                         value={formNuevo.grado}
-                        onChange={(e) => setFormNuevo({ ...formNuevo, grado: e.target.value })}
+                        onChange={(e) => setFormNuevo({ ...formNuevo, grado: e.target.value, seccion: '' })}
                       >
                         <option value="">— elige nivel primero —</option>
                         {(GRADOS_POR_NIVEL[formNuevo.nivel] || []).map(g => (
-                          <option key={g} value={g}>{g}°</option>
+                          <option key={g} value={g}>{formatGrado(formNuevo.nivel, g)}</option>
                         ))}
                       </select>
                     </div>
                     <div>
-                      <label className="block text-xs font-medium text-gray-600 mb-1">Sección</label>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">
+                        {labelSeccion(formNuevo.nivel)}
+                      </label>
                       <select
                         className="input"
                         value={formNuevo.seccion}
                         onChange={(e) => setFormNuevo({ ...formNuevo, seccion: e.target.value })}
+                        disabled={!formNuevo.grado}
                       >
                         <option value="">Seleccionar...</option>
-                        {SECCIONES.map(s => <option key={s} value={s}>{s}</option>)}
+                        {getSecciones(formNuevo.nivel, formNuevo.grado).map(s => (
+                          <option key={s} value={s}>{s}</option>
+                        ))}
                       </select>
                     </div>
                   </div>
@@ -1044,17 +1046,25 @@ export default function Estudiantes() {
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-xs font-medium text-gray-600 mb-1">Grado</label>
-                      <select className="input" value={formEditar.grado || ''} onChange={(e) => setFormEditar({ ...formEditar, grado: e.target.value })}>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">
+                        {formEditar.nivel === 'inicial' ? 'Edad' : 'Grado'}
+                      </label>
+                      <select className="input" value={formEditar.grado || ''} onChange={(e) => setFormEditar({ ...formEditar, grado: e.target.value, seccion: '' })}>
                         <option value="">Seleccionar...</option>
-                        {(GRADOS_POR_NIVEL[formEditar.nivel] || []).map(g => <option key={g} value={g}>{g}°</option>)}
+                        {(GRADOS_POR_NIVEL[formEditar.nivel] || []).map(g => (
+                          <option key={g} value={g}>{formatGrado(formEditar.nivel, g)}</option>
+                        ))}
                       </select>
                     </div>
                     <div>
-                      <label className="block text-xs font-medium text-gray-600 mb-1">Sección</label>
-                      <select className="input" value={formEditar.seccion || ''} onChange={(e) => setFormEditar({ ...formEditar, seccion: e.target.value })}>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">
+                        {labelSeccion(formEditar.nivel)}
+                      </label>
+                      <select className="input" value={formEditar.seccion || ''} onChange={(e) => setFormEditar({ ...formEditar, seccion: e.target.value })} disabled={!formEditar.grado}>
                         <option value="">Seleccionar...</option>
-                        {SECCIONES.map(s => <option key={s} value={s}>{s}</option>)}
+                        {getSecciones(formEditar.nivel, formEditar.grado).map(s => (
+                          <option key={s} value={s}>{s}</option>
+                        ))}
                       </select>
                     </div>
                   </div>
@@ -1222,21 +1232,25 @@ export default function Estudiantes() {
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Grado</label>
+                <label className="block text-xs font-medium text-gray-600 mb-1">
+                  {formReactivar.nivel === 'inicial' ? 'Edad' : 'Grado'}
+                </label>
                 <select
                   className="input"
                   value={formReactivar.grado}
-                  onChange={e => setFormReactivar(f => ({ ...f, grado: e.target.value }))}
+                  onChange={e => setFormReactivar(f => ({ ...f, grado: e.target.value, seccion: '' }))}
                   disabled={!formReactivar.nivel}
                 >
                   <option value="">— elige nivel primero —</option>
                   {(GRADOS_POR_NIVEL[formReactivar.nivel] || []).map(g => (
-                    <option key={g} value={g}>{g}</option>
+                    <option key={g} value={g}>{formatGrado(formReactivar.nivel, g)}</option>
                   ))}
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Sección</label>
+                <label className="block text-xs font-medium text-gray-600 mb-1">
+                  {labelSeccion(formReactivar.nivel)}
+                </label>
                 <select
                   className="input"
                   value={formReactivar.seccion}
@@ -1244,7 +1258,9 @@ export default function Estudiantes() {
                   disabled={!formReactivar.grado}
                 >
                   <option value="">Seleccionar...</option>
-                  {SECCIONES.map(s => <option key={s} value={s}>{s}</option>)}
+                  {getSecciones(formReactivar.nivel, formReactivar.grado).map(s => (
+                    <option key={s} value={s}>{s}</option>
+                  ))}
                 </select>
               </div>
             </div>
@@ -1370,7 +1386,7 @@ export default function Estudiantes() {
             <div className="bg-gray-50 rounded-xl p-3 mb-4 text-sm">
               <p className="font-semibold text-gray-700">{modalDNIInactivo.nombre} {modalDNIInactivo.apellido}</p>
               <p className="text-gray-500 text-xs mt-0.5">
-                {modalDNIInactivo.nivel} · {modalDNIInactivo.grado}° {modalDNIInactivo.seccion}
+                {modalDNIInactivo.nivel} · {formatGradoSeccion(modalDNIInactivo.nivel, modalDNIInactivo.grado, modalDNIInactivo.seccion)}
                 {modalDNIInactivo.motivo_desactivacion && (
                   <> · <span className={modalDNIInactivo.motivo_desactivacion === 'disciplinario' ? 'text-red-500 font-medium' : ''}>
                     {MOTIVO_LABEL[modalDNIInactivo.motivo_desactivacion] || modalDNIInactivo.motivo_desactivacion}

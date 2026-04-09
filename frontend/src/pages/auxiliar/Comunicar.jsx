@@ -8,17 +8,13 @@ import toast from 'react-hot-toast'
 import api from '../../lib/api'
 import { obtenerUsuario } from '../../lib/auth'
 
-const GRADOS_POR_NIVEL = {
-  inicial:    ['3', '4', '5'],
-  primaria:   ['1', '2', '3', '4', '5', '6'],
-  secundaria: ['1', '2', '3', '4', '5'],
-}
+import { GRADOS_POR_NIVEL, getSecciones, formatGrado, getAulasDeNivel } from '../../lib/nivelAcademico'
+
 const NIVEL_POR_ROL = {
   'i-auxiliar': 'inicial',
   'p-auxiliar': 'primaria',
   's-auxiliar': 'secundaria',
 }
-const SECCIONES = ['A', 'B', 'C', 'D', 'E']
 const MAX_CHARS = 1000
 
 const toggleSet = (set, val) => {
@@ -31,7 +27,11 @@ export default function Comunicar() {
   const location = useLocation()
   const usuario  = obtenerUsuario()
   const nivel    = NIVEL_POR_ROL[usuario?.rol] || 'primaria'
-  const gradosDisponibles = GRADOS_POR_NIVEL[nivel]
+  const gradosDisponibles = GRADOS_POR_NIVEL[nivel] || []
+  // Para inicial: todas las aulas del nivel como pares {grado, seccion}
+  const aulasDelNivel = getAulasDeNivel(nivel)
+  // Para primaria/secundaria: secciones uniformes (iguales en todos los grados)
+  const seccionesUniformes = nivel !== 'inicial' ? getSecciones(nivel, gradosDisponibles[0] || '') : []
 
   const [paso, setPaso]           = useState(1)
   const [tipoEnvio, setTipoEnvio] = useState('individual')
@@ -132,7 +132,7 @@ export default function Comunicar() {
     setAulasMasivoSet(prev => toggleSet(prev, `${g}-${s}`))
 
   const toggleGradoMasivo = (g) => {
-    const keys = SECCIONES.map(s => `${g}-${s}`)
+    const keys = getSecciones(nivel, g).map(s => `${g}-${s}`)
     const allSelected = keys.every(k => aulasMasivoSet.has(k))
     setAulasMasivoSet(prev => {
       const next = new Set(prev)
@@ -142,7 +142,7 @@ export default function Comunicar() {
   }
 
   const toggleSeccionMasivo = (s) => {
-    const keys = gradosDisponibles.map(g => `${g}-${s}`)
+    const keys = gradosDisponibles.filter(g => getSecciones(nivel, g).includes(s)).map(g => `${g}-${s}`)
     const allSelected = keys.every(k => aulasMasivoSet.has(k))
     setAulasMasivoSet(prev => {
       const next = new Set(prev)
@@ -152,7 +152,7 @@ export default function Comunicar() {
   }
 
   const toggleTodoMasivo = () => {
-    const allKeys = gradosDisponibles.flatMap(g => SECCIONES.map(s => `${g}-${s}`))
+    const allKeys = aulasDelNivel.map(({ grado: g, seccion: s }) => `${g}-${s}`)
     const allSelected = allKeys.every(k => aulasMasivoSet.has(k))
     setAulasMasivoSet(allSelected ? new Set() : new Set(allKeys))
   }
@@ -163,10 +163,14 @@ export default function Comunicar() {
       const [gb, sb] = b.split('-')
       return ga.localeCompare(gb, undefined, { numeric: true }) || sa.localeCompare(sb)
     })
-    .map(k => { const [g, s] = k.split('-'); return `${g}°${s}` })
+    .map(k => {
+      const idx = k.lastIndexOf('-')
+      const g = k.slice(0, idx), s = k.slice(idx + 1)
+      return nivel === 'inicial' ? `${g}a — Aula ${s}` : `${g}°${s}`
+    })
 
-  const todosSeleccionados = gradosDisponibles.length > 0 &&
-    gradosDisponibles.every(g => SECCIONES.every(s => aulasMasivoSet.has(`${g}-${s}`)))
+  const todosSeleccionados = aulasDelNivel.length > 0 &&
+    aulasDelNivel.every(({ grado: g, seccion: s }) => aulasMasivoSet.has(`${g}-${s}`))
 
   // ─────────────────────────────────────────────────────────────────────────────
 
@@ -378,7 +382,7 @@ export default function Comunicar() {
                   {destinatarios.map((d) => (
                     <span key={d.id} className="flex items-center gap-1.5 bg-marino text-white text-xs px-3 py-1.5 rounded-full">
                       <span className="font-medium">{d.nombre_completo}</span>
-                      <span className="text-white/55 font-normal">· {d.grado}°{d.seccion}</span>
+                      <span className="text-white/55 font-normal">· {formatGradoSeccion(d.nivel, d.grado, d.seccion)}</span>
                       <button type="button" onClick={() => quitarDestinatario(d.id)} className="hover:opacity-70 ml-0.5">
                         <X size={11} />
                       </button>
@@ -428,7 +432,7 @@ export default function Comunicar() {
                             <Check size={8} className="text-white" strokeWidth={3} />
                           </span>
                         )}
-                        {g}°
+                        {formatGrado(nivel, g)}
                       </button>
                     )
                   })}
@@ -439,15 +443,15 @@ export default function Comunicar() {
                 <div className="space-y-2 pt-2 border-t border-gray-100">
                   <p className="text-xs text-gray-500 font-medium flex items-center gap-1.5">
                     <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-marino text-white text-[10px] font-bold">2</span>
-                    Elige la sección del <strong>{grado}° grado</strong>
+                    Elige el aula del <strong>{formatGrado(nivel, grado)}</strong>
                   </p>
                   <div className="flex gap-2 flex-wrap">
-                    {SECCIONES.map((s) => {
+                    {getSecciones(nivel, grado).map((s) => {
                       const activo = seccion === s
                       return (
                         <button key={s} type="button"
                           onClick={() => setSeccion(s)}
-                          className={`relative flex flex-col items-center justify-center w-14 py-3 rounded-xl border-2 transition-all ${
+                          className={`relative flex flex-col items-center justify-center px-4 py-3 rounded-xl border-2 transition-all ${
                             activo
                               ? 'bg-marino border-marino text-white shadow-md shadow-marino/20 scale-105'
                               : 'bg-white border-gray-200 text-gray-600 hover:border-marino/50 hover:bg-marino/5'
@@ -457,7 +461,7 @@ export default function Comunicar() {
                               <Check size={9} className="text-white" strokeWidth={3} />
                             </span>
                           )}
-                          <span className={`text-lg font-black leading-none ${activo ? 'text-white' : 'text-gray-700'}`}>{s}</span>
+                          <span className={`text-sm font-black leading-none ${activo ? 'text-white' : 'text-gray-700'}`}>{s}</span>
                         </button>
                       )
                     })}
@@ -465,7 +469,7 @@ export default function Comunicar() {
                 </div>
               ) : (
                 <p className="text-xs text-gray-400 text-center py-1 border-t border-gray-100 pt-3">
-                  Primero selecciona el grado para ver las secciones
+                  Primero selecciona el grado para ver las aulas
                 </p>
               )}
             </div>
@@ -486,63 +490,111 @@ export default function Comunicar() {
                 Toca cada aula para seleccionarla. Toca el grado <span className="font-semibold">(fila)</span> o la sección <span className="font-semibold">(columna)</span> para marcar todo de una vez.
               </p>
 
-              <div className="overflow-x-auto">
-                <div className="grid gap-1.5 min-w-0"
-                  style={{ gridTemplateColumns: `2rem repeat(${SECCIONES.length}, 1fr)` }}>
-                  <div />
-                  {SECCIONES.map(s => {
-                    const colKeys = gradosDisponibles.map(g => `${g}-${s}`)
-                    const allCol  = colKeys.every(k => aulasMasivoSet.has(k))
-                    const someCol = colKeys.some(k => aulasMasivoSet.has(k))
-                    return (
-                      <button key={s} type="button"
-                        onClick={() => toggleSeccionMasivo(s)}
-                        className={`py-1.5 rounded-lg text-xs font-bold transition-colors ${
-                          allCol  ? 'bg-marino/15 text-marino' :
-                          someCol ? 'bg-marino/8 text-marino/60' :
-                                    'bg-gray-100 text-gray-500 hover:bg-marino/10 hover:text-marino'
-                        }`}>{s}</button>
-                    )
-                  })}
+              {/* Grid rectangular para primaria/secundaria (secciones uniformes) */}
+              {nivel !== 'inicial' ? (
+                <div className="overflow-x-auto">
+                  <div className="grid gap-1.5 min-w-0"
+                    style={{ gridTemplateColumns: `2rem repeat(${seccionesUniformes.length}, 1fr)` }}>
+                    <div />
+                    {seccionesUniformes.map(s => {
+                      const colKeys = gradosDisponibles.map(g => `${g}-${s}`)
+                      const allCol  = colKeys.every(k => aulasMasivoSet.has(k))
+                      const someCol = colKeys.some(k => aulasMasivoSet.has(k))
+                      return (
+                        <button key={s} type="button"
+                          onClick={() => toggleSeccionMasivo(s)}
+                          className={`py-1.5 rounded-lg text-xs font-bold transition-colors ${
+                            allCol  ? 'bg-marino/15 text-marino' :
+                            someCol ? 'bg-marino/8 text-marino/60' :
+                                      'bg-gray-100 text-gray-500 hover:bg-marino/10 hover:text-marino'
+                          }`}>{s}</button>
+                      )
+                    })}
+                    {gradosDisponibles.map((g) => {
+                      const rowKeys = seccionesUniformes.map(s => `${g}-${s}`)
+                      const allRow  = rowKeys.every(k => aulasMasivoSet.has(k))
+                      const someRow = rowKeys.some(k => aulasMasivoSet.has(k))
+                      return (
+                        <>
+                          <button key={`row-${g}`} type="button"
+                            onClick={() => toggleGradoMasivo(g)}
+                            className={`py-2 rounded-lg text-xs font-bold transition-colors ${
+                              allRow  ? 'bg-marino/15 text-marino' :
+                              someRow ? 'bg-marino/8 text-marino/60' :
+                                        'bg-gray-100 text-gray-500 hover:bg-marino/10 hover:text-marino'
+                            }`}>{g}°</button>
+                          {seccionesUniformes.map((s) => {
+                            const key    = `${g}-${s}`
+                            const activo = aulasMasivoSet.has(key)
+                            return (
+                              <button key={key} type="button"
+                                onClick={() => toggleAulaMasivo(g, s)}
+                                className={`relative flex flex-col items-center justify-center h-12 rounded-xl border-2 transition-all ${
+                                  activo
+                                    ? 'bg-marino border-marino text-white shadow-sm'
+                                    : 'bg-white border-gray-200 text-gray-600 hover:border-marino/40 hover:bg-marino/5'
+                                }`}>
+                                {activo && (
+                                  <span className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-dorado rounded-full flex items-center justify-center">
+                                    <Check size={8} className="text-white" strokeWidth={3} />
+                                  </span>
+                                )}
+                                <span className={`text-sm font-black leading-none ${activo ? 'text-white' : 'text-gray-700'}`}>{s}</span>
+                                <span className={`text-[9px] mt-0.5 ${activo ? 'text-white/65' : 'text-gray-400'}`}>{g}°</span>
+                              </button>
+                            )
+                          })}
+                        </>
+                      )
+                    })}
+                  </div>
+                </div>
+              ) : (
+                /* Para inicial: aulas agrupadas por edad, sin grid rectangular */
+                <div className="space-y-3">
                   {gradosDisponibles.map((g) => {
-                    const rowKeys = SECCIONES.map(s => `${g}-${s}`)
-                    const allRow  = rowKeys.every(k => aulasMasivoSet.has(k))
-                    const someRow = rowKeys.some(k => aulasMasivoSet.has(k))
+                    const secciones = getSecciones(nivel, g)
+                    const rowKeys   = secciones.map(s => `${g}-${s}`)
+                    const allRow    = rowKeys.every(k => aulasMasivoSet.has(k))
+                    const someRow   = rowKeys.some(k => aulasMasivoSet.has(k))
                     return (
-                      <>
-                        <button key={`row-${g}`} type="button"
+                      <div key={g} className="space-y-1.5">
+                        <button type="button"
                           onClick={() => toggleGradoMasivo(g)}
-                          className={`py-2 rounded-lg text-xs font-bold transition-colors ${
+                          className={`text-xs font-bold px-3 py-1 rounded-lg transition-colors ${
                             allRow  ? 'bg-marino/15 text-marino' :
                             someRow ? 'bg-marino/8 text-marino/60' :
                                       'bg-gray-100 text-gray-500 hover:bg-marino/10 hover:text-marino'
-                          }`}>{g}°</button>
-                        {SECCIONES.map((s) => {
-                          const key    = `${g}-${s}`
-                          const activo = aulasMasivoSet.has(key)
-                          return (
-                            <button key={key} type="button"
-                              onClick={() => toggleAulaMasivo(g, s)}
-                              className={`relative flex flex-col items-center justify-center h-12 rounded-xl border-2 transition-all ${
-                                activo
-                                  ? 'bg-marino border-marino text-white shadow-sm'
-                                  : 'bg-white border-gray-200 text-gray-600 hover:border-marino/40 hover:bg-marino/5'
-                              }`}>
-                              {activo && (
-                                <span className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-dorado rounded-full flex items-center justify-center">
-                                  <Check size={8} className="text-white" strokeWidth={3} />
+                          }`}>{g} años</button>
+                        <div className="flex gap-2 flex-wrap pl-1">
+                          {secciones.map((s) => {
+                            const key    = `${g}-${s}`
+                            const activo = aulasMasivoSet.has(key)
+                            return (
+                              <button key={key} type="button"
+                                onClick={() => toggleAulaMasivo(g, s)}
+                                className={`relative flex items-center gap-1.5 px-3 py-2 rounded-xl border-2 transition-all ${
+                                  activo
+                                    ? 'bg-marino border-marino text-white shadow-sm'
+                                    : 'bg-white border-gray-200 text-gray-600 hover:border-marino/40 hover:bg-marino/5'
+                                }`}>
+                                {activo && (
+                                  <span className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-dorado rounded-full flex items-center justify-center">
+                                    <Check size={8} className="text-white" strokeWidth={3} />
+                                  </span>
+                                )}
+                                <span className={`text-xs font-bold ${activo ? 'text-white' : 'text-gray-700'}`}>
+                                  Aula {s}
                                 </span>
-                              )}
-                              <span className={`text-sm font-black leading-none ${activo ? 'text-white' : 'text-gray-700'}`}>{s}</span>
-                              <span className={`text-[9px] mt-0.5 ${activo ? 'text-white/65' : 'text-gray-400'}`}>{g}°</span>
-                            </button>
-                          )
-                        })}
-                      </>
+                              </button>
+                            )
+                          })}
+                        </div>
+                      </div>
                     )
                   })}
                 </div>
-              </div>
+              )}
 
               {aulasMasivo.length > 0 ? (
                 <div className="bg-gray-50 border border-gray-100 rounded-xl px-4 py-3.5">

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { abrirWhatsApp } from '../../lib/externo'
+import { formatGradoSeccion } from '../../lib/nivelAcademico'
 import {
   Users, Clock, X, CheckCircle, LogOut, RefreshCw,
   Mail, MailX, AlertTriangle, Phone, Copy,
@@ -395,7 +396,7 @@ function VistaSemana({ semanaData, dias, onSelectEstudiante }) {
                     <p className="font-medium text-gray-800 text-sm">{estudiante.nombre} {estudiante.apellido}</p>
                     {tieneAlerta && <AlertTriangle size={12} className="text-red-500 flex-shrink-0" />}
                   </div>
-                  <p className="text-xs text-gray-400 mt-0.5">{estudiante.grado}° {estudiante.seccion}</p>
+                  <p className="text-xs text-gray-400 mt-0.5">{formatGradoSeccion(estudiante.nivel, estudiante.grado, estudiante.seccion)}</p>
                 </td>
                 {dias.map((dia, i) => {
                   const key = fmtISO(dia)
@@ -490,7 +491,7 @@ function VistaMes({ lista, mes, anio, onSelectEstudiante }) {
                     <p className="font-medium text-gray-800">{estudiante?.nombre} {estudiante?.apellido}</p>
                     {tieneAlerta && <AlertTriangle size={12} className="text-red-500 flex-shrink-0" />}
                   </div>
-                  <p className="text-xs text-gray-400 mt-0.5">{estudiante?.grado}° {estudiante?.seccion}</p>
+                  <p className="text-xs text-gray-400 mt-0.5">{formatGradoSeccion(estudiante?.nivel, estudiante?.grado, estudiante?.seccion)}</p>
                 </td>
                 <td className="px-4 py-3 text-right">
                   <span className={`font-bold text-sm ${pctBajo ? 'text-red-600' : 'text-green-600'}`}>{pct}%</span>

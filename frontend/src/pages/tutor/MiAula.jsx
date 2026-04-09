@@ -9,6 +9,7 @@ import { format, parseISO, addDays } from 'date-fns'
 import { es } from 'date-fns/locale'
 import api from '../../lib/api'
 import { QK } from '../../lib/queryKeys'
+import { formatGradoSeccion } from '../../lib/nivelAcademico'
 import { abrirWhatsApp } from '../../lib/externo'
 import { obtenerUsuario } from '../../lib/auth'
 import { SkeletonTutorEstudiantes, SkeletonTutorHistorial } from '../../components/Skeleton'
@@ -765,7 +766,7 @@ export default function MiAula() {
         <div>
           <p className="text-white/50 text-xs capitalize tracking-wide">{fechaHoy}</p>
           <h1 className="text-white font-bold text-xl mt-0.5">
-            Aula {aula?.grado}° {aula?.seccion}
+            {aula ? formatGradoSeccion(aula.nivel, aula.grado, aula.seccion) : 'Mi Aula'}
             <span className="ml-2 text-white/40 font-normal text-sm capitalize">· {aula?.nivel}</span>
           </h1>
           <p className="text-white/40 text-xs mt-0.5">{estudiantes.length} alumnos</p>

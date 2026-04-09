@@ -1,6 +1,8 @@
 // Vista previa del carnet estudiantil (97mm × 68mm horizontal).
 // Usa estilos inline para garantizar fidelidad visual en cualquier contexto.
 
+import { formatGrado } from '../lib/nivelAcademico'
+
 const MARINO = '#0a1f3d'
 const DORADO = '#c9a227'
 
@@ -173,14 +175,23 @@ export default function CarnetEstudiante({ estudiante, qrBase64 }) {
           </div>
           <div style={{ height: '0.7mm', background: DORADO, margin: '1mm 0', borderRadius: '0.3mm' }} />
           <div style={{ display: 'flex', gap: '4mm', fontSize: '6.5pt', color: '#555555', lineHeight: 1.5 }}>
-            <div>
-              <span style={{ color: '#999999', fontSize: '6pt' }}>GRADO </span>
-              <span style={{ fontWeight: 'bold' }}>{estudiante.grado}°</span>
-            </div>
-            <div>
-              <span style={{ color: '#999999', fontSize: '6pt' }}>SECCIÓN </span>
-              <span style={{ fontWeight: 'bold' }}>"{estudiante.seccion}"</span>
-            </div>
+            {estudiante.nivel === 'inicial' ? (
+              <div>
+                <span style={{ color: '#999999', fontSize: '6pt' }}>AULA </span>
+                <span style={{ fontWeight: 'bold' }}>{estudiante.seccion} · {formatGrado(estudiante.nivel, estudiante.grado)}</span>
+              </div>
+            ) : (
+              <>
+                <div>
+                  <span style={{ color: '#999999', fontSize: '6pt' }}>GRADO </span>
+                  <span style={{ fontWeight: 'bold' }}>{estudiante.grado}°</span>
+                </div>
+                <div>
+                  <span style={{ color: '#999999', fontSize: '6pt' }}>SECCIÓN </span>
+                  <span style={{ fontWeight: 'bold' }}>"{estudiante.seccion}"</span>
+                </div>
+              </>
+            )}
           </div>
         </div>
 

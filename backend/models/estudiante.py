@@ -16,7 +16,7 @@ class Estudiante(Base):
     sexo = Column(String(1), nullable=True)  # 'M' | 'F'
     nivel = Column(Enum("inicial", "primaria", "secundaria"), nullable=False)
     grado = Column(String(10), nullable=False)
-    seccion = Column(String(5), nullable=False)
+    seccion = Column(String(20), nullable=False)
     qr_token = Column(String(100), unique=True, nullable=False)
     foto_url = Column(Text, nullable=True)
     activo = Column(Boolean, default=True)

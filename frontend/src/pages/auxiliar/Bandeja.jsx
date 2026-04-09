@@ -4,6 +4,7 @@ import {
   Inbox, School, Users, User, Send, Bell, Clock, FileText, Reply,
 } from 'lucide-react'
 import api from '../../lib/api'
+import { formatGradoSeccion } from '../../lib/nivelAcademico'
 import toast from 'react-hot-toast'
 import { format, isToday, isYesterday } from 'date-fns'
 import { es } from 'date-fns/locale'
@@ -170,7 +171,7 @@ function PanelRecoleccion({ destinatarios, totalDests, comId, recordando, onReco
               </div>
               {est?.grado && (
                 <span className="text-[10px] font-bold bg-marino/10 text-marino px-1.5 py-0.5 rounded-full flex-shrink-0">
-                  {est.grado}° {est.seccion}
+                  {formatGradoSeccion(est?.nivel, est.grado, est.seccion)}
                 </span>
               )}
               {entregado ? (
@@ -506,7 +507,7 @@ function PanelDetalle({ com, onVolver }) {
                                 </span>
                                 {est?.grado && (
                                   <span className="text-[10px] font-bold bg-marino text-white px-1.5 py-0.5 rounded-full flex-shrink-0">
-                                    {est.grado}° {est.seccion}
+                                    {formatGradoSeccion(est?.nivel, est.grado, est.seccion)}
                                   </span>
                                 )}
                               </div>
@@ -572,7 +573,7 @@ function FilaRespuesta({ r, activa, onClick }) {
           {/* Grado */}
           {est?.grado && (
             <span className={`inline-block text-[10px] font-bold px-1.5 py-0.5 rounded-full mt-0.5 ${NIVEL_COLOR[nivel] ?? 'bg-gray-100 text-gray-600'}`}>
-              {est.grado}° {est.seccion}
+              {formatGradoSeccion(est?.nivel, est.grado, est.seccion)}
             </span>
           )}
 
@@ -647,7 +648,7 @@ function PanelRespuestaIndividual({ r, onVolver, onMarcarLeida }) {
             {est?.nombre} {est?.apellido}
           </p>
           <p className="text-xs text-white/60 mt-0.5">
-            {est?.grado}° {est?.seccion}
+            {formatGradoSeccion(est?.nivel, est?.grado, est?.seccion)}
             {est?.nivel && <span className="ml-1 capitalize">· {est.nivel}</span>}
           </p>
         </div>
@@ -794,7 +795,7 @@ function FilaPendiente({ p, activa, onClick }) {
 
           {est?.grado && (
             <span className={`inline-block text-[10px] font-bold px-1.5 py-0.5 rounded-full mt-0.5 ${NIVEL_COLOR[nivel] ?? 'bg-gray-100 text-gray-600'}`}>
-              {est.grado}° {est.seccion}
+              {formatGradoSeccion(est?.nivel, est.grado, est.seccion)}
             </span>
           )}
 
@@ -852,7 +853,7 @@ function PanelPendiente({ p, onVolver }) {
             {est?.nombre} {est?.apellido}
           </p>
           <p className="text-xs text-white/60 mt-0.5">
-            {est?.grado}° {est?.seccion}
+            {formatGradoSeccion(est?.nivel, est?.grado, est?.seccion)}
             {est?.nivel && <span className="ml-1 capitalize">· {est.nivel}</span>}
           </p>
         </div>

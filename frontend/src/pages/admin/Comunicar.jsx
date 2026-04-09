@@ -3,12 +3,7 @@ import { Send, Users, User, Eye, Paperclip, X, Search } from 'lucide-react'
 import toast from 'react-hot-toast'
 import api from '../../lib/api'
 
-const GRADOS_POR_NIVEL = {
-  inicial:    ['3', '4', '5'],
-  primaria:   ['1', '2', '3', '4', '5', '6'],
-  secundaria: ['1', '2', '3', '4', '5'],
-}
-const SECCIONES  = ['A', 'B', 'C', 'D', 'E']
+import { GRADOS_POR_NIVEL, getSecciones, formatGradoSeccion, formatGrado } from '../../lib/nivelAcademico'
 const NIVELES    = ['inicial', 'primaria', 'secundaria']
 const LABEL_NIVEL = { inicial: 'Inicial', primaria: 'Primaria', secundaria: 'Secundaria' }
 const MAX_CHARS  = 1000
@@ -239,7 +234,7 @@ export default function AdminComunicar() {
                     >
                       <span className="font-medium text-gray-800">{est.nombre} {est.apellido}</span>
                       <span className="text-gray-400 ml-2 text-xs">
-                        {LABEL_NIVEL[est.nivel]} · {est.grado}° {est.seccion}
+                        {LABEL_NIVEL[est.nivel]} · {formatGradoSeccion(est.nivel, est.grado, est.seccion)}
                       </span>
                     </button>
                   ))}
@@ -286,11 +281,11 @@ export default function AdminComunicar() {
                   disabled={!nivel}
                 >
                   <option value="">Seleccionar...</option>
-                  {(GRADOS_POR_NIVEL[nivel] || []).map(g => <option key={g} value={g}>{g}°</option>)}
+                  {(GRADOS_POR_NIVEL[nivel] || []).map(g => <option key={g} value={g}>{formatGrado(nivel, g)}</option>)}
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Sección</label>
+                <label className="block text-xs font-medium text-gray-600 mb-1">{nivel === 'inicial' ? 'Aula' : 'Sección'}</label>
                 <select
                   className="input"
                   value={seccion}
@@ -298,7 +293,7 @@ export default function AdminComunicar() {
                   disabled={!grado}
                 >
                   <option value="">Seleccionar...</option>
-                  {SECCIONES.map(s => <option key={s} value={s}>{s}</option>)}
+                  {getSecciones(nivel, grado).map(s => <option key={s} value={s}>{s}</option>)}
                 </select>
               </div>
             </div>
@@ -436,7 +431,7 @@ export default function AdminComunicar() {
               {tipoEnvio === 'aula' && nivel && grado && seccion && (
                 <p>
                   <span className="font-medium text-gray-700">Para:</span>{' '}
-                  {LABEL_NIVEL[nivel]} — {grado}° {seccion}
+                  {LABEL_NIVEL[nivel]} — {formatGradoSeccion(nivel, grado, seccion)}
                   {typeof contadorApoderados === 'number' && (
                     <span className="text-gray-400 ml-1">— {contadorApoderados} apoderados</span>
                   )}

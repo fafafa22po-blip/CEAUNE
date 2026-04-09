@@ -8,6 +8,7 @@ import {
   ChevronRight, GraduationCap,
 } from 'lucide-react'
 import { BarraAsistencia } from '../../components/BarraAsistencia'
+import { formatGradoSeccion } from '../../lib/nivelAcademico'
 import { format, startOfMonth, endOfMonth, parseISO } from 'date-fns'
 import { es } from 'date-fns/locale'
 import api from '../../lib/api'
@@ -123,7 +124,7 @@ function TarjetaHijo({ hijo, comunicadosSinLeer, nav, onAlertChange }) {
   const abrirTutor = () => {
     if (!contactos?.tutor?.telefono) return toast.error('El tutor no tiene número registrado')
     const { nombre, apellido } = contactos.tutor
-    const msg = `Estimado/a Prof. ${nombre} ${apellido}, soy apoderado/a de *${hijo.nombre} ${hijo.apellido}* (${hijo.grado}° ${hijo.seccion} - ${hijo.nivel}). Le contacto para consultar...`
+    const msg = `Estimado/a Prof. ${nombre} ${apellido}, soy apoderado/a de *${hijo.nombre} ${hijo.apellido}* (${formatGradoSeccion(hijo.nivel, hijo.grado, hijo.seccion)} - ${hijo.nivel}). Le contacto para consultar...`
     abrirWhatsApp(contactos.tutor.telefono, msg)
   }
 
@@ -168,7 +169,7 @@ function TarjetaHijo({ hijo, comunicadosSinLeer, nav, onAlertChange }) {
             <GraduationCap size={12} />
             <span className="capitalize">{hijo.nivel}</span>
             <span>·</span>
-            <span>{hijo.grado}° {hijo.seccion}</span>
+            <span>{formatGradoSeccion(hijo.nivel, hijo.grado, hijo.seccion)}</span>
           </div>
         </div>
         {/* Indicador de alerta activa */}

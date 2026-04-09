@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { Phone, GraduationCap } from 'lucide-react'
 import api from '../../lib/api'
+import { formatGradoSeccion } from '../../lib/nivelAcademico'
 import toast from 'react-hot-toast'
 import { abrirWhatsApp } from '../../lib/externo'
 import { QK } from '../../lib/queryKeys'
@@ -124,7 +125,7 @@ export default function Contacto() {
           <GraduationCap size={13} />
           <span className="capitalize">{hijo.nivel}</span>
           <span>·</span>
-          <span>{hijo.grado}° {hijo.seccion}</span>
+          <span>{formatGradoSeccion(hijo.nivel, hijo.grado, hijo.seccion)}</span>
           <span>·</span>
           <span className="font-medium text-gray-500">{hijo.nombre} {hijo.apellido}</span>
         </div>

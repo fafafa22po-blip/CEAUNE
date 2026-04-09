@@ -2,6 +2,8 @@
 // QR como protagonista para escaneo de asistencia e inspección.
 // Usa estilos inline para garantizar fidelidad visual en cualquier contexto.
 
+import { formatGrado } from '../lib/nivelAcademico'
+
 const MARINO = '#0a1f3d'
 const DORADO = '#c9a227'
 
@@ -167,10 +169,20 @@ export default function CarnetEstudianteVertical({ estudiante, qrBase64 }) {
             {nivel}
           </div>
           <div style={{ fontSize: '6pt', color: '#555555', lineHeight: 1.5 }}>
-            <span style={{ color: '#999999' }}>GRADO </span>
-            <span style={{ fontWeight: 'bold', color: MARINO }}>{estudiante.grado}°</span>
-            <span style={{ color: '#999999', marginLeft: '2.5mm' }}>SEC. </span>
-            <span style={{ fontWeight: 'bold', color: MARINO }}>"{estudiante.seccion}"</span>
+            {estudiante.nivel === 'inicial' ? (
+              <>
+                <span style={{ color: '#999999' }}>AULA </span>
+                <span style={{ fontWeight: 'bold', color: MARINO }}>{estudiante.seccion}</span>
+                <span style={{ color: '#999999', marginLeft: '2.5mm' }}>{formatGrado(estudiante.nivel, estudiante.grado).toUpperCase()}</span>
+              </>
+            ) : (
+              <>
+                <span style={{ color: '#999999' }}>GRADO </span>
+                <span style={{ fontWeight: 'bold', color: MARINO }}>{estudiante.grado}°</span>
+                <span style={{ color: '#999999', marginLeft: '2.5mm' }}>SEC. </span>
+                <span style={{ fontWeight: 'bold', color: MARINO }}>"{estudiante.seccion}"</span>
+              </>
+            )}
           </div>
         </div>
       </div>

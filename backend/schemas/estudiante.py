@@ -19,7 +19,7 @@ def _norm_grado(v: str) -> str:
 
 
 def _norm_seccion(v: str) -> str:
-    return v.strip().upper()
+    return v.strip()
 
 
 class EstudianteBasico(BaseModel):

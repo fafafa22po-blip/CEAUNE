@@ -4,6 +4,7 @@ import {
   Eye, EyeOff, BookOpen, Users, Shield, RefreshCw,
 } from 'lucide-react'
 import api from '../lib/api'
+import { formatGradoSeccion, formatGrado } from '../lib/nivelAcademico'
 import { obtenerUsuario, guardarSesion } from '../lib/auth'
 import toast from 'react-hot-toast'
 
@@ -242,11 +243,11 @@ export default function Perfil() {
           {extras.aula ? (
             <div className="flex items-center gap-4 bg-blue-50 rounded-lg px-4 py-3">
               <div className="w-10 h-10 rounded-full bg-marino text-white flex items-center justify-center text-sm font-bold flex-shrink-0">
-                {extras.aula.grado}°
+                {formatGrado(extras.aula.nivel, extras.aula.grado)}
               </div>
               <div>
                 <p className="font-semibold text-marino">
-                  {extras.aula.grado}° {extras.aula.seccion}
+                  {formatGradoSeccion(extras.aula.nivel, extras.aula.grado, extras.aula.seccion)}
                 </p>
                 <p className="text-xs text-gray-500 capitalize">{extras.aula.nivel}</p>
               </div>
@@ -274,7 +275,7 @@ export default function Perfil() {
                       {h.nombre} {h.apellido}
                     </p>
                     <p className="text-xs text-gray-400 capitalize">
-                      {h.nivel} · {h.grado}° {h.seccion}
+                      {h.nivel} · {formatGradoSeccion(h.nivel, h.grado, h.seccion)}
                     </p>
                   </div>
                 </div>

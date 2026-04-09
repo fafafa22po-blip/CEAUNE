@@ -23,9 +23,7 @@ const NIVELES  = [
   { v: 'secundaria', label: 'Secundaria'        },
 ]
 
-const GRADOS   = ['1', '2', '3', '4', '5', '6']
-const GRADO_LABEL = { '1': '1°', '2': '2°', '3': '3°', '4': '4°', '5': '5°', '6': '6°' }
-const SECCIONES = ['A', 'B', 'C', 'D', 'E']
+import { GRADOS_POR_NIVEL, getSecciones, formatGrado, formatGradoSeccion } from '../../lib/nivelAcademico'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -106,7 +104,7 @@ function TablaResultados({ registros, vista }) {
                   <td className="px-3 py-2.5 text-gray-500 capitalize">{r.nivel}</td>
                 )}
                 <td className="px-3 py-2.5 text-center text-gray-600">
-                  {r.grado}° {r.seccion}
+                  {formatGradoSeccion(r.nivel, r.grado, r.seccion)}
                 </td>
                 <td className="px-3 py-2.5 text-center font-semibold text-green-600">{r.puntual}</td>
                 <td className="px-3 py-2.5 text-center font-semibold text-amber-600">{r.tardanza}</td>
@@ -337,19 +335,23 @@ export default function Reportes() {
         {vista === 'aula' && (
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1.5">Grado <span className="text-red-500">*</span></label>
-              <select className="input" value={grado} onChange={(e) => setGrado(e.target.value)}>
+              <label className="block text-xs font-semibold text-gray-600 mb-1.5">
+                {nivel === 'inicial' ? 'Edad' : 'Grado'} <span className="text-red-500">*</span>
+              </label>
+              <select className="input" value={grado} onChange={(e) => { setGrado(e.target.value); setSeccion('') }} disabled={!nivel}>
                 <option value="">Seleccionar...</option>
-                {GRADOS.map((g) => (
-                  <option key={g} value={g}>{GRADO_LABEL[g]}</option>
+                {(GRADOS_POR_NIVEL[nivel] || []).map((g) => (
+                  <option key={g} value={g}>{formatGrado(nivel, g)}</option>
                 ))}
               </select>
             </div>
             <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1.5">Sección <span className="text-red-500">*</span></label>
-              <select className="input" value={seccion} onChange={(e) => setSeccion(e.target.value)}>
+              <label className="block text-xs font-semibold text-gray-600 mb-1.5">
+                {nivel === 'inicial' ? 'Aula' : 'Sección'} <span className="text-red-500">*</span>
+              </label>
+              <select className="input" value={seccion} onChange={(e) => setSeccion(e.target.value)} disabled={!grado}>
                 <option value="">Seleccionar...</option>
-                {SECCIONES.map((s) => (
+                {getSecciones(nivel, grado).map((s) => (
                   <option key={s} value={s}>{s}</option>
                 ))}
               </select>
@@ -370,7 +372,7 @@ export default function Reportes() {
                     {alumnoSeleccionado.nombre} {alumnoSeleccionado.apellido}
                   </p>
                   <p className="text-xs text-gray-500 mt-0.5 capitalize">
-                    {alumnoSeleccionado.nivel} · {alumnoSeleccionado.grado}° {alumnoSeleccionado.seccion}
+                    {alumnoSeleccionado.nivel} · {formatGradoSeccion(alumnoSeleccionado.nivel, alumnoSeleccionado.grado, alumnoSeleccionado.seccion)}
                   </p>
                 </div>
                 <button
@@ -414,7 +416,7 @@ export default function Reportes() {
                           {a.nombre} {a.apellido}
                         </p>
                         <p className="text-xs text-gray-400 capitalize mt-0.5">
-                          {a.nivel} · {a.grado}° {a.seccion}
+                          {a.nivel} · {formatGradoSeccion(a.nivel, a.grado, a.seccion)}
                         </p>
                       </button>
                     ))}

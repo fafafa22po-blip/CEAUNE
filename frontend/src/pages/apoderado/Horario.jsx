@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { GraduationCap, FileText, Image, Download, ExternalLink, Loader2 } from 'lucide-react'
 import api from '../../lib/api'
+import { formatGradoSeccion } from '../../lib/nivelAcademico'
 import { QK } from '../../lib/queryKeys'
 import { useHijo } from '../../context/HijoContext'
 
@@ -96,7 +97,7 @@ function VistaHorario({ archivo, hijo }) {
             <p className="text-sm font-semibold text-gray-800">Horario {anio}</p>
             {hijo && (
               <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full flex-shrink-0 ${NIVEL_COLOR[nivel] ?? 'bg-gray-100 text-gray-600'}`}>
-                {NIVEL_LABEL[nivel]} · {hijo.grado}° {hijo.seccion}
+                {NIVEL_LABEL[nivel]} · {formatGradoSeccion(hijo.nivel, hijo.grado, hijo.seccion)}
               </span>
             )}
           </div>
