@@ -222,6 +222,13 @@ export default function LoginPersonal() {
             Contacte al administrador del sistema.
           </p>
 
+          <p className="text-center text-xs text-gray-400 mt-3">
+            ¿Eres apoderado?{' '}
+            <a href="/login" className="text-marino font-semibold hover:underline">
+              Ingresa aquí
+            </a>
+          </p>
+
           {/* Banner APK — solo en navegador web */}
           {!esNativo && (
             <div className="mt-5">

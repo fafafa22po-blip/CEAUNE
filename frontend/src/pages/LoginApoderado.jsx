@@ -241,6 +241,13 @@ export default function LoginApoderado() {
               </p>
             </div>
 
+            <p className="text-center text-xs text-gray-400 mt-4">
+              ¿Eres personal del colegio?{' '}
+              <a href="/personal" className="text-marino font-semibold hover:underline">
+                Ingresa aquí
+              </a>
+            </p>
+
             {/* Banner APK — solo en navegador web */}
             {!esNativo && (
               <div className="mt-4">

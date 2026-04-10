@@ -79,6 +79,7 @@ import Justificar from './pages/apoderado/Justificar'
 import HorarioApoderado from './pages/apoderado/Horario'
 import LibretasApoderado from './pages/apoderado/Libretas'
 import ContactoApoderado from './pages/apoderado/Contacto'
+import RecojoApoderado from './pages/apoderado/Recojo'
 
 // Perfil compartido
 import Perfil from './pages/Perfil'
@@ -95,6 +96,8 @@ import Reportes from './pages/admin/Reportes'
 import Usuarios from './pages/admin/Usuarios'
 import AdminComunicar from './pages/admin/Comunicar'
 import AdminBandeja from './pages/admin/Bandeja'
+import AdminRecojo from './pages/admin/Recojo'
+import EscanearRecojo from './pages/auxiliar/EscanearRecojo'
 
 const ROLES_AUXILIAR = ['i-auxiliar', 'p-auxiliar', 's-auxiliar']
 
@@ -148,6 +151,7 @@ export default function App() {
               <Route index element={<Navigate to="inicio" replace />} />
               <Route path="inicio"          element={<InicioAuxiliar />} />
               <Route path="escanear"        element={<Escanear />} />
+              <Route path="recojo"          element={<EscanearRecojo />} />
               <Route path="inspeccion"      element={<Inspeccion />} />
               <Route path="asistencia"      element={<Asistencia />} />
               <Route path="comunicar"       element={<Comunicar />} />
@@ -187,6 +191,7 @@ export default function App() {
               <Route path="justificar"  element={<Justificar />} />
               <Route path="horario"     element={<HorarioApoderado />} />
               <Route path="contacto"    element={<ContactoApoderado />} />
+              <Route path="recojo"      element={<RecojoApoderado />} />
               <Route path="perfil"      element={<Perfil />} />
               <Route path="descargar-app" element={<DescargarApp />} />
             </Route>
@@ -206,6 +211,7 @@ export default function App() {
               <Route path="usuarios"       element={<Usuarios />} />
               <Route path="comunicar"      element={<AdminComunicar />} />
               <Route path="bandeja"        element={<AdminBandeja />} />
+              <Route path="recojo"         element={<AdminRecojo />} />
               <Route path="descargar-app"  element={<DescargarApp />} />
             </Route>
           </Route>

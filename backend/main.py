@@ -5,7 +5,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from core.config import settings
-from routers import auth, asistencia, estudiantes, admin, comunicados, justificaciones, apoderado, tutor, notificaciones, reportes
+from routers import auth, asistencia, estudiantes, admin, comunicados, justificaciones, apoderado, tutor, notificaciones, reportes, recojo
 
 logging.basicConfig(
     level=logging.INFO,
@@ -31,6 +31,7 @@ async def lifespan(app: FastAPI):
     import models.horario_curso   # noqa: F401
     import models.horario_archivo # noqa: F401
     import models.libreta         # noqa: F401
+    import models.recojo          # noqa: F401
     Base.metadata.create_all(bind=engine)
 
     # Migración incremental: agrega columnas si no existen
@@ -50,6 +51,14 @@ async def lifespan(app: FastAPI):
         "ALTER TABLE estudiantes ADD COLUMN medicacion_escolar TEXT NULL",
         "ALTER TABLE estudiantes ADD COLUMN protocolo_emergencia TEXT NULL",
         "ALTER TABLE usuarios ADD COLUMN es_apoderado TINYINT(1) NOT NULL DEFAULT 0",
+        # Recojo seguro — confirmación explícita + snapshot foto (capa 1 y 6)
+        "ALTER TABLE recojo_logs ADD COLUMN confirmado TINYINT(1) NOT NULL DEFAULT 0",
+        "ALTER TABLE recojo_logs ADD COLUMN confirmado_at TIMESTAMP NULL",
+        "ALTER TABLE recojo_logs ADD COLUMN foto_snapshot LONGTEXT NULL",
+        # Reporte de irregularidad por apoderado
+        "ALTER TABLE recojo_logs ADD COLUMN reportado TINYINT(1) NOT NULL DEFAULT 0",
+        "ALTER TABLE recojo_logs ADD COLUMN reportado_motivo TEXT NULL",
+        "ALTER TABLE recojo_logs ADD COLUMN reportado_at TIMESTAMP NULL",
     ]
     with engine.connect() as _conn:
         for _sql in _nuevas_cols:
@@ -96,6 +105,7 @@ app.include_router(justificaciones.router,prefix="/justificaciones",tags=["Justi
 app.include_router(apoderado.router,      prefix="/apoderado",      tags=["Apoderado"])
 app.include_router(tutor.router,          prefix="/tutor",          tags=["Tutor"])
 app.include_router(notificaciones.router, prefix="/notificaciones", tags=["Notificaciones"])
+app.include_router(recojo.router,         prefix="/recojo",         tags=["Recojo"])
 
 
 # ── Versión APK ──────────────────────────────────────────────────────────────

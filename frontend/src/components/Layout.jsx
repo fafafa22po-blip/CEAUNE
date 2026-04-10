@@ -15,7 +15,7 @@ import {
   BookOpen, Eye, BarChart2, Home, LogOut,
   ChevronLeft, ChevronRight, Clock, User, Phone, ScanSearch,
   CalendarCheck, GraduationCap, NotebookText, MoreHorizontal, UserCheck, Briefcase, ArrowLeftRight,
-  Download,
+  Download, ShieldCheck,
 } from 'lucide-react'
 
 // ── BOTTOM NAV — config por rol ──────────────────────────────────────
@@ -23,10 +23,11 @@ const AUXILIAR_NAV = {
   main: [
     { a: '/auxiliar/inicio',      icon: Home,          label: 'Inicio'     },
     { a: '/auxiliar/escanear',    icon: QrCode,        label: 'Escanear',  scan: true },
+    { a: '/auxiliar/recojo',      icon: ShieldCheck,   label: 'Recojo'     },
     { a: '/auxiliar/asistencia',  icon: CalendarCheck, label: 'Asistencia' },
-    { a: '/auxiliar/bandeja',     icon: Inbox,         label: 'Bandeja'    },
   ],
   overflow: [
+    { a: '/auxiliar/bandeja',         icon: Inbox,         label: 'Bandeja'         },
     { a: '/auxiliar/inspeccion',      icon: ScanSearch,    label: 'Inspección'      },
     { a: '/auxiliar/comunicar',       icon: MessageSquare, label: 'Comunicar'       },
     { a: '/auxiliar/justificaciones', icon: FileCheck,     label: 'Justificaciones' },
@@ -59,12 +60,13 @@ const BOTTOM_NAV = {
       { a: '/apoderado/inicio',      icon: Home,          label: 'Inicio'      },
       { a: '/apoderado/asistencias', icon: Calendar,      label: 'Asistencias' },
       { a: '/apoderado/comunicados', icon: MessageSquare, label: 'Comunicados', badge: true },
-      { a: '/apoderado/justificar',  icon: FileCheck,     label: 'Justificar'  },
+      { a: '/apoderado/recojo',      icon: ShieldCheck,   label: 'Recojo'      },
     ],
     overflow: [
-      { a: '/apoderado/horario',  icon: GraduationCap, label: 'Horario'  },
-      { a: '/apoderado/libretas', icon: NotebookText,  label: 'Libretas' },
-      { a: '/apoderado/contacto', icon: Phone,         label: 'Contacto' },
+      { a: '/apoderado/justificar',  icon: FileCheck,     label: 'Justificar'  },
+      { a: '/apoderado/horario',     icon: GraduationCap, label: 'Horario'     },
+      { a: '/apoderado/libretas',    icon: NotebookText,  label: 'Libretas'    },
+      { a: '/apoderado/contacto',    icon: Phone,         label: 'Contacto'    },
     ],
   },
   'admin': {
@@ -77,6 +79,7 @@ const BOTTOM_NAV = {
     overflow: [
       { a: '/admin/apoderados',     icon: UserCheck,     label: 'Apoderados'  },
       { a: '/admin/calendario',     icon: Calendar,      label: 'Calendario'  },
+      { a: '/admin/recojo',         icon: ShieldCheck,   label: 'Recojo'      },
       { a: '/admin/horarios',       icon: Clock,         label: 'Horarios'    },
       { a: '/admin/horario-clases', icon: GraduationCap, label: 'Clases'      },
       { a: '/admin/bandeja',        icon: Inbox,         label: 'Bandeja'     },
@@ -90,6 +93,7 @@ const MENUS = {
   'i-auxiliar': [
     { a: '/auxiliar/inicio',          icon: Home,            label: 'Inicio'          },
     { a: '/auxiliar/escanear',        icon: QrCode,          label: 'Escanear'        },
+    { a: '/auxiliar/recojo',          icon: ShieldCheck,     label: 'Recojo Seguro'   },
     { a: '/auxiliar/inspeccion',      icon: ScanSearch,      label: 'Inspección'      },
     { a: '/auxiliar/asistencia',      icon: LayoutDashboard, label: 'Asistencia'      },
     { a: '/auxiliar/comunicar',       icon: MessageSquare,   label: 'Comunicar'       },
@@ -103,6 +107,7 @@ const MENUS = {
   'p-auxiliar': [
     { a: '/auxiliar/inicio',          icon: Home,            label: 'Inicio'          },
     { a: '/auxiliar/escanear',        icon: QrCode,          label: 'Escanear'        },
+    { a: '/auxiliar/recojo',          icon: ShieldCheck,     label: 'Recojo Seguro'   },
     { a: '/auxiliar/inspeccion',      icon: ScanSearch,      label: 'Inspección'      },
     { a: '/auxiliar/asistencia',      icon: LayoutDashboard, label: 'Asistencia'      },
     { a: '/auxiliar/comunicar',       icon: MessageSquare,   label: 'Comunicar'       },
@@ -116,6 +121,7 @@ const MENUS = {
   's-auxiliar': [
     { a: '/auxiliar/inicio',          icon: Home,            label: 'Inicio'          },
     { a: '/auxiliar/escanear',        icon: QrCode,          label: 'Escanear'        },
+    { a: '/auxiliar/recojo',          icon: ShieldCheck,     label: 'Recojo Seguro'   },
     { a: '/auxiliar/inspeccion',      icon: ScanSearch,      label: 'Inspección'      },
     { a: '/auxiliar/asistencia',      icon: LayoutDashboard, label: 'Asistencia'      },
     { a: '/auxiliar/comunicar',       icon: MessageSquare,   label: 'Comunicar'       },
@@ -139,6 +145,7 @@ const MENUS = {
     { a: '/apoderado/inicio',      icon: Home,          label: 'Inicio'      },
     { a: '/apoderado/asistencias', icon: Calendar,      label: 'Asistencias' },
     { a: '/apoderado/comunicados', icon: MessageSquare, label: 'Comunicados' },
+    { a: '/apoderado/recojo',      icon: ShieldCheck,   label: 'Recojo Seguro' },
     { a: '/apoderado/justificar',  icon: FileCheck,     label: 'Justificar'  },
     { a: '/apoderado/horario',     icon: GraduationCap, label: 'Horario'     },
     { a: '/apoderado/libretas',    icon: NotebookText,  label: 'Libretas'    },
@@ -148,6 +155,7 @@ const MENUS = {
     { a: '/admin/dashboard',       icon: LayoutDashboard, label: 'Dashboard'    },
     { a: '/admin/estudiantes',     icon: Users,           label: 'Estudiantes'  },
     { a: '/admin/apoderados',      icon: UserCheck,       label: 'Apoderados'   },
+    { a: '/admin/recojo',          icon: ShieldCheck,     label: 'Recojo'       },
     { a: '/admin/calendario',      icon: Calendar,        label: 'Calendario'   },
     { a: '/admin/horarios',        icon: Clock,           label: 'Horarios'     },
     { a: '/admin/horario-clases',  icon: GraduationCap,   label: 'Clases'       },

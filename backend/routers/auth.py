@@ -16,10 +16,18 @@ log = logging.getLogger(__name__)
 
 @router.post("/login", response_model=Token)
 def login(data: LoginRequest, db: Session = Depends(get_db)):
+    # Buscar por DNI exacto primero, luego con prefijo CE (personal institucional)
     user = db.query(Usuario).filter(
         Usuario.dni == data.dni,
         Usuario.activo == True,
     ).first()
+
+    # Si no encontró y el DNI no empieza con CE, probar CE+DNI (auxiliares/tutores/admin)
+    if not user and not data.dni.upper().startswith("CE"):
+        user = db.query(Usuario).filter(
+            Usuario.dni == f"CE{data.dni}",
+            Usuario.activo == True,
+        ).first()
 
     if not user:
         log.warning("Login fallido: DNI '%s' no encontrado o inactivo", data.dni)
