@@ -1,8 +1,8 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
 import {
-  ShieldCheck, ShieldX, Hash, Clock,
+  ShieldCheck, ShieldX, Clock,
   CheckCircle2, AlertTriangle, UserX,
-  ScanLine, BarChart2, RefreshCw, Users, LogOut,
+  ScanLine, BarChart2, RefreshCw, Users, Search,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import QRScanner from '../../components/QRScanner'
@@ -11,7 +11,7 @@ import { hapticMedium, hapticLight } from '../../lib/haptics'
 
 const AUTO_CIERRE = 10
 
-// ── Foto con inicial de fallback ───────────────────────────────────────────────
+// ── Foto con inicial de fallback ──────────────────────────────────────────────
 function Avatar({ foto_url, nombre, className = '', textClass = '' }) {
   if (foto_url) {
     return <img src={foto_url} alt={nombre} className={`object-cover ${className}`} />
@@ -23,9 +23,9 @@ function Avatar({ foto_url, nombre, className = '', textClass = '' }) {
   )
 }
 
-// ── Contador circular SVG ──────────────────────────────────────────────────────
+// ── Contador circular SVG ─────────────────────────────────────────────────────
 function ContadorCircular({ segundos, total, color }) {
-  const r   = 18
+  const r    = 18
   const circ = 2 * Math.PI * r
   const dash = circ * (segundos / total)
   return (
@@ -42,10 +42,43 @@ function ContadorCircular({ segundos, total, color }) {
   )
 }
 
-// ── Modal de resultado rediseñado ──────────────────────────────────────────────
+// ── Tab bar unificado ─────────────────────────────────────────────────────────
+function TabBar({ activo, onEscanear, onResumen, pendientes }) {
+  return (
+    <div className="bg-white border-t border-gray-100 flex flex-shrink-0 pb-safe">
+      <button
+        onClick={onEscanear}
+        className={`flex-1 flex flex-col items-center gap-1 py-3 transition-colors ${
+          activo === 'camara' ? 'text-green-600' : 'text-gray-400'
+        }`}
+      >
+        <ScanLine className="w-5 h-5" />
+        <span className={`text-[10px] ${activo === 'camara' ? 'font-bold' : 'font-medium'}`}>Escanear</span>
+      </button>
+      <button
+        onClick={onResumen}
+        className={`flex-1 flex flex-col items-center gap-1 py-3 transition-colors relative ${
+          activo === 'resumen' ? 'text-[#0a1f3d]' : 'text-gray-400'
+        }`}
+      >
+        <div className="relative">
+          <BarChart2 className="w-5 h-5" />
+          {pendientes > 0 && (
+            <span className="absolute -top-1.5 -right-2 min-w-[16px] h-4 bg-amber-500 text-white text-[9px] font-black rounded-full flex items-center justify-center px-1">
+              {pendientes}
+            </span>
+          )}
+        </div>
+        <span className={`text-[10px] ${activo === 'resumen' ? 'font-bold' : 'font-medium'}`}>Resumen</span>
+      </button>
+    </div>
+  )
+}
+
+// ── Modal de resultado ────────────────────────────────────────────────────────
 function PantallaResultado({ resultado, onCerrar }) {
-  const [fase, setFase]     = useState('viendo')   // 'viendo' | 'confirmando' | 'exito'
-  const [cuenta, setCuenta] = useState(AUTO_CIERRE)
+  const [fase,    setFase]    = useState('viendo')
+  const [cuenta,  setCuenta]  = useState(AUTO_CIERRE)
   const [pausado, setPausado] = useState(false)
   const timerRef = useRef(null)
 
@@ -58,7 +91,10 @@ function PantallaResultado({ resultado, onCerrar }) {
 
   useEffect(() => { hapticMedium() }, [])
 
-  const conCuenta = (!autorizado || fase === 'exito') && !pausado
+  const ok        = autorizado
+  const noAsistio = ok && !alumno_presente && !ya_recogido
+
+  const conCuenta = (!autorizado || fase === 'exito' || noAsistio) && !pausado
   useEffect(() => {
     if (!conCuenta) return
     if (cuenta <= 0) { onCerrar(); return }
@@ -80,14 +116,13 @@ function PantallaResultado({ resultado, onCerrar }) {
     }
   }
 
-  const ok = autorizado
-
-  // Paleta según el caso
   const paleta = ya_recogido
-    ? { ring: 'ring-blue-500', badge: 'bg-blue-600', alumno: 'bg-blue-50 border-blue-100' }
+    ? { ring: 'ring-blue-400',   badge: 'bg-blue-600',   alumno: 'bg-blue-50 border-blue-100'     }
+    : noAsistio
+    ? { ring: 'ring-orange-500', badge: 'bg-orange-600', alumno: 'bg-orange-50 border-orange-200' }
     : ok
-    ? { ring: 'ring-green-500', badge: 'bg-green-600', alumno: 'bg-green-50 border-green-100' }
-    : { ring: 'ring-red-500',   badge: 'bg-red-600',   alumno: 'bg-red-50 border-red-100'   }
+    ? { ring: 'ring-green-500',  badge: 'bg-green-600',  alumno: 'bg-green-50 border-green-100'   }
+    : { ring: 'ring-red-500',    badge: 'bg-red-600',    alumno: 'bg-red-50 border-red-100'       }
 
   const motivoNoAuth = vencido
     ? 'Fotocheck vencido — no válido'
@@ -96,6 +131,15 @@ function PantallaResultado({ resultado, onCerrar }) {
     : estado === 'pendiente'
     ? 'Fotocheck pendiente de activación'
     : 'No figura como autorizado'
+
+  // Color del botón cerrar según estado — nunca azul sobre azul
+  const cerrarStyle = ok && alumno_presente && !ya_recogido
+    ? 'border border-gray-200 text-gray-500'
+    : ya_recogido
+    ? 'bg-gray-100 text-gray-700'          // neutral — ya no bg-blue-600
+    : noAsistio
+    ? 'bg-orange-600 text-white'
+    : 'bg-red-600 text-white'
 
   return (
     <div
@@ -107,8 +151,7 @@ function PantallaResultado({ resultado, onCerrar }) {
         className="w-full max-w-sm bg-white rounded-3xl overflow-hidden shadow-2xl"
         onClick={e => { e.stopPropagation(); setPausado(true) }}
       >
-
-        {/* ── Fase éxito ────────────────────────────────────────────── */}
+        {/* ── Fase éxito ─────────────────────────────────────────── */}
         {fase === 'exito' && (
           <>
             <div className="bg-green-600 flex flex-col items-center justify-center py-8 gap-3">
@@ -123,33 +166,30 @@ function PantallaResultado({ resultado, onCerrar }) {
             <div className="px-4 py-4">
               <button
                 onClick={onCerrar}
-                className="w-full py-3 rounded-2xl font-bold text-sm text-white bg-green-600 flex items-center justify-center gap-2.5"
+                className="w-full py-3 rounded-2xl font-bold text-sm text-green-700 bg-green-100 border border-green-200 flex items-center justify-center gap-2.5"
               >
                 <span>Escanear siguiente ({cuenta})</span>
-                <ContadorCircular segundos={cuenta} total={AUTO_CIERRE} color="#86efac" />
+                <ContadorCircular segundos={cuenta} total={AUTO_CIERRE} color="#16a34a" />
               </button>
             </div>
           </>
         )}
 
-        {/* ── Fase normal (viendo / confirmando) ───────────────────── */}
+        {/* ── Fase normal ────────────────────────────────────────── */}
         {fase !== 'exito' && (
           <>
             {/* Foto grande */}
             <div className="relative">
               <div
-                className={`w-full aspect-[4/3] overflow-hidden ring-4 ${paleta.ring}`}
-                style={{ background: '#111' }}
+                className={`w-full aspect-[4/3] overflow-hidden ring-4 ${paleta.ring} bg-gray-200`}
               >
                 <Avatar
                   foto_url={persona?.foto_url}
                   nombre={persona?.nombre}
                   className="w-full h-full"
-                  textClass="text-7xl bg-gray-800 w-full h-full"
+                  textClass="text-7xl bg-gray-300 w-full h-full"
                 />
               </div>
-
-              {/* Gradiente + nombre sobre la foto */}
               <div
                 className="absolute bottom-0 left-0 right-0 h-28"
                 style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.88) 0%, transparent 100%)' }}
@@ -162,17 +202,17 @@ function PantallaResultado({ resultado, onCerrar }) {
                   {persona?.parentesco} · DNI {persona?.dni}
                 </p>
               </div>
-
-              {/* Badge estado */}
               <div className={`absolute top-3 right-3 ${paleta.badge} px-3 py-1.5 rounded-xl flex items-center gap-1.5 shadow-lg`}>
                 {ya_recogido
                   ? <CheckCircle2 className="w-4 h-4 text-white" />
+                  : noAsistio
+                  ? <UserX        className="w-4 h-4 text-white" />
                   : ok
                   ? <ShieldCheck  className="w-4 h-4 text-white" />
                   : <ShieldX      className="w-4 h-4 text-white" />
                 }
                 <span className="text-white font-black text-xs tracking-wide">
-                  {ya_recogido ? 'YA RECOGIDO' : ok ? 'AUTORIZADO' : 'NO AUTORIZADO'}
+                  {ya_recogido ? 'YA RECOGIDO' : noAsistio ? 'ALUMNO AUSENTE' : ok ? 'AUTORIZADO' : 'NO AUTORIZADO'}
                 </span>
               </div>
             </div>
@@ -180,32 +220,33 @@ function PantallaResultado({ resultado, onCerrar }) {
             {/* Datos */}
             <div className="px-4 pt-3 pb-1 space-y-2.5">
 
-              {/* Caso: ya recogido — quién lo recogió */}
+              {/* Ya recogido — info neutra con borde gris, no azul total */}
               {ya_recogido && (
-                <div className="flex items-start gap-3 bg-blue-50 border border-blue-200 rounded-2xl px-3 py-3">
-                  <div className="w-10 h-10 rounded-xl overflow-hidden flex-shrink-0 bg-blue-200">
+                <div className="flex items-start gap-3 bg-gray-50 border border-gray-200 rounded-2xl px-3 py-3">
+                  <div className="w-10 h-10 rounded-xl overflow-hidden flex-shrink-0 bg-gray-200">
                     {recogido_por?.foto_snapshot
                       ? <img src={recogido_por.foto_snapshot} alt="" className="w-full h-full object-cover" />
-                      : <div className="w-full h-full flex items-center justify-center font-bold text-blue-600 text-base">
+                      : <div className="w-full h-full flex items-center justify-center font-bold text-gray-500 text-base">
                           {recogido_por?.nombre?.charAt(0) || '?'}
                         </div>
                     }
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-blue-900 font-bold text-sm">
-                      Alumno ya fue recogido{recogido_a_las ? ` a las ${recogido_a_las}` : ''}
+                    <p className="text-gray-900 font-bold text-sm">
+                      Recogido{recogido_a_las ? ` a las ${recogido_a_las}` : ''}
                     </p>
                     {recogido_por && (
-                      <p className="text-blue-700 text-xs mt-0.5">
+                      <p className="text-gray-600 text-xs mt-0.5">
                         Por {recogido_por.nombre} {recogido_por.apellido}
-                        <span className="text-blue-500"> · {recogido_por.parentesco}</span>
+                        <span className="text-gray-400"> · {recogido_por.parentesco}</span>
                       </p>
                     )}
                   </div>
+                  <CheckCircle2 className="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5" />
                 </div>
               )}
 
-              {/* Vigencia — solo si autorizado */}
+              {/* Vigencia */}
               {ok && persona?.vigencia_hasta && (
                 <div className="flex items-center gap-2 text-xs text-gray-500">
                   <Clock className="w-3.5 h-3.5 flex-shrink-0 text-gray-400" />
@@ -220,25 +261,33 @@ function PantallaResultado({ resultado, onCerrar }) {
                 </div>
               )}
 
-              {/* Alerta no autorizado — excluye ya_recogido */}
-              {!ok && !ya_recogido && (
+              {/* No autorizado */}
+              {!ok && !ya_recogido && !noAsistio && (
                 <div className="flex items-start gap-2.5 bg-red-50 border border-red-200 rounded-2xl px-3 py-2.5">
                   <AlertTriangle className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
                   <div>
                     <p className="text-red-800 font-semibold text-xs">{motivoNoAuth}</p>
-                    <p className="text-red-600 text-xs mt-0.5">
-                      No entregar al alumno. Avisar a secretaría de inmediato.
-                    </p>
+                    <p className="text-red-600 text-xs mt-0.5">No entregar al alumno. Avisar a secretaría.</p>
                   </div>
                 </div>
               )}
 
-              {/* Advertencia alumno sin ingreso */}
-              {ok && !alumno_presente && (
-                <div className="flex items-start gap-2.5 bg-amber-50 border border-amber-200 rounded-2xl px-3 py-2.5">
-                  <AlertTriangle className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
-                  <p className="text-amber-800 text-xs font-medium">
-                    El alumno no tiene ingreso registrado hoy. Verificar con la docente.
+              {/* Bloqueo no asistió */}
+              {noAsistio && (
+                <div className="flex flex-col items-center gap-3 bg-orange-50 border-2 border-orange-300 rounded-2xl px-4 py-5 text-center">
+                  <div className="w-16 h-16 rounded-2xl bg-orange-100 ring-4 ring-orange-200 flex items-center justify-center">
+                    <UserX className="w-9 h-9 text-orange-600" />
+                  </div>
+                  <div>
+                    <p className="text-orange-900 font-black text-base leading-tight">
+                      Este alumno NO asistió hoy
+                    </p>
+                    <p className="text-orange-700 text-xs mt-1.5 leading-relaxed">
+                      No hay registro de ingreso. El recojo no puede ser autorizado.
+                    </p>
+                  </div>
+                  <p className="text-orange-600 text-[11px] font-semibold bg-orange-100 rounded-xl px-3 py-1.5">
+                    Verificar con secretaría o la docente
                   </p>
                 </div>
               )}
@@ -271,10 +320,10 @@ function PantallaResultado({ resultado, onCerrar }) {
                     </p>
                   </div>
                   {ya_recogido
-                    ? <CheckCircle2 className="w-5 h-5 text-blue-500  flex-shrink-0" />
+                    ? <CheckCircle2 className="w-5 h-5 text-blue-500 flex-shrink-0" />
                     : ok
                     ? <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0" />
-                    : <UserX        className="w-5 h-5 text-red-400   flex-shrink-0" />
+                    : <UserX        className="w-5 h-5 text-red-400 flex-shrink-0" />
                   }
                 </div>
               )}
@@ -282,8 +331,7 @@ function PantallaResultado({ resultado, onCerrar }) {
 
             {/* Botones */}
             <div className="px-4 pb-4 pt-2.5 space-y-2">
-              {/* Confirmar entrega — solo si autorizado */}
-              {ok && (
+              {ok && alumno_presente && !ya_recogido && (
                 <button
                   onClick={confirmarEntrega}
                   disabled={fase === 'confirmando'}
@@ -296,21 +344,22 @@ function PantallaResultado({ resultado, onCerrar }) {
                 </button>
               )}
 
-              {/* Cerrar */}
               <button
                 onClick={() => { setPausado(true); onCerrar() }}
-                className={`w-full py-2.5 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 ${
-                  ok          ? 'border border-gray-200 text-gray-500' :
-                  ya_recogido ? 'text-white bg-blue-600' :
-                                'text-white bg-red-600'
-                }`}
+                className={`w-full py-2.5 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 ${cerrarStyle}`}
               >
-                {ok
+                {ok && alumno_presente && !ya_recogido
                   ? 'Cancelar'
                   : (
                     <>
                       <span>{pausado ? 'Cerrar' : `Cerrar (${cuenta})`}</span>
-                      {!pausado && <ContadorCircular segundos={cuenta} total={AUTO_CIERRE} color="#fca5a5" />}
+                      {!pausado && (
+                        <ContadorCircular
+                          segundos={cuenta}
+                          total={AUTO_CIERRE}
+                          color={ya_recogido ? '#9ca3af' : noAsistio ? '#fdba74' : '#fca5a5'}
+                        />
+                      )}
                     </>
                   )
                 }
@@ -318,7 +367,6 @@ function PantallaResultado({ resultado, onCerrar }) {
             </div>
           </>
         )}
-
       </div>
     </div>
   )
@@ -357,9 +405,7 @@ function FilaEstudiante({ foto_url, nombre, apellido, nivel, grado, seccion, bad
         }
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-bold text-gray-900 leading-tight truncate">
-          {nombre} {apellido}
-        </p>
+        <p className="text-sm font-bold text-gray-900 leading-tight truncate">{nombre} {apellido}</p>
         <p className="text-xs text-gray-500 mt-0.5">{aula}</p>
       </div>
       <div className="flex flex-col items-end gap-1 flex-shrink-0">
@@ -374,8 +420,8 @@ function FilaEstudiante({ foto_url, nombre, apellido, nivel, grado, seccion, bad
   )
 }
 
-function PanelResumen({ onVolver }) {
-  const [datos, setDatos]       = useState(null)
+function PanelResumen({ onVolver, pendientes }) {
+  const [datos,    setDatos]    = useState(null)
   const [cargando, setCargando] = useState(true)
 
   const cargar = useCallback(async () => {
@@ -420,12 +466,11 @@ function PanelResumen({ onVolver }) {
           </button>
         </div>
 
-        {/* Stats */}
         {datos && (
           <div className="flex gap-2">
-            <StatCard valor={datos.total_presentes}  label="Presentes hoy"      color="marino" icon={Users}       />
-            <StatCard valor={datos.total_recogidos}  label="Ya recogidos"       color="green"  icon={CheckCircle2} />
-            <StatCard valor={datos.total_pendientes} label="Pendientes de recojo" color="amber" icon={Clock}       />
+            <StatCard valor={datos.total_presentes}  label="Presentes hoy"        color="marino" icon={Users}        />
+            <StatCard valor={datos.total_recogidos}  label="Ya recogidos"          color="green"  icon={CheckCircle2} />
+            <StatCard valor={datos.total_pendientes} label="Pendientes de recojo"  color="amber"  icon={Clock}        />
           </div>
         )}
         {cargando && !datos && (
@@ -435,10 +480,8 @@ function PanelResumen({ onVolver }) {
         )}
       </div>
 
-      {/* Contenido scrollable */}
+      {/* Contenido */}
       <div className="flex-1 overflow-y-auto px-4 pt-4 pb-24 space-y-5">
-
-        {/* Pendientes */}
         {datos && datos.pendientes.length > 0 && (
           <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
             <div className="flex items-center gap-2 px-4 py-3 border-b border-amber-100 bg-amber-50">
@@ -453,18 +496,15 @@ function PanelResumen({ onVolver }) {
             <div className="divide-y divide-gray-50 px-3">
               {datos.pendientes.map((p, i) => (
                 <FilaEstudiante
-                  key={i}
-                  {...p.estudiante}
+                  key={i} {...p.estudiante}
                   hora={p.hora_ingreso ? `Ingresó ${p.hora_ingreso}` : ''}
-                  badge="Esperando"
-                  badgeColor="bg-amber-100 text-amber-700"
+                  badge="Esperando" badgeColor="bg-amber-100 text-amber-700"
                 />
               ))}
             </div>
           </div>
         )}
 
-        {/* Recogidos */}
         {datos && datos.recogidos.length > 0 && (
           <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
             <div className="flex items-center gap-2 px-4 py-3 border-b border-green-100 bg-green-50">
@@ -479,13 +519,7 @@ function PanelResumen({ onVolver }) {
             <div className="divide-y divide-gray-50 px-3">
               {datos.recogidos.map((r, i) => (
                 <div key={i} className="py-2.5">
-                  <FilaEstudiante
-                    {...r.estudiante}
-                    hora={r.hora}
-                    badge="Recogido"
-                    badgeColor="bg-green-100 text-green-700"
-                  />
-                  {/* Responsable que recogió */}
+                  <FilaEstudiante {...r.estudiante} hora={r.hora} badge="Recogido" badgeColor="bg-green-100 text-green-700" />
                   <div className="ml-[52px] mt-1 flex items-center gap-2">
                     <div className="w-6 h-6 rounded-lg overflow-hidden flex-shrink-0 bg-gray-100">
                       {r.responsable.foto_snapshot
@@ -506,41 +540,34 @@ function PanelResumen({ onVolver }) {
           </div>
         )}
 
-        {/* Empty state */}
         {datos && datos.total_presentes === 0 && (
           <div className="flex flex-col items-center justify-center py-20 text-gray-400">
             <Users className="w-12 h-12 mb-3 opacity-30" />
             <p className="text-sm">Sin ingresos registrados hoy</p>
           </div>
         )}
-
       </div>
 
-      {/* Tab bar */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 flex pb-safe">
-        <button
-          onClick={onVolver}
-          className="flex-1 flex flex-col items-center gap-1 py-3 text-gray-400"
-        >
-          <ScanLine className="w-5 h-5" />
-          <span className="text-[10px] font-medium">Escanear</span>
-        </button>
-        <button className="flex-1 flex flex-col items-center gap-1 py-3 text-[#0a1f3d]">
-          <BarChart2 className="w-5 h-5" />
-          <span className="text-[10px] font-bold">Resumen</span>
-        </button>
-      </div>
+      <TabBar activo="resumen" onEscanear={onVolver} onResumen={() => {}} pendientes={pendientes} />
     </div>
   )
 }
 
 // ── Página principal ──────────────────────────────────────────────────────────
 export default function EscanearRecojo() {
-  const [modo, setModo]             = useState('camara')   // camara | resultado | resumen
-  const [cargando, setCargando]     = useState(false)
+  const [modo,         setModo]         = useState('camara')
+  const [cargando,     setCargando]     = useState(false)
   const [camaraActiva, setCamaraActiva] = useState(true)
-  const [resultado, setResultado]   = useState(null)
-  const [dniManual, setDniManual]   = useState('')
+  const [resultado,    setResultado]    = useState(null)
+  const [dni,          setDni]          = useState('')
+  const [pendientes,   setPendientes]   = useState(0)
+
+  // Cargar pendientes al montar para el badge del tab
+  useEffect(() => {
+    api.get('/recojo/resumen-hoy')
+      .then(r => setPendientes(r.data?.total_pendientes ?? 0))
+      .catch(() => {})
+  }, [])
 
   const escanear = useCallback(async (token) => {
     if (cargando) return
@@ -560,42 +587,52 @@ export default function EscanearRecojo() {
     }
   }, [cargando])
 
+  const buscarPorDni = useCallback(async () => {
+    const d = dni.trim()
+    if (!d || d.length < 8) return
+    if (cargando) return
+    setCargando(true)
+    setCamaraActiva(false)
+    try {
+      const { data } = await api.post('/recojo/buscar-dni', { dni: d })
+      hapticLight()
+      setResultado(data)
+      setModo('resultado')
+    } catch (err) {
+      const msg = err.response?.data?.detail || 'DNI no encontrado'
+      toast.error(msg)
+      setCamaraActiva(true)
+    } finally {
+      setCargando(false)
+      setDni('')
+    }
+  }, [dni, cargando])
+
   const cerrarResultado = useCallback(() => {
     setResultado(null)
     setModo('camara')
     setCamaraActiva(true)
+    // Actualizar badge de pendientes
+    api.get('/recojo/resumen-hoy')
+      .then(r => setPendientes(r.data?.total_pendientes ?? 0))
+      .catch(() => {})
   }, [])
 
-  const irResumen = () => {
-    setModo('resumen')
-    setCamaraActiva(false)
-  }
+  const irResumen  = () => { setModo('resumen');  setCamaraActiva(false) }
+  const irCamara   = () => { setModo('camara');   setCamaraActiva(true)  }
 
-  const volverCamara = () => {
-    setModo('camara')
-    setCamaraActiva(true)
-  }
-
-  const enviarManual = () => {
-    const t = dniManual.trim()
-    if (!t) return
-    setDniManual('')
-    escanear(t)
-  }
-
-  // ── Vista: resultado ───────────────────────────────────────────────────────
   if (modo === 'resultado' && resultado) {
     return <PantallaResultado resultado={resultado} onCerrar={cerrarResultado} />
   }
 
-  // ── Vista: resumen del día ─────────────────────────────────────────────────
   if (modo === 'resumen') {
-    return <PanelResumen onVolver={volverCamara} />
+    return <PanelResumen onVolver={irCamara} pendientes={pendientes} />
   }
 
-  // ── Vista: cámara ──────────────────────────────────────────────────────────
+  // ── Vista cámara ──────────────────────────────────────────────────────────
   return (
     <div className="flex flex-col h-screen bg-gray-950">
+
       {/* Top bar */}
       <div className="flex items-center justify-between px-4 pt-3 pb-3 bg-gray-950 flex-shrink-0">
         <div className="flex items-center gap-2.5">
@@ -607,23 +644,23 @@ export default function EscanearRecojo() {
             <p className="text-gray-400 text-xs">Escanea el fotocheck del apoderado</p>
           </div>
         </div>
-
         <button
           onClick={irResumen}
-          className="w-9 h-9 rounded-xl bg-white/10 flex items-center justify-center"
-          title="Ver resumen del día"
+          className="relative w-9 h-9 rounded-xl bg-white/10 flex items-center justify-center"
         >
           <BarChart2 className="w-4 h-4 text-white" />
+          {pendientes > 0 && (
+            <span className="absolute -top-1 -right-1 min-w-[16px] h-4 bg-amber-500 text-white text-[9px] font-black rounded-full flex items-center justify-center px-1">
+              {pendientes}
+            </span>
+          )}
         </button>
       </div>
 
-      {/* Scanner */}
-      <div className="flex-1 relative overflow-hidden">
+      {/* Scanner — altura fija, no ocupa toda la pantalla */}
+      <div className="h-[48vh] relative overflow-hidden flex-shrink-0">
         {camaraActiva && (
-          <QRScanner
-            activo={camaraActiva}
-            onResult={escanear}
-          />
+          <QRScanner activo={camaraActiva} onResult={escanear} />
         )}
 
         {cargando && (
@@ -634,62 +671,55 @@ export default function EscanearRecojo() {
           </div>
         )}
 
-        {/* Overlay instrucción */}
         {!cargando && (
           <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none z-10">
-            {/* Marco de escaneo */}
-            <div className="relative w-64 h-64">
+            <div className="relative w-56 h-56">
               <div className="absolute top-0 left-0 w-10 h-10 border-l-4 border-t-4 border-green-400 rounded-tl-lg" />
               <div className="absolute top-0 right-0 w-10 h-10 border-r-4 border-t-4 border-green-400 rounded-tr-lg" />
               <div className="absolute bottom-0 left-0 w-10 h-10 border-l-4 border-b-4 border-green-400 rounded-bl-lg" />
               <div className="absolute bottom-0 right-0 w-10 h-10 border-r-4 border-b-4 border-green-400 rounded-br-lg" />
               <div className="absolute top-1/2 left-4 right-4 h-0.5 bg-green-400/60 -translate-y-1/2 animate-pulse" />
             </div>
-            <p className="text-white/70 text-sm mt-6 text-center px-8">
+            <p className="text-white/70 text-sm mt-5 text-center px-8">
               Apunta al QR del fotocheck físico
             </p>
           </div>
         )}
       </div>
 
-      {/* Input manual (fallback) */}
-      <div className="bg-gray-900 px-4 pt-4 pb-2 flex-shrink-0">
-        <p className="text-gray-400 text-xs text-center mb-3">O ingresa el código manualmente</p>
-        <div className="flex gap-2">
-          <div className="flex-1 relative">
-            <Hash className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
-            <input
-              value={dniManual}
-              onChange={e => setDniManual(e.target.value.toUpperCase())}
-              onKeyDown={e => e.key === 'Enter' && enviarManual()}
-              placeholder="RECOJO-XXXXXXXX-..."
-              className="w-full pl-9 pr-4 py-2.5 bg-gray-800 border border-gray-700 rounded-xl text-sm text-white placeholder-gray-600 outline-none focus:border-green-500"
-            />
+      {/* Sección inferior — buscar por DNI */}
+      <div className="flex-1 bg-gray-900 flex flex-col justify-center px-4 py-5 gap-4">
+        <div>
+          <p className="text-gray-300 text-xs font-semibold uppercase tracking-wide mb-1.5">
+            ¿QR no escanea? Busca por DNI del responsable
+          </p>
+          <div className="flex gap-2">
+            <div className="flex-1 relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <input
+                value={dni}
+                onChange={e => setDni(e.target.value.replace(/\D/g, '').slice(0, 8))}
+                onKeyDown={e => e.key === 'Enter' && buscarPorDni()}
+                placeholder="DNI del responsable"
+                inputMode="numeric"
+                maxLength={8}
+                className="w-full pl-9 pr-4 py-3 bg-gray-800 border border-gray-700 rounded-xl text-sm text-white placeholder-gray-500 outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500"
+              />
+            </div>
+            <button
+              onClick={buscarPorDni}
+              disabled={dni.length < 8 || cargando}
+              className="px-4 py-3 bg-green-600 text-white rounded-xl text-sm font-bold disabled:opacity-40 flex items-center gap-1.5"
+            >
+              <Search className="w-4 h-4" />
+              Buscar
+            </button>
           </div>
-          <button
-            onClick={enviarManual}
-            disabled={!dniManual.trim() || cargando}
-            className="px-4 py-2.5 bg-green-600 text-white rounded-xl text-sm font-medium disabled:opacity-40"
-          >
-            OK
-          </button>
         </div>
       </div>
 
-      {/* Tab bar */}
-      <div className="bg-gray-900 border-t border-white/5 flex flex-shrink-0">
-        <button className="flex-1 flex flex-col items-center gap-1 py-3 text-green-400">
-          <ScanLine className="w-5 h-5" />
-          <span className="text-[10px] font-bold">Escanear</span>
-        </button>
-        <button
-          onClick={irResumen}
-          className="flex-1 flex flex-col items-center gap-1 py-3 text-gray-500"
-        >
-          <BarChart2 className="w-5 h-5" />
-          <span className="text-[10px] font-medium">Resumen</span>
-        </button>
-      </div>
+      {/* Tab bar unificado */}
+      <TabBar activo="camara" onEscanear={() => {}} onResumen={irResumen} pendientes={pendientes} />
     </div>
   )
 }

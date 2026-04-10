@@ -1,13 +1,20 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   ShieldCheck, Plus, X, Camera, AlertCircle, CheckCircle2,
-  Clock, UserX, ChevronDown, Info, Upload, Calendar,
-  UserCheck, History, Flag, LogIn, CheckCheck, AlertTriangle,
+  Clock, UserX, ChevronDown, Info, Upload,
+  CalendarDays, Flag, AlertTriangle,
+  ChevronLeft, ChevronRight, CalendarOff,
 } from 'lucide-react'
+import {
+  format, startOfMonth, endOfMonth,
+  eachDayOfInterval, getDay, isToday, parseISO,
+} from 'date-fns'
+import { es } from 'date-fns/locale'
 import toast from 'react-hot-toast'
 import api from '../../lib/api'
 import { useHijo } from '../../context/HijoContext'
+import { QK } from '../../lib/queryKeys'
 
 // ── Configuración visual por estado ──────────────────────────────────────────
 const ESTADO_CFG = {
@@ -388,101 +395,85 @@ function ModalReportar({ log, onClose, onSuccess }) {
   )
 }
 
-// ── Tab: Hoy ─────────────────────────────────────────────────────────────────
-function TabHoy() {
+// ── Hero card: estado de hoy ──────────────────────────────────────────────────
+function CardHoy({ hijoActivo }) {
   const { data: estadoHoy = [], isLoading } = useQuery({
     queryKey: ['recojo-estado-hoy'],
-    queryFn: () => api.get('/recojo/estado-hoy').then(r => r.data),
+    queryFn:  () => api.get('/recojo/estado-hoy').then(r => r.data),
     refetchInterval: 30_000,
   })
 
-  if (isLoading) {
-    return (
-      <div className="space-y-3">
-        {[1, 2].map(i => <div key={i} className="h-32 bg-gray-100 rounded-2xl animate-pulse" />)}
-      </div>
-    )
-  }
+  if (isLoading) return <div className="h-24 bg-gray-100 rounded-2xl animate-pulse" />
 
-  if (estadoHoy.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center py-16 text-gray-400">
-        <Calendar className="w-12 h-12 mb-3 opacity-30" />
-        <p className="text-sm font-medium">Sin datos de hoy</p>
-        <p className="text-xs mt-1">Puede que no haya clases hoy</p>
-      </div>
-    )
-  }
+  const hijo = hijoActivo
+    ? estadoHoy.find(h => h.estudiante.id === hijoActivo.id)
+    : estadoHoy[0]
+
+  if (!hijo) return null
+
+  const { ingreso, recojo } = hijo
+
+  // Determinar estado y paleta
+  const recogido  = !!recojo
+  const asistio   = !!ingreso
+  const borderCol = recogido ? 'border-l-green-500' : asistio ? 'border-l-amber-400' : 'border-l-gray-300'
 
   return (
-    <div className="space-y-4">
-      {estadoHoy.map(hijo => {
-        const est    = hijo.estudiante
-        const ingreso = hijo.ingreso
-        const recojo  = hijo.recojo
-        const aula    = `${est.grado} "${est.seccion}" · ${est.nivel}`
-        return (
-        <div key={est.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-          {/* Header hijo */}
-          <div className="px-4 py-3 bg-gray-50 border-b border-gray-100 flex items-center gap-2">
-            <div className="w-8 h-8 rounded-full bg-marino/10 flex items-center justify-center">
-              <span className="text-xs font-bold text-marino">{est.nombre?.charAt(0)}</span>
+    <div className={`card border-l-4 ${borderCol}`}>
+      <div className="flex items-center justify-between mb-1">
+        <p className="text-xs text-gray-400 uppercase tracking-wide">Hoy</p>
+        <p className="text-xs text-gray-400 capitalize">
+          {format(new Date(), "EEEE d 'de' MMMM", { locale: es })}
+        </p>
+      </div>
+
+      {recogido ? (
+        /* ── Ya fue recogido ── */
+        <div className="flex items-center gap-3 mt-2">
+          {recojo.foto_snapshot ? (
+            <div className="w-14 h-14 rounded-xl overflow-hidden flex-shrink-0">
+              <img src={recojo.foto_snapshot} alt="" className="w-full h-full object-cover" />
             </div>
-            <div>
-              <p className="text-sm font-semibold text-gray-900">{est.nombre} {est.apellido}</p>
-              <p className="text-xs text-gray-400">{aula}</p>
+          ) : (
+            <div className="w-14 h-14 rounded-xl bg-green-100 flex items-center justify-center flex-shrink-0">
+              <span className="text-xl font-black text-green-600">{recojo.nombre?.charAt(0)}</span>
             </div>
+          )}
+          <div className="flex-1 min-w-0">
+            <p className="font-black text-green-700 text-base leading-tight">Ya fue recogido</p>
+            <p className="text-sm text-gray-700 font-semibold mt-0.5">
+              {recojo.nombre} {recojo.apellido}
+            </p>
+            <p className="text-xs text-gray-400 mt-0.5">{recojo.parentesco} · {recojo.hora}</p>
           </div>
-
-          <div className="p-4 space-y-3">
-            {/* Ingreso */}
-            <div className="flex items-center gap-3">
-              <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${ingreso ? 'bg-green-100' : 'bg-gray-100'}`}>
-                <LogIn className={`w-4 h-4 ${ingreso ? 'text-green-600' : 'text-gray-400'}`} />
-              </div>
-              <div>
-                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Ingreso</p>
-                {ingreso
-                  ? <p className="text-sm text-gray-800">{ingreso.hora} <span className={`text-xs font-medium ${ingreso.estado === 'tardanza' ? 'text-amber-600' : 'text-green-600'}`}>{ingreso.estado === 'tardanza' ? 'Tardanza' : 'A tiempo'}</span></p>
-                  : <p className="text-sm text-gray-400">No registrado</p>
-                }
-              </div>
-            </div>
-
-            {/* Recojo */}
-            <div className="flex items-start gap-3">
-              <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5 ${recojo ? 'bg-blue-100' : 'bg-gray-100'}`}>
-                <UserCheck className={`w-4 h-4 ${recojo ? 'text-blue-600' : 'text-gray-400'}`} />
-              </div>
-              <div className="flex-1">
-                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Recojo de hoy</p>
-                {recojo ? (
-                  <div className="mt-1.5 bg-blue-50 border border-blue-100 rounded-xl p-3 flex items-center gap-3">
-                    {recojo.foto_snapshot ? (
-                      <div className="w-12 h-12 rounded-xl overflow-hidden flex-shrink-0">
-                        <img src={recojo.foto_snapshot} alt="Responsable" className="w-full h-full object-cover" />
-                      </div>
-                    ) : (
-                      <div className="w-12 h-12 rounded-xl bg-blue-200 flex items-center justify-center flex-shrink-0">
-                        <span className="text-lg font-bold text-blue-600">{recojo.nombre?.charAt(0)}</span>
-                      </div>
-                    )}
-                    <div>
-                      <p className="text-sm font-semibold text-gray-800">{recojo.nombre} {recojo.apellido}</p>
-                      <p className="text-xs text-gray-500">{recojo.parentesco} · {recojo.hora}</p>
-                    </div>
-                  </div>
-                ) : (
-                  <p className="text-sm text-gray-400 mt-0.5">Pendiente de recojo</p>
-                )}
-              </div>
-            </div>
+          <CheckCircle2 className="w-6 h-6 text-green-500 flex-shrink-0" />
+        </div>
+      ) : asistio ? (
+        /* ── Asistió, pendiente de recojo ── */
+        <div className="flex items-center gap-3 mt-2">
+          <div className="w-14 h-14 rounded-xl bg-amber-50 flex items-center justify-center flex-shrink-0">
+            <Clock className="w-7 h-7 text-amber-400" />
+          </div>
+          <div className="flex-1">
+            <p className="font-black text-amber-600 text-base leading-tight">Pendiente de recojo</p>
+            <p className="text-xs text-gray-400 mt-0.5">
+              Ingresó a las {ingreso.hora}
+              {ingreso.estado === 'tardanza' && <span className="text-amber-500 ml-1">· Tardanza</span>}
+            </p>
           </div>
         </div>
-        )
-      })}
-
-      <p className="text-center text-xs text-gray-400 pb-2">Actualiza cada 30 segundos</p>
+      ) : (
+        /* ── No asistió ── */
+        <div className="flex items-center gap-3 mt-2">
+          <div className="w-14 h-14 rounded-xl bg-gray-100 flex items-center justify-center flex-shrink-0">
+            <CalendarOff className="w-7 h-7 text-gray-300" />
+          </div>
+          <div>
+            <p className="font-semibold text-gray-500 text-base leading-tight">No asistió hoy</p>
+            <p className="text-xs text-gray-400 mt-0.5">Sin registro de ingreso</p>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -607,97 +598,339 @@ function TabAutorizados({ hijoActivo, cargandoHijo }) {
   )
 }
 
-// ── Tab: Actividad ───────────────────────────────────────────────────────────
-function TabActividad() {
-  const queryClient = useQueryClient()
-  const [modalReportar, setModalReportar] = useState(null)
+// ── Helpers calendario ───────────────────────────────────────────────────────
+const CELDA_CFG = {
+  recogido:   { bg: 'bg-green-100', text: 'text-green-700', icon: '✓' },
+  pendiente:  { bg: 'bg-amber-100', text: 'text-amber-600', icon: '?' },
+  sin_recojo: { bg: 'bg-gray-100',  text: 'text-gray-400',  icon: '—' },
+  no_asistio: { bg: 'bg-red-100',   text: 'text-red-600',   icon: '✗' },
+}
 
-  const { data: historial = [], isLoading } = useQuery({
-    queryKey: ['recojo-historial'],
-    queryFn: () => api.get('/recojo/historial').then(r => r.data),
+function construirSemanas(mes) {
+  const diasLV = eachDayOfInterval({ start: startOfMonth(mes), end: endOfMonth(mes) })
+    .filter(d => { const dow = getDay(d); return dow >= 1 && dow <= 5 })
+  const semanas = []
+  let prevKey = null, actual = null
+  diasLV.forEach(d => {
+    const dow = getDay(d)
+    const lun = new Date(d)
+    lun.setDate(d.getDate() - (dow - 1))
+    const key = lun.toDateString()
+    if (key !== prevKey) { prevKey = key; actual = [null,null,null,null,null]; semanas.push(actual) }
+    actual[dow - 1] = d
+  })
+  return semanas
+}
+
+// ── Tab: Calendario de recojos ───────────────────────────────────────────────
+function TabCalendario({ hijoActivo }) {
+  const queryClient  = useQueryClient()
+  const [mes, setMes] = useState(new Date())
+  const [diaSeleccionado, setDiaSeleccionado] = useState(null)
+  const [modalReportar, setModalReportar]     = useState(null)
+
+  const mesMes  = mes.getMonth() + 1
+  const mesYear = mes.getFullYear()
+  const hoy     = new Date()
+  const hoyStr  = format(hoy, 'yyyy-MM-dd')
+
+  const { data: calData, isPending } = useQuery({
+    queryKey: QK.recojoCalendario(hijoActivo?.id, mesMes, mesYear),
+    queryFn:  () => api.get('/recojo/calendario-mes', {
+      params: {
+        mes:           mesMes,
+        anio:          mesYear,
+        estudiante_id: hijoActivo?.id,
+      },
+    }).then(r => r.data),
+    enabled:   !!hijoActivo?.id,
+    staleTime: 30_000,
   })
 
-  if (isLoading) {
-    return (
-      <div className="space-y-3">
-        {[1, 2, 3].map(i => <div key={i} className="h-28 bg-gray-100 rounded-2xl animate-pulse" />)}
-      </div>
-    )
+  // Cerrar detalle al cambiar mes o hijo
+  useEffect(() => { setDiaSeleccionado(null) }, [mesMes, mesYear, hijoActivo?.id])
+
+  const estados   = calData?.estados   ?? {}
+  const detalle   = calData?.detalle   ?? {}
+  const diasNoLab = calData?.dias_no_lab ?? {}
+  const semanas   = construirSemanas(mes)
+
+  const celdaCfg = (d) => {
+    if (!d) return null
+    const dStr = format(d, 'yyyy-MM-dd')
+    if (dStr > hoyStr)       return { bg: 'bg-gray-50',  text: 'text-gray-200', icon: null }
+    if (diasNoLab[dStr])     return { bg: 'bg-sky-50',   text: 'text-sky-400',  icon: 'L'  }
+    const estado = estados[dStr]
+    return estado ? CELDA_CFG[estado] : { bg: 'bg-gray-100', text: 'text-gray-300', icon: '—' }
   }
 
-  if (historial.length === 0) {
+  // Detalle del día seleccionado
+  const diaEstado = diaSeleccionado ? estados[diaSeleccionado] : null
+  const diaDetalle = diaSeleccionado ? detalle[diaSeleccionado] : null
+  const diaNoLab   = diaSeleccionado ? diasNoLab[diaSeleccionado] : null
+  const diaCfg     = diaEstado ? CELDA_CFG[diaEstado] : null
+
+  if (!hijoActivo) {
     return (
       <div className="flex flex-col items-center justify-center py-16 text-gray-400">
-        <History className="w-12 h-12 mb-3 opacity-30" />
-        <p className="text-sm font-medium">Sin actividad registrada</p>
-        <p className="text-xs mt-1">Los recojos confirmados aparecerán aquí</p>
+        <CalendarDays className="w-12 h-12 mb-3 opacity-30" />
+        <p className="text-sm font-medium">Selecciona un hijo para ver el historial</p>
       </div>
     )
   }
 
   return (
     <>
-      <div className="space-y-3">
-        {historial.map(log => {
-          const resp = log.responsable || {}
-          const est  = log.estudiante  || {}
-          return (
-            <div key={log.id} className={`bg-white rounded-2xl border shadow-sm overflow-hidden ${log.reportado ? 'border-red-200' : 'border-gray-100'}`}>
-              <div className="p-4 flex items-start gap-3">
-                {resp.foto_snapshot ? (
-                  <div className="w-14 h-14 rounded-xl overflow-hidden flex-shrink-0">
-                    <img src={resp.foto_snapshot} alt="Snapshot" className="w-full h-full object-cover" />
-                  </div>
-                ) : (
-                  <div className="w-14 h-14 rounded-xl bg-gray-100 flex items-center justify-center flex-shrink-0">
-                    <span className="text-xl font-bold text-gray-400">{resp.nombre?.charAt(0)}</span>
-                  </div>
-                )}
+      {/* ── Hero card: estado de hoy ── */}
+      <CardHoy hijoActivo={hijoActivo} />
 
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <p className="font-semibold text-gray-900 text-sm">{resp.nombre} {resp.apellido}</p>
-                      <p className="text-xs text-gray-500">{resp.parentesco}</p>
-                    </div>
-                    {log.reportado && (
-                      <span className="flex items-center gap-1 text-xs font-medium text-red-600 bg-red-50 border border-red-200 px-2 py-0.5 rounded-full flex-shrink-0">
-                        <Flag className="w-3 h-3" />
-                        Reportado
+      {/* ── Calendario del mes ── */}
+      <div className="card">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <p className="text-xs text-gray-400 uppercase tracking-wide mb-0.5">Historial de recojos</p>
+            <p className="font-bold text-marino capitalize text-lg">
+              {format(mes, 'MMMM yyyy', { locale: es })}
+            </p>
+            <p className="text-sm text-gray-500 mt-0.5">{hijoActivo.nombre} {hijoActivo.apellido}</p>
+          </div>
+          <div className="flex items-center gap-0.5">
+            <button
+              onClick={() => setMes(m => new Date(m.getFullYear(), m.getMonth() - 1, 1))}
+              className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              <ChevronLeft size={16} />
+            </button>
+            <button
+              onClick={() => setMes(m => new Date(m.getFullYear(), m.getMonth() + 1, 1))}
+              disabled={mes.getFullYear() === hoy.getFullYear() && mes.getMonth() === hoy.getMonth()}
+              className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+            >
+              <ChevronRight size={16} />
+            </button>
+          </div>
+        </div>
+
+        {/* Cabecera días */}
+        <div className="grid grid-cols-5 gap-2 mb-2">
+          {['Lun','Mar','Mié','Jue','Vie'].map(d => (
+            <div key={d} className="text-center text-xs font-semibold text-gray-400">{d}</div>
+          ))}
+        </div>
+
+        {/* Grilla */}
+        {isPending ? (
+          <div className="grid grid-cols-5 gap-2">
+            {Array.from({ length: 25 }).map((_, i) => (
+              <div key={i} className="h-14 rounded-xl bg-gray-100 animate-pulse" />
+            ))}
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {semanas.map((semana, si) => (
+              <div key={si} className="grid grid-cols-5 gap-2">
+                {semana.map((d, di) => {
+                  const cfg  = celdaCfg(d)
+                  if (!d || !cfg) return <div key={di} />
+                  const dStr   = format(d, 'yyyy-MM-dd')
+                  const esHoy  = isToday(d)
+                  const futuro = dStr > hoyStr
+                  return (
+                    <div
+                      key={di}
+                      onClick={!futuro ? () => setDiaSeleccionado(dStr) : undefined}
+                      className={`rounded-xl flex flex-col items-center justify-center py-3 gap-0.5 select-none ${cfg.bg} ${
+                        esHoy ? 'ring-2 ring-marino ring-offset-1' : ''
+                      } ${!futuro ? 'cursor-pointer active:scale-95 transition-transform' : ''} ${
+                        diaSeleccionado === dStr ? 'ring-2 ring-dorado ring-offset-1' : ''
+                      }`}
+                    >
+                      <span className={`text-sm font-bold leading-none ${cfg.text}`}>
+                        {cfg.icon ?? ''}
                       </span>
-                    )}
-                  </div>
-                  <div className="mt-2 flex items-center gap-1 text-xs text-gray-500">
-                    <CheckCheck className="w-3.5 h-3.5 text-green-500" />
-                    Recogió a <strong className="text-gray-700 ml-0.5">{est.nombre} {est.apellido}</strong>
-                  </div>
-                  <p className="text-xs text-gray-400 mt-0.5">{log.fecha} · {log.hora}</p>
+                      <span className={`text-xs leading-none ${esHoy ? 'font-bold text-marino' : 'text-gray-400'}`}>
+                        {format(d, 'd')}
+                      </span>
+                    </div>
+                  )
+                })}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Leyenda */}
+        <div className="flex flex-wrap gap-3 mt-4 pt-3 border-t border-gray-100">
+          {[
+            { bg: 'bg-green-100', text: 'text-green-700', icon: '✓', label: 'Recogido'     },
+            { bg: 'bg-amber-100', text: 'text-amber-600', icon: '?', label: 'Pendiente'    },
+            { bg: 'bg-red-100',   text: 'text-red-600',   icon: '✗', label: 'No asistió'   },
+            { bg: 'bg-gray-100',  text: 'text-gray-400',  icon: '—', label: 'Sin registro' },
+            { bg: 'bg-sky-50',    text: 'text-sky-400',   icon: 'L', label: 'No laborable' },
+          ].map(({ bg, text, icon, label }) => (
+            <div key={label} className="flex items-center gap-1.5 text-xs text-gray-500">
+              <span className={`w-5 h-5 rounded-md flex items-center justify-center text-xs font-bold ${bg} ${text}`}>
+                {icon}
+              </span>
+              {label}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ── Bottom sheet: detalle del día ── */}
+      {diaSeleccionado && (
+        <div
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center animate-fade-in"
+          onClick={() => setDiaSeleccionado(null)}
+        >
+          <div className="absolute inset-0 bg-black/40" />
+          <div
+            className="relative w-full max-w-md bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl animate-slide-up sm:mx-4"
+            onClick={e => e.stopPropagation()}
+            style={{ paddingBottom: 'max(1.25rem, env(safe-area-inset-bottom))' }}
+          >
+            {/* Handle móvil */}
+            <div className="flex justify-center pt-3 pb-1 sm:hidden">
+              <div className="w-10 h-1 bg-gray-200 rounded-full" />
+            </div>
+
+            <div className="px-5 pt-3 pb-5">
+              {/* Cabecera */}
+              <div className="flex items-start justify-between mb-4">
+                <div>
+                  <p className="text-xl font-black text-marino capitalize">
+                    {format(parseISO(diaSeleccionado), "EEEE d", { locale: es })}
+                  </p>
+                  <p className="text-sm text-gray-400 capitalize">
+                    {format(parseISO(diaSeleccionado), "MMMM yyyy", { locale: es })}
+                  </p>
                 </div>
+                <button
+                  onClick={() => setDiaSeleccionado(null)}
+                  className="p-2 -mr-2 -mt-1 hover:bg-gray-100 rounded-full transition-colors"
+                >
+                  <X size={18} className="text-gray-400" />
+                </button>
               </div>
 
-              {!log.reportado && (
-                <div className="px-4 pb-3">
-                  <button
-                    onClick={() => setModalReportar(log)}
-                    className="text-xs text-red-500 font-medium flex items-center gap-1 hover:text-red-700 transition-colors"
-                  >
-                    <Flag className="w-3 h-3" />
-                    Reportar irregularidad
-                  </button>
+              {/* Badge estado */}
+              {diaCfg && (
+                <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-bold mb-4 ${diaCfg.bg} ${diaCfg.text}`}>
+                  <span className="text-base">{diaCfg.icon}</span>
+                  {{ recogido: 'Recogido', pendiente: 'Pendiente', sin_recojo: 'Sin recojo registrado', no_asistio: 'No asistió' }[diaEstado]}
+                </div>
+              )}
+
+              {/* Contenido según estado */}
+              {diaNoLab ? (
+                <div className="text-center py-8">
+                  <div className="w-14 h-14 bg-sky-50 rounded-2xl flex items-center justify-center mx-auto mb-3">
+                    <CalendarOff size={22} className="text-sky-300" />
+                  </div>
+                  <p className="text-sm font-semibold text-sky-500">Día no laborable</p>
+                  <p className="text-xs text-gray-400 mt-1">{diaNoLab}</p>
+                </div>
+              ) : diaEstado === 'recogido' && diaDetalle ? (
+                <div className="space-y-3">
+                  {/* Responsable */}
+                  <div className="flex items-center gap-4 bg-green-50 border border-green-100 rounded-2xl p-4">
+                    {diaDetalle.foto_snapshot ? (
+                      <div className="w-16 h-16 rounded-xl overflow-hidden flex-shrink-0">
+                        <img src={diaDetalle.foto_snapshot} alt="Responsable" className="w-full h-full object-cover" />
+                      </div>
+                    ) : (
+                      <div className="w-16 h-16 rounded-xl bg-green-200 flex items-center justify-center flex-shrink-0">
+                        <span className="text-2xl font-black text-green-700">
+                          {diaDetalle.nombre?.charAt(0) || '?'}
+                        </span>
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="font-bold text-gray-900 text-base">
+                        {diaDetalle.nombre} {diaDetalle.apellido}
+                      </p>
+                      <p className="text-sm text-gray-500 mt-0.5">{diaDetalle.parentesco}</p>
+                      <p className="text-xs text-gray-400 mt-1 flex items-center gap-1">
+                        <Clock size={12} />
+                        Recogido a las <strong className="text-gray-700 ml-0.5">{diaDetalle.hora}</strong>
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Badge reportado */}
+                  {diaDetalle.reportado && (
+                    <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-xl px-3 py-2.5">
+                      <Flag size={14} className="text-red-500 flex-shrink-0" />
+                      <p className="text-xs font-medium text-red-700">Este recojo fue reportado como irregularidad</p>
+                    </div>
+                  )}
+
+                  {/* Botón reportar */}
+                  {!diaDetalle.reportado && (
+                    <button
+                      onClick={() => {
+                        setDiaSeleccionado(null)
+                        setModalReportar({
+                          id:           diaDetalle.log_id,
+                          fecha:        format(parseISO(diaSeleccionado), "dd/MM/yyyy"),
+                          hora:         diaDetalle.hora,
+                          responsable:  { nombre: diaDetalle.nombre, apellido: diaDetalle.apellido },
+                          estudiante:   { nombre: hijoActivo?.nombre, apellido: hijoActivo?.apellido },
+                        })
+                      }}
+                      className="w-full text-xs text-red-500 font-medium flex items-center justify-center gap-1.5 py-2 hover:text-red-700 transition-colors"
+                    >
+                      <Flag size={12} />
+                      Reportar irregularidad
+                    </button>
+                  )}
+                </div>
+              ) : diaEstado === 'pendiente' ? (
+                <div className="text-center py-8">
+                  <div className="w-14 h-14 bg-amber-50 rounded-2xl flex items-center justify-center mx-auto mb-3">
+                    <Clock size={22} className="text-amber-400" />
+                  </div>
+                  <p className="text-sm font-semibold text-amber-600">Pendiente de recojo</p>
+                  <p className="text-xs text-gray-400 mt-1">Tu hijo asistió hoy y aún no ha sido recogido</p>
+                </div>
+              ) : diaEstado === 'sin_recojo' ? (
+                <div className="text-center py-8">
+                  <div className="w-14 h-14 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-3">
+                    <UserX size={22} className="text-gray-300" />
+                  </div>
+                  <p className="text-sm font-medium text-gray-500">Sin recojo registrado</p>
+                  <p className="text-xs text-gray-400 mt-1">No se registró recojo vía sistema este día</p>
+                </div>
+              ) : diaEstado === 'no_asistio' ? (
+                <div className="text-center py-8">
+                  <div className="w-14 h-14 bg-red-50 rounded-2xl flex items-center justify-center mx-auto mb-3">
+                    <CalendarOff size={22} className="text-red-300" />
+                  </div>
+                  <p className="text-sm font-medium text-red-500">No asistió este día</p>
+                  <p className="text-xs text-gray-400 mt-1">No hay registro de ingreso</p>
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <div className="w-14 h-14 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-3">
+                    <Clock size={22} className="text-gray-300" />
+                  </div>
+                  <p className="text-sm font-medium text-gray-400">Sin información</p>
                 </div>
               )}
             </div>
-          )
-        })}
-      </div>
+          </div>
+        </div>
+      )}
 
+      {/* Modal reportar irregularidad */}
       {modalReportar && (
         <ModalReportar
           log={modalReportar}
           onClose={() => setModalReportar(null)}
           onSuccess={() => {
             setModalReportar(null)
-            queryClient.invalidateQueries({ queryKey: ['recojo-historial'] })
+            queryClient.invalidateQueries({ queryKey: QK.recojoCalendario(hijoActivo?.id, mesMes, mesYear) })
           }}
         />
       )}
@@ -707,14 +940,13 @@ function TabActividad() {
 
 // ── Página principal ──────────────────────────────────────────────────────────
 const TABS = [
-  { id: 'hoy',        label: 'Hoy',         Icon: Calendar   },
-  { id: 'autorizados',label: 'Autorizados', Icon: ShieldCheck },
-  { id: 'actividad',  label: 'Actividad',   Icon: History     },
+  { id: 'recojo',      label: 'Recojo',      Icon: CalendarDays },
+  { id: 'autorizados', label: 'Autorizados', Icon: ShieldCheck  },
 ]
 
 export default function Recojo() {
   const { hijoActivo, cargando: cargandoHijo } = useHijo()
-  const [tab, setTab] = useState('hoy')
+  const [tab, setTab] = useState('recojo')
 
   if (cargandoHijo) {
     return (
@@ -758,9 +990,8 @@ export default function Recojo() {
       </div>
 
       {/* Contenido */}
-      {tab === 'hoy' && <TabHoy />}
+      {tab === 'recojo'      && <TabCalendario  hijoActivo={hijoActivo} />}
       {tab === 'autorizados' && <TabAutorizados hijoActivo={hijoActivo} cargandoHijo={cargandoHijo} />}
-      {tab === 'actividad' && <TabActividad />}
     </div>
   )
 }

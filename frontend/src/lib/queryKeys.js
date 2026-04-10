@@ -32,6 +32,7 @@ export const QK = {
   apoderadoLibretas: (hijoId, anio) => ['apoderado', 'libretas', hijoId, anio],
 
   // ── Apoderado (estadísticas + días no laborables) ─────────
-  resumenMes:     (hijoId, mes, anio) => ['apoderado', 'resumen-mes',     hijoId, mes, anio],
-  diasNoLab:      (hijoId, mes, anio) => ['apoderado', 'dias-no-lab',     hijoId, mes, anio],
+  resumenMes:      (hijoId, mes, anio) => ['apoderado', 'resumen-mes',      hijoId, mes, anio],
+  diasNoLab:       (hijoId, mes, anio) => ['apoderado', 'dias-no-lab',      hijoId, mes, anio],
+  recojoCalendario:(hijoId, mes, anio) => ['apoderado', 'recojo-calendario', hijoId, mes, anio],
 }

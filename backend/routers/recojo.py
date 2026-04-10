@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import base64
 import io
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from typing import Optional
 
 
@@ -23,6 +23,7 @@ from sqlalchemy.orm import Session
 
 from core.dependencies import get_current_user, get_db, require_roles
 from models.asistencia import Asistencia
+from models.dia_no_laborable import DiasNoLaborables
 from models.estudiante import ApoderadoEstudiante, Estudiante
 from models.recojo import PersonaAutorizada, RecojoLog
 from models.usuario import Usuario
@@ -337,6 +338,101 @@ def historial_apoderado(
     return resultado
 
 
+@router.get("/calendario-mes")
+def calendario_mes_apoderado(
+    mes: int = Query(..., ge=1, le=12),
+    anio: int = Query(..., ge=2020, le=2099),
+    estudiante_id: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_user),
+):
+    """
+    Para el apoderado: estado de recojo por día laborable del mes.
+    Estados: recogido | pendiente | sin_recojo | no_asistio
+    """
+    _verificar_apoderado(current_user)
+    ids_hijos = _mis_hijos_ids(current_user.id, db)
+    if not ids_hijos:
+        return {"estados": {}, "detalle": {}, "dias_no_lab": {}}
+
+    if estudiante_id:
+        if estudiante_id not in ids_hijos:
+            raise HTTPException(status.HTTP_403_FORBIDDEN, "No es tu hijo")
+        ids_consulta = [estudiante_id]
+    else:
+        ids_consulta = ids_hijos[:1]  # primer hijo si no se especifica
+
+    inicio = date(anio, mes, 1)
+    fin    = date(anio + 1, 1, 1) - timedelta(days=1) if mes == 12 else date(anio, mes + 1, 1) - timedelta(days=1)
+    hoy    = date.today()
+
+    # Días no laborables del mes
+    dnl_rows = db.query(DiasNoLaborables).filter(
+        DiasNoLaborables.fecha >= inicio,
+        DiasNoLaborables.fecha <= fin,
+    ).all()
+    dias_no_lab = {str(d.fecha): d.motivo for d in dnl_rows}
+
+    # Ingresos del mes (presencia)
+    ingresos = db.query(Asistencia).filter(
+        Asistencia.estudiante_id.in_(ids_consulta),
+        Asistencia.fecha >= inicio,
+        Asistencia.fecha <= fin,
+        Asistencia.tipo.in_(["ingreso", "ingreso_especial"]),
+    ).all()
+    asistio_set = {(str(a.fecha), a.estudiante_id) for a in ingresos}
+
+    # Recojos confirmados del mes
+    mes_inicio_dt = datetime(anio, mes, 1)
+    mes_fin_dt    = datetime(anio + 1, 1, 1) if mes == 12 else datetime(anio, mes + 1, 1)
+    logs = db.query(RecojoLog).filter(
+        RecojoLog.estudiante_id.in_(ids_consulta),
+        RecojoLog.confirmado == True,          # noqa: E712
+        RecojoLog.confirmado_at >= mes_inicio_dt,
+        RecojoLog.confirmado_at <  mes_fin_dt,
+    ).all()
+
+    log_map: dict[tuple, RecojoLog] = {}
+    for log in logs:
+        if log.confirmado_at:
+            key = (log.confirmado_at.strftime("%Y-%m-%d"), log.estudiante_id)
+            if key not in log_map:
+                log_map[key] = log
+
+    estados: dict[str, str] = {}
+    detalle: dict[str, dict] = {}
+
+    est_id = ids_consulta[0]
+    d = inicio
+    while d <= fin:
+        if d.weekday() < 5:  # L-V
+            dstr = str(d)
+            if dstr not in dias_no_lab and d <= hoy:
+                key = (dstr, est_id)
+                if key in log_map:
+                    log = log_map[key]
+                    p   = db.query(PersonaAutorizada).filter(
+                        PersonaAutorizada.id == log.persona_autorizada_id
+                    ).first()
+                    estados[dstr] = "recogido"
+                    detalle[dstr] = {
+                        "hora":          log.confirmado_at.strftime("%H:%M") if log.confirmado_at else "",
+                        "nombre":        p.nombre      if p else "",
+                        "apellido":      p.apellido    if p else "",
+                        "parentesco":    p.parentesco  if p else "",
+                        "foto_snapshot": log.foto_snapshot,
+                        "reportado":     log.reportado,
+                        "log_id":        log.id,
+                    }
+                elif (dstr, est_id) in asistio_set:
+                    estados[dstr] = "pendiente" if d == hoy else "sin_recojo"
+                else:
+                    estados[dstr] = "no_asistio"
+        d += timedelta(days=1)
+
+    return {"estados": estados, "detalle": detalle, "dias_no_lab": dias_no_lab}
+
+
 @router.post("/reportar/{log_id}", status_code=200)
 def reportar_irregularidad(
     log_id: str,
@@ -384,6 +480,26 @@ def revocar_mi_autorizado(
 # ════════════════════════════════════════════════════════════════════════════
 # ADMIN — gestión completa
 # ════════════════════════════════════════════════════════════════════════════
+
+@router.get("/admin/stats")
+def admin_stats(
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(require_roles("admin")),
+):
+    """Contadores rápidos por estado para el dashboard admin."""
+    from sqlalchemy import func
+    rows = (
+        db.query(PersonaAutorizada.estado, func.count(PersonaAutorizada.id))
+        .group_by(PersonaAutorizada.estado)
+        .all()
+    )
+    counts = {estado: n for estado, n in rows}
+    return {
+        "pendiente": counts.get("pendiente", 0),
+        "activo":    counts.get("activo",    0),
+        "revocado":  counts.get("revocado",  0),
+    }
+
 
 @router.get("/admin/solicitudes")
 def admin_solicitudes(
@@ -572,6 +688,141 @@ def admin_fotocheck_png(
 # ESCANEO — auxiliar / tutor valida el fotocheck en la puerta
 # ════════════════════════════════════════════════════════════════════════════
 
+@router.post("/buscar-dni")
+def buscar_por_dni(
+    body: dict,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_user),
+):
+    """
+    Alternativa al escaneo QR: busca un responsable por su DNI.
+    Útil cuando el QR del fotocheck no escanea correctamente.
+    Retorna la misma estructura que /escanear.
+    """
+    if current_user.rol not in ROLES_ESCANEO:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Sin permiso")
+
+    dni = (body.get("dni") or "").strip()
+    if not dni:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "DNI requerido")
+
+    # Buscar persona por DNI — priorizar activos
+    todas = db.query(PersonaAutorizada).filter(PersonaAutorizada.dni == dni).all()
+    if not todas:
+        raise HTTPException(
+            status.HTTP_404_NOT_FOUND,
+            f"No se encontró ningún responsable registrado con DNI {dni}.",
+        )
+    persona = next((p for p in todas if p.estado == "activo"), todas[0])
+
+    # A partir de aquí reutiliza exactamente la misma lógica que /escanear
+    # usando el qr_token de la persona encontrada
+    body_proxy = {"qr_token": persona.qr_token or ""}
+    return escanear_fotocheck.__wrapped__(body_proxy, db, current_user) \
+        if hasattr(escanear_fotocheck, "__wrapped__") \
+        else _logica_escaneo(persona, db, current_user)
+
+
+def _logica_escaneo(persona: "PersonaAutorizada", db: Session, current_user):
+    """Núcleo compartido entre /escanear y /buscar-dni."""
+    estudiante = db.query(Estudiante).filter(Estudiante.id == persona.estudiante_id).first()
+
+    autorizado = persona.estado == "activo"
+    vencido = False
+    if autorizado and persona.vigencia_hasta:
+        if date.today() > persona.vigencia_hasta:
+            autorizado = False
+            vencido = True
+
+    hoy = date.today()
+    log_confirmado_hoy = (
+        db.query(RecojoLog)
+        .filter(
+            RecojoLog.estudiante_id == persona.estudiante_id,
+            RecojoLog.confirmado == True,              # noqa: E712
+            RecojoLog.created_at >= datetime(hoy.year, hoy.month, hoy.day),
+        )
+        .first()
+    )
+    ya_recogido    = log_confirmado_hoy is not None
+    recogido_a_las = None
+    recogido_por   = None
+    if ya_recogido:
+        autorizado = False
+        if log_confirmado_hoy.confirmado_at:
+            recogido_a_las = log_confirmado_hoy.confirmado_at.strftime("%H:%M")
+        persona_previa = db.query(PersonaAutorizada).filter(
+            PersonaAutorizada.id == log_confirmado_hoy.persona_autorizada_id
+        ).first()
+        if persona_previa:
+            recogido_por = {
+                "nombre":        persona_previa.nombre,
+                "apellido":      persona_previa.apellido,
+                "parentesco":    persona_previa.parentesco,
+                "foto_snapshot": log_confirmado_hoy.foto_snapshot,
+            }
+
+    alumno_presente     = False
+    alumno_hora_ingreso = None
+    if estudiante:
+        ingreso_hoy = (
+            db.query(Asistencia)
+            .filter(
+                Asistencia.estudiante_id == estudiante.id,
+                Asistencia.fecha == hoy,
+                Asistencia.tipo.in_(["ingreso", "ingreso_especial"]),
+            )
+            .order_by(Asistencia.hora.asc())
+            .first()
+        )
+        if ingreso_hoy:
+            alumno_presente     = True
+            alumno_hora_ingreso = ingreso_hoy.hora.strftime("%H:%M") if ingreso_hoy.hora else None
+
+    log_id = None
+    if autorizado:
+        log = RecojoLog(
+            persona_autorizada_id=persona.id,
+            estudiante_id=persona.estudiante_id,
+            escaneado_por=current_user.id,
+            confirmado=False,
+        )
+        db.add(log)
+        db.commit()
+        db.refresh(log)
+        log_id = log.id
+
+    return {
+        "autorizado":          autorizado,
+        "estado":              persona.estado,
+        "vencido":             vencido,
+        "ya_recogido":         ya_recogido,
+        "recogido_a_las":      recogido_a_las,
+        "recogido_por":        recogido_por,
+        "alumno_presente":     alumno_presente,
+        "alumno_hora_ingreso": alumno_hora_ingreso,
+        "log_id":              log_id,
+        "persona": {
+            "id":             persona.id,
+            "nombre":         persona.nombre,
+            "apellido":       persona.apellido,
+            "dni":            persona.dni,
+            "parentesco":     persona.parentesco,
+            "foto_url":       persona.foto_url,
+            "vigencia_hasta": persona.vigencia_hasta.isoformat() if persona.vigencia_hasta else None,
+        },
+        "estudiante": {
+            "id":       estudiante.id       if estudiante else "",
+            "nombre":   estudiante.nombre   if estudiante else "",
+            "apellido": estudiante.apellido if estudiante else "",
+            "grado":    estudiante.grado    if estudiante else "",
+            "seccion":  estudiante.seccion  if estudiante else "",
+            "nivel":    estudiante.nivel    if estudiante else "",
+            "foto_url": estudiante.foto_url if estudiante else None,
+        } if estudiante else None,
+    }
+
+
 @router.post("/escanear")
 def escanear_fotocheck(
     body: dict,
@@ -608,111 +859,7 @@ def escanear_fotocheck(
             "QR no reconocido. Verifica que sea un fotocheck de recojo válido.",
         )
 
-    estudiante = db.query(Estudiante).filter(
-        Estudiante.id == persona.estudiante_id
-    ).first()
-
-    # ── 2. Verificar estado y vigencia ───────────────────────────────────────
-    autorizado = persona.estado == "activo"
-    vencido = False
-    if autorizado and persona.vigencia_hasta:
-        if date.today() > persona.vigencia_hasta:
-            autorizado = False
-            vencido = True
-
-    # ── 3. Capa 1: ¿ya fue recogido hoy? ────────────────────────────────────
-    hoy = date.today()
-    log_confirmado_hoy = (
-        db.query(RecojoLog)
-        .filter(
-            RecojoLog.estudiante_id == persona.estudiante_id,
-            RecojoLog.confirmado == True,                      # noqa: E712
-            RecojoLog.created_at >= datetime(hoy.year, hoy.month, hoy.day),
-        )
-        .first()
-    )
-
-    ya_recogido = log_confirmado_hoy is not None
-    recogido_a_las = None
-    recogido_por   = None   # { nombre, apellido, parentesco, foto_snapshot }
-    if ya_recogido:
-        autorizado = False
-        if log_confirmado_hoy.confirmado_at:
-            recogido_a_las = log_confirmado_hoy.confirmado_at.strftime("%H:%M")
-        persona_previa = db.query(PersonaAutorizada).filter(
-            PersonaAutorizada.id == log_confirmado_hoy.persona_autorizada_id
-        ).first()
-        if persona_previa:
-            recogido_por = {
-                "nombre":        persona_previa.nombre,
-                "apellido":      persona_previa.apellido,
-                "parentesco":    persona_previa.parentesco,
-                "foto_snapshot": log_confirmado_hoy.foto_snapshot,
-            }
-
-    # ── 4. Consultar asistencia del alumno hoy ───────────────────────────────
-    alumno_presente = False
-    alumno_hora_ingreso = None
-    if estudiante:
-        ingreso_hoy = (
-            db.query(Asistencia)
-            .filter(
-                Asistencia.estudiante_id == estudiante.id,
-                Asistencia.fecha == hoy,
-                Asistencia.tipo.in_(["ingreso", "ingreso_especial"]),
-            )
-            .order_by(Asistencia.hora.asc())
-            .first()
-        )
-        if ingreso_hoy:
-            alumno_presente = True
-            alumno_hora_ingreso = ingreso_hoy.hora.strftime("%H:%M") if ingreso_hoy.hora else None
-
-    # ── 5. Crear log sin confirmar (solo si está autorizado) ─────────────────
-    log_id = None
-    if autorizado:
-        log = RecojoLog(
-            persona_autorizada_id=persona.id,
-            estudiante_id=persona.estudiante_id,
-            escaneado_por=current_user.id,
-            confirmado=False,
-        )
-        db.add(log)
-        db.commit()
-        db.refresh(log)
-        log_id = log.id
-
-    return {
-        "autorizado":          autorizado,
-        "estado":              persona.estado,
-        "vencido":             vencido,
-        "ya_recogido":         ya_recogido,
-        "recogido_a_las":      recogido_a_las,
-        "recogido_por":        recogido_por,
-        "alumno_presente":     alumno_presente,
-        "alumno_hora_ingreso": alumno_hora_ingreso,
-        "log_id":              log_id,
-        "persona": {
-            "id":             persona.id,
-            "nombre":         persona.nombre,
-            "apellido":       persona.apellido,
-            "dni":            persona.dni,
-            "parentesco":     persona.parentesco,
-            "foto_url":       persona.foto_url,
-            "vigencia_hasta": (
-                persona.vigencia_hasta.isoformat() if persona.vigencia_hasta else None
-            ),
-        },
-        "estudiante": {
-            "id":       estudiante.id        if estudiante else "",
-            "nombre":   estudiante.nombre    if estudiante else "",
-            "apellido": estudiante.apellido  if estudiante else "",
-            "grado":    estudiante.grado     if estudiante else "",
-            "seccion":  estudiante.seccion   if estudiante else "",
-            "nivel":    estudiante.nivel     if estudiante else "",
-            "foto_url": estudiante.foto_url  if estudiante else None,
-        } if estudiante else None,
-    }
+    return _logica_escaneo(persona, db, current_user)
 
 
 @router.post("/confirmar/{log_id}")
