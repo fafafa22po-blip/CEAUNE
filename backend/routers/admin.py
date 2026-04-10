@@ -203,6 +203,7 @@ def crear_usuario(
             seccion=_norm_seccion(data["seccion"]),
             anio=data.get("anio", date.today().year),
         ))
+        u.nivel = nivel_tutor  # también en usuarios para acceso rápido por token
 
     db.commit()
     db.refresh(u)
@@ -242,6 +243,7 @@ def actualizar_usuario(
                 vinculo.seccion = _norm_seccion(data["seccion"])
             if "nivel_tutor" in data:
                 vinculo.nivel = data["nivel_tutor"]
+                u.nivel = data["nivel_tutor"]
             if "anio" in data:
                 vinculo.anio = data["anio"]
         elif data.get("grado") and data.get("seccion"):

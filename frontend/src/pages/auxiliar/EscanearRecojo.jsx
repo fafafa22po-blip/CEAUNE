@@ -142,15 +142,8 @@ function PantallaResultado({ resultado, onCerrar }) {
     : 'bg-red-600 text-white'
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ background: 'rgba(5,10,20,0.82)', backdropFilter: 'blur(8px)' }}
-      onClick={() => { setPausado(true); if (!ok || fase === 'exito') onCerrar() }}
-    >
-      <div
-        className="w-full max-w-sm bg-white rounded-3xl overflow-hidden shadow-2xl"
-        onClick={e => { e.stopPropagation(); setPausado(true) }}
-      >
+    <div className="max-w-sm mx-auto" onClick={() => setPausado(true)}>
+      <div className="bg-white rounded-3xl overflow-hidden shadow-card border border-gray-100">
         {/* ── Fase éxito ─────────────────────────────────────────── */}
         {fase === 'exito' && (
           <>
@@ -439,116 +432,115 @@ function PanelResumen({ onVolver, pendientes }) {
   useEffect(() => { cargar() }, [cargar])
 
   return (
-    <div className="flex flex-col h-screen bg-gray-50">
-      {/* Top bar */}
-      <div className="bg-[#0a1f3d] px-4 pt-3 pb-4 flex-shrink-0">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-white/15 flex items-center justify-center">
-              <BarChart2 className="w-4 h-4 text-white" />
-            </div>
-            <div>
-              <p className="text-white font-bold text-sm">Resumen del día</p>
-              <p className="text-white/50 text-xs">
-                {datos
-                  ? new Date(datos.fecha + 'T00:00:00').toLocaleDateString('es-PE', { weekday: 'long', day: '2-digit', month: 'long' })
-                  : 'Cargando...'
-                }
-              </p>
-            </div>
-          </div>
+    <div className="space-y-4">
+
+      {/* Título */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-xl font-bold text-marino">Resumen del día</h1>
+          {datos && (
+            <p className="text-xs text-gray-400 mt-0.5 capitalize">
+              {new Date(datos.fecha + 'T00:00:00').toLocaleDateString('es-PE', { weekday: 'long', day: '2-digit', month: 'long' })}
+            </p>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
           <button
             onClick={cargar}
             disabled={cargando}
-            className="w-8 h-8 rounded-xl bg-white/10 flex items-center justify-center"
+            className="w-9 h-9 rounded-xl bg-white border border-gray-200 flex items-center justify-center hover:bg-gray-50"
           >
-            <RefreshCw className={`w-4 h-4 text-white ${cargando ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`w-4 h-4 text-gray-500 ${cargando ? 'animate-spin' : ''}`} />
+          </button>
+          <button
+            onClick={onVolver}
+            className="flex items-center gap-2 px-3 py-2 bg-marino text-white text-sm font-semibold rounded-xl hover:brightness-110"
+          >
+            <ScanLine className="w-4 h-4" /> Escanear
           </button>
         </div>
-
-        {datos && (
-          <div className="flex gap-2">
-            <StatCard valor={datos.total_presentes}  label="Presentes hoy"        color="marino" icon={Users}        />
-            <StatCard valor={datos.total_recogidos}  label="Ya recogidos"          color="green"  icon={CheckCircle2} />
-            <StatCard valor={datos.total_pendientes} label="Pendientes de recojo"  color="amber"  icon={Clock}        />
-          </div>
-        )}
-        {cargando && !datos && (
-          <div className="flex gap-2">
-            {[1,2,3].map(i => <div key={i} className="flex-1 h-20 bg-white/10 rounded-2xl animate-pulse" />)}
-          </div>
-        )}
       </div>
 
-      {/* Contenido */}
-      <div className="flex-1 overflow-y-auto px-4 pt-4 pb-24 space-y-5">
-        {datos && datos.pendientes.length > 0 && (
-          <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-            <div className="flex items-center gap-2 px-4 py-3 border-b border-amber-100 bg-amber-50">
-              <Clock className="w-4 h-4 text-amber-600 flex-shrink-0" />
-              <p className="text-sm font-bold text-amber-800">
-                Pendientes de recojo
-                <span className="ml-2 text-xs bg-amber-600 text-white px-2 py-0.5 rounded-full">
-                  {datos.pendientes.length}
-                </span>
-              </p>
-            </div>
-            <div className="divide-y divide-gray-50 px-3">
-              {datos.pendientes.map((p, i) => (
-                <FilaEstudiante
-                  key={i} {...p.estudiante}
-                  hora={p.hora_ingreso ? `Ingresó ${p.hora_ingreso}` : ''}
-                  badge="Esperando" badgeColor="bg-amber-100 text-amber-700"
-                />
-              ))}
-            </div>
-          </div>
-        )}
+      {/* Stats */}
+      {cargando && !datos && (
+        <div className="flex gap-3">
+          {[1,2,3].map(i => <div key={i} className="flex-1 h-20 bg-gray-100 rounded-2xl animate-pulse" />)}
+        </div>
+      )}
+      {datos && (
+        <div className="flex gap-3">
+          <StatCard valor={datos.total_presentes}  label="Presentes hoy"       color="marino" icon={Users}        />
+          <StatCard valor={datos.total_recogidos}  label="Ya recogidos"         color="green"  icon={CheckCircle2} />
+          <StatCard valor={datos.total_pendientes} label="Pendientes"           color="amber"  icon={Clock}        />
+        </div>
+      )}
 
-        {datos && datos.recogidos.length > 0 && (
-          <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-            <div className="flex items-center gap-2 px-4 py-3 border-b border-green-100 bg-green-50">
-              <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0" />
-              <p className="text-sm font-bold text-green-800">
-                Ya recogidos
-                <span className="ml-2 text-xs bg-green-600 text-white px-2 py-0.5 rounded-full">
-                  {datos.recogidos.length}
-                </span>
-              </p>
-            </div>
-            <div className="divide-y divide-gray-50 px-3">
-              {datos.recogidos.map((r, i) => (
-                <div key={i} className="py-2.5">
-                  <FilaEstudiante {...r.estudiante} hora={r.hora} badge="Recogido" badgeColor="bg-green-100 text-green-700" />
-                  <div className="ml-[52px] mt-1 flex items-center gap-2">
-                    <div className="w-6 h-6 rounded-lg overflow-hidden flex-shrink-0 bg-gray-100">
-                      {r.responsable.foto_snapshot
-                        ? <img src={r.responsable.foto_snapshot} alt="" className="w-full h-full object-cover" />
-                        : <div className="w-full h-full flex items-center justify-center text-[10px] font-bold text-gray-400">
-                            {r.responsable.nombre?.charAt(0) || '?'}
-                          </div>
-                      }
-                    </div>
-                    <p className="text-xs text-gray-500">
-                      {r.responsable.nombre} {r.responsable.apellido}
-                      <span className="text-gray-400"> · {r.responsable.parentesco}</span>
-                    </p>
+      {/* Pendientes */}
+      {datos && datos.pendientes.length > 0 && (
+        <div className="card overflow-hidden p-0">
+          <div className="flex items-center gap-2 px-4 py-3 border-b border-amber-100 bg-amber-50">
+            <Clock className="w-4 h-4 text-amber-600 flex-shrink-0" />
+            <p className="text-sm font-bold text-amber-800">
+              Pendientes de recojo
+              <span className="ml-2 text-xs bg-amber-600 text-white px-2 py-0.5 rounded-full">
+                {datos.pendientes.length}
+              </span>
+            </p>
+          </div>
+          <div className="divide-y divide-gray-50 px-3">
+            {datos.pendientes.map((p, i) => (
+              <FilaEstudiante
+                key={i} {...p.estudiante}
+                hora={p.hora_ingreso ? `Ingresó ${p.hora_ingreso}` : ''}
+                badge="Esperando" badgeColor="bg-amber-100 text-amber-700"
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Recogidos */}
+      {datos && datos.recogidos.length > 0 && (
+        <div className="card overflow-hidden p-0">
+          <div className="flex items-center gap-2 px-4 py-3 border-b border-green-100 bg-green-50">
+            <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0" />
+            <p className="text-sm font-bold text-green-800">
+              Ya recogidos
+              <span className="ml-2 text-xs bg-green-600 text-white px-2 py-0.5 rounded-full">
+                {datos.recogidos.length}
+              </span>
+            </p>
+          </div>
+          <div className="divide-y divide-gray-50 px-3">
+            {datos.recogidos.map((r, i) => (
+              <div key={i} className="py-2.5">
+                <FilaEstudiante {...r.estudiante} hora={r.hora} badge="Recogido" badgeColor="bg-green-100 text-green-700" />
+                <div className="ml-[52px] mt-1 flex items-center gap-2">
+                  <div className="w-6 h-6 rounded-lg overflow-hidden flex-shrink-0 bg-gray-100">
+                    {r.responsable.foto_snapshot
+                      ? <img src={r.responsable.foto_snapshot} alt="" className="w-full h-full object-cover" />
+                      : <div className="w-full h-full flex items-center justify-center text-[10px] font-bold text-gray-400">
+                          {r.responsable.nombre?.charAt(0) || '?'}
+                        </div>
+                    }
                   </div>
+                  <p className="text-xs text-gray-500">
+                    {r.responsable.nombre} {r.responsable.apellido}
+                    <span className="text-gray-400"> · {r.responsable.parentesco}</span>
+                  </p>
                 </div>
-              ))}
-            </div>
+              </div>
+            ))}
           </div>
-        )}
+        </div>
+      )}
 
-        {datos && datos.total_presentes === 0 && (
-          <div className="flex flex-col items-center justify-center py-20 text-gray-400">
-            <Users className="w-12 h-12 mb-3 opacity-30" />
-            <p className="text-sm">Sin ingresos registrados hoy</p>
-          </div>
-        )}
-      </div>
-
-      <TabBar activo="resumen" onEscanear={onVolver} onResumen={() => {}} pendientes={pendientes} />
+      {datos && datos.total_presentes === 0 && (
+        <div className="card flex flex-col items-center justify-center py-12 text-gray-400">
+          <Users className="w-10 h-10 mb-3 opacity-30" />
+          <p className="text-sm">Sin ingresos registrados hoy</p>
+        </div>
+      )}
     </div>
   )
 }
@@ -631,24 +623,17 @@ export default function EscanearRecojo() {
 
   // ── Vista cámara ──────────────────────────────────────────────────────────
   return (
-    <div className="flex flex-col h-screen bg-gray-950">
+    <div className="space-y-4">
 
-      {/* Top bar */}
-      <div className="flex items-center justify-between px-4 pt-3 pb-3 bg-gray-950 flex-shrink-0">
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-xl bg-green-600 flex items-center justify-center">
-            <ShieldCheck className="w-5 h-5 text-white" />
-          </div>
-          <div>
-            <p className="text-white font-bold text-sm">Recojo Seguro</p>
-            <p className="text-gray-400 text-xs">Escanea el fotocheck del apoderado</p>
-          </div>
-        </div>
+      {/* Título */}
+      <div className="flex items-center justify-between">
+        <h1 className="text-xl font-bold text-marino">Recojo Seguro</h1>
         <button
           onClick={irResumen}
-          className="relative w-9 h-9 rounded-xl bg-white/10 flex items-center justify-center"
+          className="relative flex items-center gap-2 px-3 py-2 bg-white border border-gray-200 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-50"
         >
-          <BarChart2 className="w-4 h-4 text-white" />
+          <BarChart2 className="w-4 h-4" />
+          <span>Resumen</span>
           {pendientes > 0 && (
             <span className="absolute -top-1 -right-1 min-w-[16px] h-4 bg-amber-500 text-white text-[9px] font-black rounded-full flex items-center justify-center px-1">
               {pendientes}
@@ -657,69 +642,49 @@ export default function EscanearRecojo() {
         </button>
       </div>
 
-      {/* Scanner — altura fija, no ocupa toda la pantalla */}
-      <div className="h-[48vh] relative overflow-hidden flex-shrink-0">
-        {camaraActiva && (
-          <QRScanner activo={camaraActiva} onResult={escanear} />
-        )}
-
+      {/* Scanner */}
+      <div className="card">
+        <p className="text-xs text-gray-400 text-center mb-3">
+          Apunta al QR del fotocheck del responsable — el sistema verifica la autorización automáticamente
+        </p>
+        <QRScanner activo={camaraActiva && !cargando} onResult={escanear} />
         {cargando && (
-          <div className="absolute inset-0 bg-black/60 flex items-center justify-center z-20">
-            <div className="w-14 h-14 rounded-2xl bg-white/10 flex items-center justify-center">
-              <div className="w-8 h-8 border-2 border-white border-t-transparent rounded-full animate-spin" />
-            </div>
-          </div>
-        )}
-
-        {!cargando && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none z-10">
-            <div className="relative w-56 h-56">
-              <div className="absolute top-0 left-0 w-10 h-10 border-l-4 border-t-4 border-green-400 rounded-tl-lg" />
-              <div className="absolute top-0 right-0 w-10 h-10 border-r-4 border-t-4 border-green-400 rounded-tr-lg" />
-              <div className="absolute bottom-0 left-0 w-10 h-10 border-l-4 border-b-4 border-green-400 rounded-bl-lg" />
-              <div className="absolute bottom-0 right-0 w-10 h-10 border-r-4 border-b-4 border-green-400 rounded-br-lg" />
-              <div className="absolute top-1/2 left-4 right-4 h-0.5 bg-green-400/60 -translate-y-1/2 animate-pulse" />
-            </div>
-            <p className="text-white/70 text-sm mt-5 text-center px-8">
-              Apunta al QR del fotocheck físico
-            </p>
+          <div className="flex items-center justify-center gap-2 mt-3 text-sm text-gray-500">
+            <div className="w-4 h-4 border-2 border-marino border-t-transparent rounded-full animate-spin" />
+            Verificando autorización...
           </div>
         )}
       </div>
 
-      {/* Sección inferior — buscar por DNI */}
-      <div className="flex-1 bg-gray-900 flex flex-col justify-center px-4 py-5 gap-4">
-        <div>
-          <p className="text-gray-300 text-xs font-semibold uppercase tracking-wide mb-1.5">
-            ¿QR no escanea? Busca por DNI del responsable
-          </p>
-          <div className="flex gap-2">
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <input
-                value={dni}
-                onChange={e => setDni(e.target.value.replace(/\D/g, '').slice(0, 8))}
-                onKeyDown={e => e.key === 'Enter' && buscarPorDni()}
-                placeholder="DNI del responsable"
-                inputMode="numeric"
-                maxLength={8}
-                className="w-full pl-9 pr-4 py-3 bg-gray-800 border border-gray-700 rounded-xl text-sm text-white placeholder-gray-500 outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500"
-              />
-            </div>
-            <button
-              onClick={buscarPorDni}
-              disabled={dni.length < 8 || cargando}
-              className="px-4 py-3 bg-green-600 text-white rounded-xl text-sm font-bold disabled:opacity-40 flex items-center gap-1.5"
-            >
-              <Search className="w-4 h-4" />
-              Buscar
-            </button>
+      {/* Buscar por DNI */}
+      <div className="card">
+        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+          ¿QR no escanea? Busca por DNI del responsable
+        </p>
+        <div className="flex gap-2">
+          <div className="flex-1 relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <input
+              value={dni}
+              onChange={e => setDni(e.target.value.replace(/\D/g, '').slice(0, 8))}
+              onKeyDown={e => e.key === 'Enter' && buscarPorDni()}
+              placeholder="DNI del responsable"
+              inputMode="numeric"
+              maxLength={8}
+              className="w-full pl-9 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm outline-none focus:border-marino focus:ring-1 focus:ring-marino"
+            />
           </div>
+          <button
+            onClick={buscarPorDni}
+            disabled={dni.length < 8 || cargando}
+            className="px-4 py-2.5 bg-marino text-white rounded-xl text-sm font-bold disabled:opacity-40 flex items-center gap-1.5"
+          >
+            <Search className="w-4 h-4" />
+            Buscar
+          </button>
         </div>
       </div>
 
-      {/* Tab bar unificado */}
-      <TabBar activo="camara" onEscanear={() => {}} onResumen={irResumen} pendientes={pendientes} />
     </div>
   )
 }

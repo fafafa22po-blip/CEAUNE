@@ -874,7 +874,9 @@ def confirmar_entrega(
 
     Acciones:
       - Marca el log como confirmado + guarda foto_snapshot (capa 6).
-      - Crea un registro de salida_especial en asistencia vinculando el recojo.
+      - Crea un registro de salida en asistencia vinculando el recojo.
+        Se usa tipo="salida" (no salida_especial) porque el recojo es la
+        salida definitiva del alumno — no hay regreso posterior.
     """
     if current_user.rol not in ROLES_ESCANEO:
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Sin permiso")
@@ -910,10 +912,10 @@ def confirmar_entrega(
             estudiante_id=estudiante.id,
             auxiliar_id=current_user.id,
             fecha=ahora.date(),
-            tipo="salida_especial",
+            tipo="salida",
             hora=ahora,
             estado="especial",
-            motivo_especial="permiso_apoderado",
+            motivo_especial=None,
             observacion=observacion_recojo,
             correo_enviado=False,
         )

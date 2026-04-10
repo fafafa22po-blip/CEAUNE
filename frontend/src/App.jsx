@@ -175,6 +175,8 @@ export default function App() {
               <Route path="libretas"      element={<Libretas />} />
               <Route path="reuniones"     element={<Reuniones />} />
               <Route path="comunicados"   element={<TutorComunicados />} />
+              <Route path="recojo"        element={<EscanearRecojo />} />
+              <Route path="inspeccion"    element={<Inspeccion />} />
               <Route path="perfil"        element={<Perfil />} />
               <Route path="descargar-app" element={<DescargarApp />} />
             </Route>

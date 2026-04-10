@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import {
   Search, QrCode, X, GraduationCap, AlertTriangle,
   Phone, Copy, Send, CheckCircle,
-  ArrowLeft, ChevronRight, Heart,
+  ArrowLeft, ChevronRight, Heart, Users, UserCheck, ShieldCheck,
 } from 'lucide-react'
 
 function IconWhatsApp({ size = 16 }) {
@@ -128,7 +128,7 @@ function ModalPerfil({ perfil, onCerrar }) {
   const [mensajeWA, setMensajeWA]       = useState('')
   const [tabActivo, setTabActivo]       = useState('asistencia')
 
-  const { estudiante, tardanzas_mes, faltas_mes, apoderados } = perfil
+  const { estudiante, tardanzas_mes, faltas_mes, apoderados, recojo_info } = perfil
   const cfg         = NIVEL_CFG[estudiante.nivel] || NIVEL_CFG.primaria
   const conTelefono = (apoderados || []).filter((a) => a.telefono)
   const hayAlerta   = tardanzas_mes >= 3 || faltas_mes >= 3
@@ -182,8 +182,13 @@ function ModalPerfil({ perfil, onCerrar }) {
             <div className={`flex-shrink-0 ${cfg.avatar} px-5 py-4 rounded-t-2xl`}>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-11 h-11 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0">
-                    <span className="text-white font-bold text-base">{iniciales(estudiante.nombre, estudiante.apellido)}</span>
+                  <div className="w-12 h-12 rounded-xl overflow-hidden flex-shrink-0 ring-2 ring-white/40">
+                    {estudiante.foto_url
+                      ? <img src={estudiante.foto_url} alt={estudiante.nombre} className="w-full h-full object-cover" />
+                      : <div className="w-full h-full bg-white/20 flex items-center justify-center">
+                          <span className="text-white font-bold text-base">{iniciales(estudiante.nombre, estudiante.apellido)}</span>
+                        </div>
+                    }
                   </div>
                   <div className="min-w-0">
                     <p className="text-white font-bold text-base leading-tight truncate">
@@ -245,6 +250,19 @@ function ModalPerfil({ perfil, onCerrar }) {
                 Salud
                 {haySalud && tabActivo !== 'salud' && (
                   <span className="w-2 h-2 rounded-full bg-rose-400 flex-shrink-0" />
+                )}
+              </button>
+              <button
+                onClick={() => setTabActivo('recojo')}
+                className={`flex-1 flex items-center justify-center gap-1.5 text-xs font-semibold py-2 rounded-lg transition-colors ${
+                  tabActivo === 'recojo'
+                    ? 'bg-marino text-white'
+                    : 'text-gray-500 hover:bg-gray-100'
+                }`}
+              >
+                Recojo
+                {recojo_info?.recojo_hoy && tabActivo !== 'recojo' && (
+                  <span className="w-2 h-2 rounded-full bg-green-400 flex-shrink-0" />
                 )}
               </button>
             </div>
@@ -360,6 +378,69 @@ function ModalPerfil({ perfil, onCerrar }) {
                       <Heart size={32} className="text-gray-200 mb-3" />
                       <p className="text-sm font-medium text-gray-400">No presenta ninguna condición de salud</p>
                       <p className="text-xs text-gray-300 mt-1">Sin condiciones registradas</p>
+                    </div>
+                  )}
+                </>
+              )}
+
+              {tabActivo === 'recojo' && (
+                <>
+                  {/* Banner: ya fue recogido hoy */}
+                  {recojo_info?.recojo_hoy ? (
+                    <div className="flex items-center gap-3 bg-green-50 border border-green-200 rounded-xl px-4 py-3 mb-4">
+                      <UserCheck size={18} className="text-green-600 flex-shrink-0" />
+                      <div>
+                        <p className="text-xs font-bold text-green-800">Ya fue recogido hoy</p>
+                        <p className="text-xs text-green-700 mt-0.5">
+                          {recojo_info.recojo_hoy.nombre} {recojo_info.recojo_hoy.apellido}
+                          {' '}·{' '}{recojo_info.recojo_hoy.parentesco}
+                          {' '}·{' '}{recojo_info.recojo_hoy.hora}
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 mb-4">
+                      <ShieldCheck size={18} className="text-amber-600 flex-shrink-0" />
+                      <p className="text-xs font-semibold text-amber-800">Pendiente de recojo hoy</p>
+                    </div>
+                  )}
+
+                  {/* Lista de autorizados */}
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
+                    Personas autorizadas
+                  </p>
+
+                  {(recojo_info?.autorizados || []).length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-10 text-center">
+                      <Users size={32} className="text-gray-200 mb-3" />
+                      <p className="text-sm font-medium text-gray-400">Sin autorizados activos</p>
+                      <p className="text-xs text-gray-300 mt-1">El apoderado no ha registrado ninguna persona</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {recojo_info.autorizados.map((a) => (
+                        <div key={a.id} className="flex items-center gap-3 bg-gray-50 rounded-xl p-3">
+                          {/* Foto o iniciales */}
+                          <div className="w-12 h-12 rounded-xl overflow-hidden flex-shrink-0 ring-1 ring-gray-200">
+                            {a.foto_url
+                              ? <img src={a.foto_url} alt={a.nombre} className="w-full h-full object-cover" />
+                              : <div className={`w-full h-full ${cfg.avatar} flex items-center justify-center`}>
+                                  <span className="text-white font-bold text-sm">{iniciales(a.nombre, a.apellido)}</span>
+                                </div>
+                            }
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-semibold text-marino leading-none truncate">
+                              {a.nombre} {a.apellido}
+                            </p>
+                            <p className="text-xs text-gray-400 mt-0.5 capitalize">{a.parentesco}</p>
+                            <p className="text-xs text-gray-300 font-mono mt-0.5">DNI {a.dni}</p>
+                          </div>
+                          <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-green-100 text-green-700 flex-shrink-0">
+                            Activo
+                          </span>
+                        </div>
+                      ))}
                     </div>
                   )}
                 </>

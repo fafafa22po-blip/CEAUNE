@@ -27,6 +27,7 @@ export const QK = {
   tutorReuniones:   (params) => ['tutor', 'reuniones', params],
   tutorLibretas:    (bimestre, anio) => ['tutor', 'libretas', bimestre, anio],
   tutorComunicados: (pagina) => ['tutor', 'comunicados', pagina],
+  tutorRecojoHoy:   ['tutor', 'recojo-hoy'],
 
   // ── Apoderado (libretas) ───────────────────────────────────
   apoderadoLibretas: (hijoId, anio) => ['apoderado', 'libretas', hijoId, anio],

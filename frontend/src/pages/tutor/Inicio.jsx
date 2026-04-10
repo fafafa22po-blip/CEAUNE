@@ -5,6 +5,7 @@ import {
   TrendingDown, TrendingUp, FileText, AlertTriangle, BookOpen,
   MessageSquare, CalendarCheck, Download, Eye,
   ArrowUpRight, ArrowDownRight, Minus,
+  ShieldCheck, UserCheck, Clock,
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
@@ -77,6 +78,14 @@ export default function Inicio() {
     queryKey: QK.tutorComparativa(),
     queryFn: () => api.get('/tutor/mi-aula/comparativa').then(r => r.data),
     staleTime: 5 * 60_000,
+  })
+
+  const { data: recojoHoy } = useQuery({
+    queryKey: QK.tutorRecojoHoy,
+    queryFn: () => api.get('/recojo/resumen-hoy', { params: { nivel: 'inicial' } }).then(r => r.data),
+    enabled: aula?.nivel === 'inicial',
+    staleTime: 60_000,
+    refetchInterval: 2 * 60_000,
   })
 
   // ── Derivados ─────────────────────────────────────────────────────────────
@@ -208,6 +217,78 @@ export default function Inicio() {
           <span className="text-xs font-semibold text-gray-700">Agendar reunión</span>
         </button>
       </div>
+
+      {/* ── Panel recojo del día (solo inicial) ──────────────────────────────── */}
+      {aula?.nivel === 'inicial' && recojoHoy && (
+        <div
+          className="card border border-emerald-100 cursor-pointer hover:shadow-md transition-shadow"
+          onClick={() => nav('/tutor/recojo')}
+        >
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center flex-shrink-0">
+                <ShieldCheck size={18} className="text-emerald-600" />
+              </div>
+              <div>
+                <p className="font-bold text-emerald-700">Recojo del día</p>
+                <p className="text-xs text-gray-400">Estado actual de salidas</p>
+              </div>
+            </div>
+            <ChevronRight size={16} className="text-gray-300 flex-shrink-0" />
+          </div>
+
+          <div className="grid grid-cols-3 gap-3">
+            {/* En el aula */}
+            <div className="flex flex-col items-center gap-1.5 px-2 py-3 bg-blue-50 rounded-2xl border border-blue-100">
+              <div className="w-8 h-8 rounded-xl bg-blue-100 flex items-center justify-center">
+                <Users size={15} className="text-blue-600" />
+              </div>
+              <span className="text-2xl font-black text-blue-700 tabular-nums leading-none">
+                {recojoHoy.total_presentes - recojoHoy.total_recogidos}
+              </span>
+              <span className="text-[10px] font-semibold text-blue-500 text-center leading-tight">En el aula</span>
+            </div>
+
+            {/* Ya recogidos */}
+            <div className="flex flex-col items-center gap-1.5 px-2 py-3 bg-emerald-50 rounded-2xl border border-emerald-100">
+              <div className="w-8 h-8 rounded-xl bg-emerald-100 flex items-center justify-center">
+                <UserCheck size={15} className="text-emerald-600" />
+              </div>
+              <span className="text-2xl font-black text-emerald-700 tabular-nums leading-none">
+                {recojoHoy.total_recogidos}
+              </span>
+              <span className="text-[10px] font-semibold text-emerald-500 text-center leading-tight">Recogidos</span>
+            </div>
+
+            {/* Pendientes */}
+            <div className={`flex flex-col items-center gap-1.5 px-2 py-3 rounded-2xl border ${
+              recojoHoy.total_pendientes > 0
+                ? 'bg-amber-50 border-amber-100'
+                : 'bg-gray-50 border-gray-100'
+            }`}>
+              <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${
+                recojoHoy.total_pendientes > 0 ? 'bg-amber-100' : 'bg-gray-100'
+              }`}>
+                <Clock size={15} className={recojoHoy.total_pendientes > 0 ? 'text-amber-600' : 'text-gray-400'} />
+              </div>
+              <span className={`text-2xl font-black tabular-nums leading-none ${
+                recojoHoy.total_pendientes > 0 ? 'text-amber-700' : 'text-gray-400'
+              }`}>
+                {recojoHoy.total_pendientes}
+              </span>
+              <span className={`text-[10px] font-semibold text-center leading-tight ${
+                recojoHoy.total_pendientes > 0 ? 'text-amber-500' : 'text-gray-400'
+              }`}>
+                Pendientes
+              </span>
+            </div>
+          </div>
+
+          {recojoHoy.total_presentes === 0 && (
+            <p className="mt-3 text-xs text-gray-400 text-center">Sin ingresos registrados hoy</p>
+          )}
+        </div>
+      )}
 
       {/* ── Alertas inteligentes ──────────────────────────────────────────────── */}
       {alertas.length > 0 && (

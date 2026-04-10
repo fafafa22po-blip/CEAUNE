@@ -32,9 +32,15 @@ const ESTADO_CFG = {
 }
 
 const ESTADO_LABEL = { puntual: 'Puntual', tardanza: 'Tardanza', falta: 'Falta', especial: 'Especial' }
-const TIPO_LABEL   = {
-  ingreso: 'Ingreso regular', ingreso_especial: 'Ingreso especial',
-  salida:  'Salida regular',  salida_especial:  'Salida especial',
+function etiquetarRegistro(tipo, estado, motivo_especial) {
+  if (tipo === 'ingreso')          return estado === 'tardanza' ? 'Tardanza' : 'Ingreso'
+  if (tipo === 'ingreso_especial') return estado === 'tardanza' ? 'Tardanza' : 'Regreso al colegio'
+  if (tipo === 'salida')           return 'Salida'
+  if (tipo === 'salida_especial') {
+    if (motivo_especial === 'permiso_apoderado') return 'Recogido'
+    return 'Salida anticipada'
+  }
+  return tipo || 'Registro'
 }
 
 function formatHora(horaISO) {
@@ -433,7 +439,7 @@ export default function Asistencias() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-semibold text-gray-700">
-                          {TIPO_LABEL[detIngreso.tipo] || 'Ingreso'}
+                          {etiquetarRegistro(detIngreso.tipo, detIngreso.estado, detIngreso.motivo_especial)}
                         </p>
                         {detIngreso.motivo_especial && (
                           <p className="text-xs text-violet-600 font-medium mt-0.5">
@@ -455,7 +461,7 @@ export default function Asistencias() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-semibold text-gray-700">
-                          {TIPO_LABEL[detSalida.tipo] || 'Salida'}
+                          {etiquetarRegistro(detSalida.tipo, detSalida.estado, detSalida.motivo_especial)}
                         </p>
                         {detSalida.motivo_especial && (
                           <p className="text-xs text-orange-600 font-medium mt-0.5">

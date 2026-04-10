@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from core.config import settings
 from core.dependencies import get_current_user, get_db
 from core.security import create_access_token, get_password_hash, verify_password
-from models.usuario import Usuario
+from models.usuario import Usuario, TutorAula
 from schemas.usuario import LoginRequest, PasswordChange, PerfilUpdate, Token, UsuarioResponse
 
 router = APIRouter()
@@ -52,7 +52,13 @@ def login(data: LoginRequest, db: Session = Depends(get_db)):
 
 
 @router.get("/me", response_model=UsuarioResponse)
-def me(current_user: Usuario = Depends(get_current_user)):
+def me(current_user: Usuario = Depends(get_current_user), db: Session = Depends(get_db)):
+    # Para tutores, poblar nivel desde tutores_aulas si no está en usuarios
+    if current_user.rol == "tutor" and not current_user.nivel:
+        aula = db.query(TutorAula).filter(TutorAula.tutor_id == current_user.id).first()
+        if aula:
+            current_user.nivel = aula.nivel
+            db.commit()
     return current_user
 
 

@@ -3,7 +3,7 @@ import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { setStatusBarDark } from '../lib/statusbar'
-import { obtenerUsuario, cerrarSesion } from '../lib/auth'
+import { obtenerUsuario, cerrarSesion, guardarSesion } from '../lib/auth'
 import logoImg from '../assets/logo.png'
 import api from '../lib/api'
 import { QK } from '../lib/queryKeys'
@@ -278,17 +278,55 @@ export default function Layout() {
   const ultimaPresionAtrasRef = useRef(0)
   masAbiertoRef.current = masAbierto
 
-  const usuario  = obtenerUsuario()
+  const [usuario, setUsuario] = useState(obtenerUsuario)
   const nav      = useNavigate()
   const location = useLocation()
+
+  // Sincronizar nivel para tutores creados antes de que se guardara en usuarios
+  useEffect(() => {
+    if (usuario?.rol === 'tutor' && !usuario?.nivel) {
+      api.get('/auth/me').then(r => {
+        guardarSesion(localStorage.getItem('token'), r.data)
+        setUsuario(r.data)
+      }).catch(() => {})
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Rol efectivo: si eligió modo apoderado, usar 'apoderado' aunque su rol base sea otro
   const rolEfectivo = (usuario?.es_apoderado && modoSesion === 'apoderado')
     ? 'apoderado'
     : (usuario?.rol || '')
 
-  const menu     = MENUS[rolEfectivo] || []
-  const bottomNav     = BOTTOM_NAV[rolEfectivo]
+  const menuBase      = MENUS[rolEfectivo] || []
+  const bottomNavBase = BOTTOM_NAV[rolEfectivo]
+
+  // Recojo Seguro dinámico para tutores de nivel inicial
+  const esTutorInicial = rolEfectivo === 'tutor' && usuario?.nivel === 'inicial'
+  const menu = esTutorInicial
+    ? [
+        menuBase[0],
+        menuBase[1],
+        { a: '/tutor/recojo',      icon: ShieldCheck, label: 'Recojo Seguro' },
+        { a: '/tutor/inspeccion',  icon: ScanSearch,  label: 'Inspección'    },
+        ...menuBase.slice(2),
+      ]
+    : menuBase
+  const bottomNav = esTutorInicial && bottomNavBase
+    ? {
+        main: [
+          bottomNavBase.main[0],
+          bottomNavBase.main[1],
+          { a: '/tutor/recojo',     icon: ShieldCheck, label: 'Recojo', scan: true },
+          bottomNavBase.main[2],
+        ],
+        overflow: [
+          { a: '/tutor/inspeccion', icon: ScanSearch, label: 'Inspección' },
+          bottomNavBase.main[3],
+          ...bottomNavBase.overflow,
+        ],
+      }
+    : bottomNavBase
+
   const mainTabs      = bottomNav?.main     ?? []
   const overflowTabs  = bottomNav?.overflow ?? []
   const tieneOverflow = overflowTabs.length > 0

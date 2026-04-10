@@ -37,5 +37,5 @@ class TutorAula(Base):
     tutor_id = Column(String(36), ForeignKey("usuarios.id"), unique=True, nullable=False)
     nivel = Column(Enum("inicial", "primaria", "secundaria"), nullable=False)
     grado = Column(String(10), nullable=False)
-    seccion = Column(String(20), nullable=False)
+    seccion = Column(String(50), nullable=False)
     anio = Column(Integer, nullable=False)

@@ -283,6 +283,7 @@ function ModalNuevaSolicitud({ hijo, onClose, onSuccess }) {
 function CardPersona({ persona, onRevocar }) {
   const cfg = ESTADO_CFG[persona.estado] || ESTADO_CFG.pendiente
   const { Icon } = cfg
+  const esPendiente = persona.estado === 'pendiente'
 
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
@@ -301,13 +302,9 @@ function CardPersona({ persona, onRevocar }) {
             </p>
           )}
         </div>
-        {persona.estado !== 'revocado' && (
-          <button onClick={() => onRevocar(persona)} className="w-8 h-8 rounded-full bg-red-50 flex items-center justify-center flex-shrink-0" title="Revocar autorización">
-            <X className="w-4 h-4 text-red-500" />
-          </button>
-        )}
       </div>
-      {persona.estado === 'pendiente' && (
+
+      {esPendiente && (
         <div className="bg-amber-50 border-t border-amber-100 px-4 py-2.5 flex items-start gap-2">
           <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
           <p className="text-xs text-amber-700">
@@ -315,6 +312,108 @@ function CardPersona({ persona, onRevocar }) {
           </p>
         </div>
       )}
+
+      {/* Zona de acción destructiva — separada visualmente */}
+      {persona.estado !== 'revocado' && (
+        <div className="border-t border-gray-100 px-4 py-2.5 flex justify-end">
+          <button
+            onClick={() => onRevocar(persona)}
+            className="text-xs text-red-400 font-medium flex items-center gap-1.5 hover:text-red-600 transition-colors py-0.5"
+          >
+            <X className="w-3.5 h-3.5" />
+            {esPendiente ? 'Cancelar solicitud' : 'Revocar autorización'}
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── Modal confirmar revocar ───────────────────────────────────────────────────
+function ModalConfirmRevocar({ persona, onClose, onConfirmar, cargando }) {
+  const [texto, setTexto] = useState('')
+  const esPendiente = persona.estado === 'pendiente'
+  const confirmado  = texto.trim().toLowerCase() === persona.nombre.trim().toLowerCase()
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{ background: 'rgba(10,31,61,0.65)', backdropFilter: 'blur(4px)' }}
+    >
+      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden">
+        {/* Header rojo */}
+        <div className="bg-red-500 px-5 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="w-5 h-5 text-white" />
+            <p className="text-white font-bold text-sm">
+              {esPendiente ? 'Cancelar solicitud' : 'Revocar autorización'}
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            className="w-7 h-7 rounded-full bg-white/20 flex items-center justify-center"
+          >
+            <X className="w-3.5 h-3.5 text-white" />
+          </button>
+        </div>
+
+        <div className="px-5 py-5 space-y-4">
+          {/* Datos de la persona */}
+          <div className="flex items-center gap-3 bg-gray-50 rounded-2xl p-3">
+            <FotoPersona foto_url={persona.foto_url} nombre={persona.nombre} />
+            <div className="min-w-0">
+              <p className="font-semibold text-gray-900 text-sm">
+                {persona.nombre} {persona.apellido}
+              </p>
+              <p className="text-xs text-gray-500 mt-0.5">
+                {persona.parentesco} · DNI {persona.dni}
+              </p>
+            </div>
+          </div>
+
+          {/* Consecuencia */}
+          <div className="bg-red-50 border border-red-100 rounded-xl px-3 py-2.5 flex items-start gap-2">
+            <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
+            <p className="text-xs text-red-700">
+              {esPendiente
+                ? 'La solicitud será eliminada. Para volver a autorizar a esta persona deberás iniciar el proceso desde cero.'
+                : 'El fotocheck quedará inactivo de inmediato y esta persona no podrá recoger a tu hijo.'}
+            </p>
+          </div>
+
+          {/* Campo de confirmación */}
+          <div>
+            <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-1.5">
+              Escribe <strong className="text-gray-800 normal-case">{persona.nombre}</strong> para confirmar
+            </label>
+            <input
+              value={texto}
+              onChange={e => setTexto(e.target.value)}
+              placeholder={`Escribe "${persona.nombre}"`}
+              autoFocus
+              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-red-200 focus:border-red-400 transition-all"
+            />
+          </div>
+        </div>
+
+        <div className="px-5 pb-5 flex gap-3">
+          <button
+            onClick={onClose}
+            className="flex-1 py-2.5 border border-gray-200 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors"
+          >
+            Cancelar
+          </button>
+          <button
+            onClick={onConfirmar}
+            disabled={!confirmado || cargando}
+            className="flex-1 py-2.5 bg-red-500 text-white rounded-xl text-sm font-semibold disabled:opacity-40 disabled:cursor-not-allowed transition-opacity"
+          >
+            {cargando
+              ? 'Procesando...'
+              : esPendiente ? 'Cancelar solicitud' : 'Sí, revocar'}
+          </button>
+        </div>
+      </div>
     </div>
   )
 }
@@ -574,25 +673,12 @@ function TabAutorizados({ hijoActivo, cargandoHijo }) {
       )}
 
       {confirmRevocar && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4"
-          style={{ background: 'rgba(10,31,61,0.65)', backdropFilter: 'blur(4px)' }}
-        >
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm p-6">
-            <h3 className="font-bold text-gray-900 text-base mb-2">¿Revocar autorización?</h3>
-            <p className="text-sm text-gray-600 mb-5">
-              El fotocheck de{' '}
-              <strong>{confirmRevocar.nombre} {confirmRevocar.apellido}</strong>{' '}
-              quedará inactivo inmediatamente.
-            </p>
-            <div className="flex gap-3">
-              <button onClick={() => setConfirmRevocar(null)} className="flex-1 py-2.5 border border-gray-200 rounded-xl text-sm font-medium text-gray-600">Cancelar</button>
-              <button onClick={() => mutRevocar.mutate(confirmRevocar.id)} disabled={mutRevocar.isPending} className="flex-1 py-2.5 bg-red-500 text-white rounded-xl text-sm font-medium disabled:opacity-60">
-                {mutRevocar.isPending ? 'Revocando...' : 'Sí, revocar'}
-              </button>
-            </div>
-          </div>
-        </div>
+        <ModalConfirmRevocar
+          persona={confirmRevocar}
+          cargando={mutRevocar.isPending}
+          onClose={() => setConfirmRevocar(null)}
+          onConfirmar={() => mutRevocar.mutate(confirmRevocar.id)}
+        />
       )}
     </>
   )
@@ -950,48 +1036,85 @@ export default function Recojo() {
 
   if (cargandoHijo) {
     return (
-      <div className="max-w-lg mx-auto px-4 py-5 space-y-3">
-        <div className="h-8 w-48 bg-gray-100 rounded-xl animate-pulse" />
-        <div className="h-24 bg-gray-100 rounded-2xl animate-pulse" />
-        <div className="h-24 bg-gray-100 rounded-2xl animate-pulse" />
+      <div className="max-w-5xl mx-auto px-4 py-5">
+        <div className="md:grid md:grid-cols-[1fr_380px] md:gap-6">
+          <div className="space-y-4">
+            <div className="h-8 w-48 bg-gray-100 rounded-xl animate-pulse" />
+            <div className="h-28 bg-gray-100 rounded-2xl animate-pulse" />
+            <div className="h-72 bg-gray-100 rounded-2xl animate-pulse" />
+          </div>
+          <div className="hidden md:block space-y-3">
+            <div className="h-8 w-40 bg-gray-100 rounded-xl animate-pulse" />
+            {[1, 2].map(i => <div key={i} className="h-24 bg-gray-100 rounded-2xl animate-pulse" />)}
+          </div>
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="max-w-lg mx-auto px-4 py-5 space-y-5 pb-28">
+    <div className="max-w-5xl mx-auto px-4 py-5 pb-24 md:pb-10">
+
       {/* Header */}
-      <div>
+      <div className="mb-5">
         <h1 className="text-xl font-bold text-gray-900 flex items-center gap-2">
           <ShieldCheck className="w-6 h-6 text-marino" />
           Recojo Seguro
         </h1>
         <p className="text-xs text-gray-500 mt-0.5">
-          {hijoActivo ? <>Seguimiento de <strong>{hijoActivo.nombre}</strong></> : 'Todos tus hijos'}
+          {hijoActivo
+            ? <>Seguimiento de <strong>{hijoActivo.nombre}</strong></>
+            : 'Todos tus hijos'}
         </p>
       </div>
 
-      {/* Tabs */}
-      <div className="flex bg-gray-100 rounded-2xl p-1 gap-1">
-        {TABS.map(({ id, label, Icon }) => (
-          <button
-            key={id}
-            onClick={() => setTab(id)}
-            className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-semibold transition-all ${
-              tab === id
-                ? 'bg-white text-marino shadow-sm'
-                : 'text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            <Icon className="w-3.5 h-3.5" />
-            {label}
-          </button>
-        ))}
+      {/* Tabs — solo en móvil */}
+      <div className="md:hidden mb-4">
+        <div className="flex bg-gray-100 rounded-2xl p-1 gap-1">
+          {TABS.map(({ id, label, Icon }) => (
+            <button
+              key={id}
+              onClick={() => setTab(id)}
+              className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-semibold transition-all ${
+                tab === id
+                  ? 'bg-white text-marino shadow-sm'
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              <Icon className="w-3.5 h-3.5" />
+              {label}
+            </button>
+          ))}
+        </div>
       </div>
 
-      {/* Contenido */}
-      {tab === 'recojo'      && <TabCalendario  hijoActivo={hijoActivo} />}
-      {tab === 'autorizados' && <TabAutorizados hijoActivo={hijoActivo} cargandoHijo={cargandoHijo} />}
+      {/* Layout: 2 columnas en desktop, tabs en móvil */}
+      <div className="md:grid md:grid-cols-[1fr_380px] md:gap-6 md:items-start">
+
+        {/* Columna izquierda: calendario + hoy */}
+        <div className={tab === 'recojo' ? 'block' : 'hidden md:block'}>
+          <TabCalendario hijoActivo={hijoActivo} />
+        </div>
+
+        {/* Columna derecha: autorizados — sticky en desktop */}
+        <div className={`space-y-4 md:sticky md:top-4 ${tab === 'autorizados' ? 'block' : 'hidden md:block'}`}>
+          <div>
+            <p className="text-xs text-gray-400 uppercase tracking-wide mb-0.5 hidden md:block">
+              Personas autorizadas
+            </p>
+            <p className="font-bold text-marino text-lg hidden md:block">
+              Para el recojo
+            </p>
+            {hijoActivo && (
+              <p className="text-sm text-gray-500 hidden md:block">
+                {hijoActivo.nombre} {hijoActivo.apellido}
+              </p>
+            )}
+          </div>
+          <TabAutorizados hijoActivo={hijoActivo} cargandoHijo={cargandoHijo} />
+        </div>
+
+      </div>
     </div>
   )
 }

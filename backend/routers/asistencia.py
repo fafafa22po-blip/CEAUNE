@@ -11,7 +11,8 @@ from core.tz import ahora as _ahora, hoy as _hoy
 from models.asistencia import Asistencia, Horario
 from models.dia_no_laborable import DiasNoLaborables
 from models.estudiante import Estudiante
-from models.usuario import Usuario
+from models.recojo import PersonaAutorizada, RecojoLog
+from models.usuario import Usuario, TutorAula
 from schemas.asistencia import (
     AsistenciaResponse,
     EscanearRequest,
@@ -28,11 +29,22 @@ router = APIRouter()
 
 # Roles que pueden escanear
 ROLES_AUXILIAR = {"i-auxiliar", "p-auxiliar", "s-auxiliar", "admin"}
+ROLES_INSPECCION = ROLES_AUXILIAR | {"tutor"}
 NIVEL_POR_ROL = {
     "i-auxiliar": "inicial",
     "p-auxiliar": "primaria",
     "s-auxiliar": "secundaria",
 }
+
+
+def _nivel_para_usuario(current_user: Usuario, db: Session) -> Optional[str]:
+    """Devuelve el nivel permitido del usuario para filtrar alumnos."""
+    if current_user.rol == "admin":
+        return None
+    if current_user.rol == "tutor":
+        aula = db.query(TutorAula).filter(TutorAula.tutor_id == current_user.id).first()
+        return aula.nivel if aula else None
+    return NIVEL_POR_ROL.get(current_user.rol)
 
 
 # ---------------------------------------------------------------------------
@@ -741,12 +753,62 @@ def _build_perfil(estudiante: Estudiante, db: Session):
                 "email": apo.email, "telefono": apo.telefono,
             })
 
+    # ── Recojo: autorizados activos + log de hoy ────────────────────────────
+    autorizados = (
+        db.query(PersonaAutorizada)
+        .filter(
+            PersonaAutorizada.estudiante_id == estudiante.id,
+            PersonaAutorizada.estado == "activo",
+        )
+        .order_by(PersonaAutorizada.created_at.asc())
+        .all()
+    )
+
+    hoy_inicio = datetime.combine(fecha_hoy, time.min)
+    log_hoy = (
+        db.query(RecojoLog)
+        .filter(
+            RecojoLog.estudiante_id == estudiante.id,
+            RecojoLog.confirmado == True,          # noqa: E712
+            RecojoLog.confirmado_at >= hoy_inicio,
+        )
+        .order_by(RecojoLog.confirmado_at.desc())
+        .first()
+    )
+
+    recojo_hoy = None
+    if log_hoy:
+        p = db.query(PersonaAutorizada).filter(
+            PersonaAutorizada.id == log_hoy.persona_autorizada_id
+        ).first()
+        recojo_hoy = {
+            "nombre":     p.nombre     if p else "",
+            "apellido":   p.apellido   if p else "",
+            "parentesco": p.parentesco if p else "",
+            "hora":       log_hoy.confirmado_at.strftime("%H:%M") if log_hoy.confirmado_at else "",
+        }
+
     return {
         "estudiante": EstudianteBasico.model_validate(estudiante),
         "tardanzas_mes": tardanzas_mes,
         "faltas_mes": faltas_mes,
         "ultimas_asistencias": [AsistenciaResponse.model_validate(a) for a in ultimas],
         "apoderados": apoderados,
+        "recojo_info": {
+            "autorizados": [
+                {
+                    "id":         a.id,
+                    "nombre":     a.nombre,
+                    "apellido":   a.apellido,
+                    "dni":        a.dni,
+                    "parentesco": a.parentesco,
+                    "foto_url":   a.foto_url,
+                    "vigencia_hasta": a.vigencia_hasta.isoformat() if a.vigencia_hasta else None,
+                }
+                for a in autorizados
+            ],
+            "recojo_hoy": recojo_hoy,
+        },
     }
 
 
@@ -756,7 +818,7 @@ def perfil_por_qr(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_user),
 ):
-    if current_user.rol not in ROLES_AUXILIAR:
+    if current_user.rol not in ROLES_INSPECCION:
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Sin permisos")
 
     estudiante = db.query(Estudiante).filter(
@@ -765,10 +827,9 @@ def perfil_por_qr(
     if not estudiante:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "QR no reconocido o alumno inactivo")
 
-    if current_user.rol != "admin":
-        nivel_permitido = NIVEL_POR_ROL[current_user.rol]
-        if estudiante.nivel != nivel_permitido:
-            raise HTTPException(status.HTTP_403_FORBIDDEN, "Este alumno no pertenece a tu nivel")
+    nivel_permitido = _nivel_para_usuario(current_user, db)
+    if nivel_permitido and estudiante.nivel != nivel_permitido:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Este alumno no pertenece a tu nivel")
 
     return _build_perfil(estudiante, db)
 
@@ -779,7 +840,7 @@ def perfil_por_id(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_user),
 ):
-    if current_user.rol not in ROLES_AUXILIAR:
+    if current_user.rol not in ROLES_INSPECCION:
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Sin permisos")
 
     estudiante = db.query(Estudiante).filter(
@@ -788,10 +849,9 @@ def perfil_por_id(
     if not estudiante:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Alumno no encontrado")
 
-    if current_user.rol != "admin":
-        nivel_permitido = NIVEL_POR_ROL[current_user.rol]
-        if estudiante.nivel != nivel_permitido:
-            raise HTTPException(status.HTTP_403_FORBIDDEN, "Este alumno no pertenece a tu nivel")
+    nivel_permitido = _nivel_para_usuario(current_user, db)
+    if nivel_permitido and estudiante.nivel != nivel_permitido:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Este alumno no pertenece a tu nivel")
 
     return _build_perfil(estudiante, db)
 
