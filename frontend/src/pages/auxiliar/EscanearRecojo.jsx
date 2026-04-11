@@ -1,8 +1,9 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
+import ReactDOM from 'react-dom'
 import {
   ShieldCheck, ShieldX, Clock,
   CheckCircle2, AlertTriangle, UserX,
-  ScanLine, BarChart2, RefreshCw, Users, Search,
+  ScanLine, BarChart2, RefreshCw, Users, Search, X,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import QRScanner from '../../components/QRScanner'
@@ -30,7 +31,7 @@ function ContadorCircular({ segundos, total, color }) {
   const dash = circ * (segundos / total)
   return (
     <svg width="44" height="44" viewBox="0 0 44 44" className="rotate-[-90deg]">
-      <circle cx="22" cy="22" r={r} fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="3" />
+      <circle cx="22" cy="22" r={r} fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="3" />
       <circle
         cx="22" cy="22" r={r} fill="none"
         stroke={color} strokeWidth="3"
@@ -42,40 +43,7 @@ function ContadorCircular({ segundos, total, color }) {
   )
 }
 
-// ── Tab bar unificado ─────────────────────────────────────────────────────────
-function TabBar({ activo, onEscanear, onResumen, pendientes }) {
-  return (
-    <div className="bg-white border-t border-gray-100 flex flex-shrink-0 pb-safe">
-      <button
-        onClick={onEscanear}
-        className={`flex-1 flex flex-col items-center gap-1 py-3 transition-colors ${
-          activo === 'camara' ? 'text-green-600' : 'text-gray-400'
-        }`}
-      >
-        <ScanLine className="w-5 h-5" />
-        <span className={`text-[10px] ${activo === 'camara' ? 'font-bold' : 'font-medium'}`}>Escanear</span>
-      </button>
-      <button
-        onClick={onResumen}
-        className={`flex-1 flex flex-col items-center gap-1 py-3 transition-colors relative ${
-          activo === 'resumen' ? 'text-[#0a1f3d]' : 'text-gray-400'
-        }`}
-      >
-        <div className="relative">
-          <BarChart2 className="w-5 h-5" />
-          {pendientes > 0 && (
-            <span className="absolute -top-1.5 -right-2 min-w-[16px] h-4 bg-amber-500 text-white text-[9px] font-black rounded-full flex items-center justify-center px-1">
-              {pendientes}
-            </span>
-          )}
-        </div>
-        <span className={`text-[10px] ${activo === 'resumen' ? 'font-bold' : 'font-medium'}`}>Resumen</span>
-      </button>
-    </div>
-  )
-}
-
-// ── Modal de resultado ────────────────────────────────────────────────────────
+// ── PANTALLA RESULTADO — portal fullscreen nativo ─────────────────────────────
 function PantallaResultado({ resultado, onCerrar }) {
   const [fase,    setFase]    = useState('viendo')
   const [cuenta,  setCuenta]  = useState(AUTO_CIERRE)
@@ -116,13 +84,14 @@ function PantallaResultado({ resultado, onCerrar }) {
     }
   }
 
+  // Colores por estado
   const paleta = ya_recogido
-    ? { ring: 'ring-blue-400',   badge: 'bg-blue-600',   alumno: 'bg-blue-50 border-blue-100'     }
+    ? { bg: '#1e40af', bgLight: '#dbeafe', ring: '#60a5fa', badge: '#1d4ed8', text: '#1e3a8a' }
     : noAsistio
-    ? { ring: 'ring-orange-500', badge: 'bg-orange-600', alumno: 'bg-orange-50 border-orange-200' }
+    ? { bg: '#c2410c', bgLight: '#ffedd5', ring: '#fb923c', badge: '#ea580c', text: '#7c2d12' }
     : ok
-    ? { ring: 'ring-green-500',  badge: 'bg-green-600',  alumno: 'bg-green-50 border-green-100'   }
-    : { ring: 'ring-red-500',    badge: 'bg-red-600',    alumno: 'bg-red-50 border-red-100'       }
+    ? { bg: '#15803d', bgLight: '#dcfce7', ring: '#4ade80', badge: '#16a34a', text: '#14532d' }
+    : { bg: '#b91c1c', bgLight: '#fee2e2', ring: '#f87171', badge: '#dc2626', text: '#7f1d1d' }
 
   const motivoNoAuth = vencido
     ? 'Fotocheck vencido — no válido'
@@ -132,116 +101,143 @@ function PantallaResultado({ resultado, onCerrar }) {
     ? 'Fotocheck pendiente de activación'
     : 'No figura como autorizado'
 
-  // Color del botón cerrar según estado — nunca azul sobre azul
-  const cerrarStyle = ok && alumno_presente && !ya_recogido
-    ? 'border border-gray-200 text-gray-500'
-    : ya_recogido
-    ? 'bg-gray-100 text-gray-700'          // neutral — ya no bg-blue-600
-    : noAsistio
-    ? 'bg-orange-600 text-white'
-    : 'bg-red-600 text-white'
+  const etiqueta = ya_recogido ? 'YA RECOGIDO'
+    : noAsistio  ? 'ALUMNO AUSENTE'
+    : ok         ? 'AUTORIZADO'
+    : 'NO AUTORIZADO'
 
-  return (
-    <div className="max-w-sm mx-auto" onClick={() => setPausado(true)}>
-      <div className="bg-white rounded-3xl overflow-hidden shadow-card border border-gray-100">
-        {/* ── Fase éxito ─────────────────────────────────────────── */}
-        {fase === 'exito' && (
-          <>
-            <div className="bg-green-600 flex flex-col items-center justify-center py-8 gap-3">
-              <div className="w-16 h-16 rounded-full bg-white/20 ring-4 ring-green-300 flex items-center justify-center">
-                <CheckCircle2 className="w-9 h-9 text-white" />
-              </div>
-              <p className="text-white font-black text-2xl">Entrega confirmada</p>
-              <p className="text-white/80 text-sm">
-                {persona?.nombre} {persona?.apellido} llevó a {estudiante?.nombre}
+  const IconoEstado = ya_recogido ? CheckCircle2
+    : noAsistio  ? UserX
+    : ok         ? ShieldCheck
+    : ShieldX
+
+  // ── Render fullscreen como portal ────────────────────────────────────────
+  const contenido = (
+    <div
+      className="fixed inset-0 z-[9999] flex flex-col animate-result-enter"
+      style={{ background: paleta.bg }}
+      onClick={() => setPausado(true)}
+    >
+
+      {/* ── Fase éxito ───────────────────────────────────────── */}
+      {fase === 'exito' && (
+        <div className="flex flex-col flex-1 items-center justify-center gap-5 px-6"
+          style={{ paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' }}>
+          <div className="w-24 h-24 rounded-full bg-white/20 ring-4 ring-white/40 flex items-center justify-center">
+            <CheckCircle2 className="w-14 h-14 text-white" />
+          </div>
+          <div className="text-center">
+            <p className="text-white font-black text-3xl">Entrega confirmada</p>
+            <p className="text-white/80 text-base mt-2">
+              {persona?.nombre} {persona?.apellido}
+            </p>
+            <p className="text-white/60 text-sm mt-0.5">
+              llevó a {estudiante?.nombre} {estudiante?.apellido}
+            </p>
+          </div>
+          <button
+            onClick={onCerrar}
+            className="mt-4 w-full max-w-xs py-4 rounded-2xl font-black text-base bg-white/20 border border-white/30 text-white flex items-center justify-center gap-3"
+          >
+            <ScanLine className="w-5 h-5" />
+            <span>Siguiente ({cuenta})</span>
+            <ContadorCircular segundos={cuenta} total={AUTO_CIERRE} color="rgba(255,255,255,0.8)" />
+          </button>
+        </div>
+      )}
+
+      {/* ── Vista normal ─────────────────────────────────────── */}
+      {fase !== 'exito' && (
+        <>
+          {/* Zona superior — foto grande */}
+          <div className="relative flex-shrink-0" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
+
+            {/* Botón cerrar */}
+            <button
+              onClick={() => { setPausado(true); onCerrar() }}
+              className="absolute z-10 w-10 h-10 rounded-full bg-black/30 flex items-center justify-center"
+              style={{ top: 'calc(env(safe-area-inset-top) + 12px)', right: 16 }}
+            >
+              <X className="w-5 h-5 text-white" />
+            </button>
+
+            {/* Foto */}
+            <div className="w-full" style={{ aspectRatio: '4/3', maxHeight: '45vh', overflow: 'hidden' }}>
+              <Avatar
+                foto_url={persona?.foto_url}
+                nombre={persona?.nombre}
+                className="w-full h-full"
+                textClass="text-9xl w-full h-full"
+                style={{ background: 'rgba(0,0,0,0.3)' }}
+              />
+            </div>
+
+            {/* Gradiente sobre foto */}
+            <div
+              className="absolute bottom-0 left-0 right-0 h-32 pointer-events-none"
+              style={{ background: `linear-gradient(to top, ${paleta.bg} 0%, transparent 100%)` }}
+            />
+
+            {/* Badge estado */}
+            <div
+              className="absolute top-3 left-4 flex items-center gap-1.5 px-3 py-1.5 rounded-xl shadow-lg"
+              style={{
+                background: 'rgba(0,0,0,0.45)',
+                top: `calc(env(safe-area-inset-top) + 12px)`,
+              }}
+            >
+              <IconoEstado className="w-4 h-4 text-white" />
+              <span className="text-white font-black text-xs tracking-wider">{etiqueta}</span>
+            </div>
+
+            {/* Nombre sobre foto */}
+            <div className="absolute bottom-0 left-0 right-0 px-5 pb-4 pointer-events-none">
+              <p className="text-white font-black text-2xl leading-tight drop-shadow-lg">
+                {persona?.nombre} {persona?.apellido}
+              </p>
+              <p className="text-white/75 text-sm mt-0.5 drop-shadow">
+                {persona?.parentesco} · DNI {persona?.dni}
               </p>
             </div>
-            <div className="px-4 py-4">
-              <button
-                onClick={onCerrar}
-                className="w-full py-3 rounded-2xl font-bold text-sm text-green-700 bg-green-100 border border-green-200 flex items-center justify-center gap-2.5"
-              >
-                <span>Escanear siguiente ({cuenta})</span>
-                <ContadorCircular segundos={cuenta} total={AUTO_CIERRE} color="#16a34a" />
-              </button>
-            </div>
-          </>
-        )}
+          </div>
 
-        {/* ── Fase normal ────────────────────────────────────────── */}
-        {fase !== 'exito' && (
-          <>
-            {/* Foto grande */}
-            <div className="relative">
-              <div
-                className={`w-full aspect-[4/3] overflow-hidden ring-4 ${paleta.ring} bg-gray-200`}
-              >
-                <Avatar
-                  foto_url={persona?.foto_url}
-                  nombre={persona?.nombre}
-                  className="w-full h-full"
-                  textClass="text-7xl bg-gray-300 w-full h-full"
-                />
-              </div>
-              <div
-                className="absolute bottom-0 left-0 right-0 h-28"
-                style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.88) 0%, transparent 100%)' }}
-              />
-              <div className="absolute bottom-0 left-0 right-0 px-4 pb-3">
-                <p className="text-white font-black text-xl leading-tight drop-shadow">
-                  {persona?.nombre} {persona?.apellido}
-                </p>
-                <p className="text-white/70 text-sm mt-0.5">
-                  {persona?.parentesco} · DNI {persona?.dni}
-                </p>
-              </div>
-              <div className={`absolute top-3 right-3 ${paleta.badge} px-3 py-1.5 rounded-xl flex items-center gap-1.5 shadow-lg`}>
-                {ya_recogido
-                  ? <CheckCircle2 className="w-4 h-4 text-white" />
-                  : noAsistio
-                  ? <UserX        className="w-4 h-4 text-white" />
-                  : ok
-                  ? <ShieldCheck  className="w-4 h-4 text-white" />
-                  : <ShieldX      className="w-4 h-4 text-white" />
-                }
-                <span className="text-white font-black text-xs tracking-wide">
-                  {ya_recogido ? 'YA RECOGIDO' : noAsistio ? 'ALUMNO AUSENTE' : ok ? 'AUTORIZADO' : 'NO AUTORIZADO'}
-                </span>
-              </div>
-            </div>
+          {/* Zona inferior — hoja blanca deslizable */}
+          <div
+            className="flex-1 bg-white rounded-t-3xl overflow-y-auto"
+            style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+          >
+            <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mt-3 mb-4" />
 
-            {/* Datos */}
-            <div className="px-4 pt-3 pb-1 space-y-2.5">
+            <div className="px-5 space-y-3 pb-4">
 
-              {/* Ya recogido — info neutra con borde gris, no azul total */}
+              {/* Ya recogido */}
               {ya_recogido && (
-                <div className="flex items-start gap-3 bg-gray-50 border border-gray-200 rounded-2xl px-3 py-3">
-                  <div className="w-10 h-10 rounded-xl overflow-hidden flex-shrink-0 bg-gray-200">
+                <div className="flex items-start gap-3 bg-blue-50 border border-blue-100 rounded-2xl px-4 py-3">
+                  <div className="w-11 h-11 rounded-xl overflow-hidden flex-shrink-0 bg-blue-100">
                     {recogido_por?.foto_snapshot
                       ? <img src={recogido_por.foto_snapshot} alt="" className="w-full h-full object-cover" />
-                      : <div className="w-full h-full flex items-center justify-center font-bold text-gray-500 text-base">
+                      : <div className="w-full h-full flex items-center justify-center font-bold text-blue-400 text-base">
                           {recogido_por?.nombre?.charAt(0) || '?'}
                         </div>
                     }
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-gray-900 font-bold text-sm">
+                    <p className="text-blue-900 font-bold text-sm">
                       Recogido{recogido_a_las ? ` a las ${recogido_a_las}` : ''}
                     </p>
                     {recogido_por && (
-                      <p className="text-gray-600 text-xs mt-0.5">
+                      <p className="text-blue-700 text-xs mt-0.5">
                         Por {recogido_por.nombre} {recogido_por.apellido}
-                        <span className="text-gray-400"> · {recogido_por.parentesco}</span>
+                        <span className="text-blue-400"> · {recogido_por.parentesco}</span>
                       </p>
                     )}
                   </div>
-                  <CheckCircle2 className="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5" />
                 </div>
               )}
 
               {/* Vigencia */}
               {ok && persona?.vigencia_hasta && (
-                <div className="flex items-center gap-2 text-xs text-gray-500">
+                <div className="flex items-center gap-2 text-xs text-gray-500 px-1">
                   <Clock className="w-3.5 h-3.5 flex-shrink-0 text-gray-400" />
                   <span>
                     Vigente hasta{' '}
@@ -256,32 +252,25 @@ function PantallaResultado({ resultado, onCerrar }) {
 
               {/* No autorizado */}
               {!ok && !ya_recogido && !noAsistio && (
-                <div className="flex items-start gap-2.5 bg-red-50 border border-red-200 rounded-2xl px-3 py-2.5">
-                  <AlertTriangle className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
+                <div className="flex items-start gap-3 bg-red-50 border border-red-200 rounded-2xl px-4 py-3">
+                  <AlertTriangle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
                   <div>
-                    <p className="text-red-800 font-semibold text-xs">{motivoNoAuth}</p>
+                    <p className="text-red-800 font-bold text-sm">{motivoNoAuth}</p>
                     <p className="text-red-600 text-xs mt-0.5">No entregar al alumno. Avisar a secretaría.</p>
                   </div>
                 </div>
               )}
 
-              {/* Bloqueo no asistió */}
+              {/* Alumno ausente */}
               {noAsistio && (
-                <div className="flex flex-col items-center gap-3 bg-orange-50 border-2 border-orange-300 rounded-2xl px-4 py-5 text-center">
-                  <div className="w-16 h-16 rounded-2xl bg-orange-100 ring-4 ring-orange-200 flex items-center justify-center">
-                    <UserX className="w-9 h-9 text-orange-600" />
-                  </div>
+                <div className="flex flex-col items-center gap-3 bg-orange-50 border-2 border-orange-200 rounded-2xl px-4 py-5 text-center">
+                  <UserX className="w-10 h-10 text-orange-500" />
                   <div>
-                    <p className="text-orange-900 font-black text-base leading-tight">
-                      Este alumno NO asistió hoy
-                    </p>
-                    <p className="text-orange-700 text-xs mt-1.5 leading-relaxed">
+                    <p className="text-orange-900 font-black text-base">Este alumno NO asistió hoy</p>
+                    <p className="text-orange-700 text-xs mt-1 leading-relaxed">
                       No hay registro de ingreso. El recojo no puede ser autorizado.
                     </p>
                   </div>
-                  <p className="text-orange-600 text-[11px] font-semibold bg-orange-100 rounded-xl px-3 py-1.5">
-                    Verificar con secretaría o la docente
-                  </p>
                 </div>
               )}
 
@@ -289,13 +278,13 @@ function PantallaResultado({ resultado, onCerrar }) {
 
               {/* Alumno */}
               {estudiante && (
-                <div className={`flex items-center gap-3 rounded-2xl border px-3 py-2.5 ${paleta.alumno}`}>
-                  <div className="w-11 h-11 rounded-xl overflow-hidden flex-shrink-0 bg-gray-200 ring-1 ring-gray-200">
+                <div className="flex items-center gap-3 rounded-2xl border border-gray-100 bg-gray-50 px-4 py-3">
+                  <div className="w-12 h-12 rounded-xl overflow-hidden flex-shrink-0 bg-gray-200">
                     <Avatar
                       foto_url={estudiante.foto_url}
                       nombre={estudiante.nombre}
                       className="w-full h-full"
-                      textClass="text-xl bg-gray-300 w-full h-full"
+                      textClass="text-2xl bg-gray-300 w-full h-full"
                     />
                   </div>
                   <div className="flex-1 min-w-0">
@@ -307,62 +296,75 @@ function PantallaResultado({ resultado, onCerrar }) {
                         ? `Inicial · ${estudiante.grado} años · Aula ${estudiante.seccion}`
                         : `${estudiante.nivel} · ${estudiante.grado}° "${estudiante.seccion}"`
                       }
-                      {alumno_hora_ingreso && (
-                        <span className="text-green-600 font-medium"> · Ingresó {alumno_hora_ingreso}</span>
-                      )}
                     </p>
+                    {alumno_hora_ingreso && (
+                      <p className="text-xs text-green-600 font-medium mt-0.5">
+                        Ingresó a las {alumno_hora_ingreso}
+                      </p>
+                    )}
                   </div>
                   {ya_recogido
                     ? <CheckCircle2 className="w-5 h-5 text-blue-500 flex-shrink-0" />
                     : ok
                     ? <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0" />
-                    : <UserX        className="w-5 h-5 text-red-400 flex-shrink-0" />
+                    : <UserX className="w-5 h-5 text-red-400 flex-shrink-0" />
                   }
                 </div>
               )}
-            </div>
 
-            {/* Botones */}
-            <div className="px-4 pb-4 pt-2.5 space-y-2">
-              {ok && alumno_presente && !ya_recogido && (
-                <button
-                  onClick={confirmarEntrega}
-                  disabled={fase === 'confirmando'}
-                  className="w-full py-3 rounded-2xl font-black text-sm text-white bg-green-600 flex items-center justify-center gap-2 disabled:opacity-60"
-                >
-                  {fase === 'confirmando'
-                    ? <><span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Confirmando...</>
-                    : <><ShieldCheck className="w-4 h-4" /> Confirmar entrega</>
-                  }
-                </button>
-              )}
+              {/* Botones acción */}
+              <div className="pt-1 space-y-2">
+                {ok && alumno_presente && !ya_recogido && (
+                  <button
+                    onClick={confirmarEntrega}
+                    disabled={fase === 'confirmando'}
+                    className="w-full py-4 rounded-2xl font-black text-base text-white flex items-center justify-center gap-2.5 disabled:opacity-60"
+                    style={{ background: paleta.bg }}
+                  >
+                    {fase === 'confirmando'
+                      ? <><span className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" /> Confirmando...</>
+                      : <><ShieldCheck className="w-5 h-5" /> Confirmar entrega</>
+                    }
+                  </button>
+                )}
 
-              <button
-                onClick={() => { setPausado(true); onCerrar() }}
-                className={`w-full py-2.5 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 ${cerrarStyle}`}
-              >
-                {ok && alumno_presente && !ya_recogido
-                  ? 'Cancelar'
-                  : (
-                    <>
-                      <span>{pausado ? 'Cerrar' : `Cerrar (${cuenta})`}</span>
-                      {!pausado && (
-                        <ContadorCircular
-                          segundos={cuenta}
-                          total={AUTO_CIERRE}
-                          color={ya_recogido ? '#9ca3af' : noAsistio ? '#fdba74' : '#fca5a5'}
-                        />
-                      )}
-                    </>
-                  )
-                }
-              </button>
+                {/* Botón cerrar con cuenta regresiva */}
+                {(!ok || ya_recogido || noAsistio) && (
+                  <button
+                    onClick={() => { setPausado(true); onCerrar() }}
+                    className="w-full py-3.5 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 bg-gray-100 text-gray-700 border border-gray-200"
+                  >
+                    {pausado
+                      ? 'Cerrar'
+                      : (
+                        <>
+                          <span>Cerrar ({cuenta})</span>
+                          <ContadorCircular segundos={cuenta} total={AUTO_CIERRE} color="#6b7280" />
+                        </>
+                      )
+                    }
+                  </button>
+                )}
+
+                {/* Cancelar (cuando es autorizado y puede confirmar) */}
+                {ok && alumno_presente && !ya_recogido && (
+                  <button
+                    onClick={() => { setPausado(true); onCerrar() }}
+                    className="w-full py-3 rounded-2xl font-medium text-sm text-gray-400"
+                  >
+                    Cancelar
+                  </button>
+                )}
+              </div>
+
             </div>
-          </>
-        )}
-      </div>
+          </div>
+        </>
+      )}
     </div>
   )
+
+  return ReactDOM.createPortal(contenido, document.body)
 }
 
 // ── Panel resumen del día ─────────────────────────────────────────────────────
@@ -433,8 +435,6 @@ function PanelResumen({ onVolver, pendientes }) {
 
   return (
     <div className="space-y-4">
-
-      {/* Título */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold text-marino">Resumen del día</h1>
@@ -461,7 +461,6 @@ function PanelResumen({ onVolver, pendientes }) {
         </div>
       </div>
 
-      {/* Stats */}
       {cargando && !datos && (
         <div className="flex gap-3">
           {[1,2,3].map(i => <div key={i} className="flex-1 h-20 bg-gray-100 rounded-2xl animate-pulse" />)}
@@ -469,13 +468,12 @@ function PanelResumen({ onVolver, pendientes }) {
       )}
       {datos && (
         <div className="flex gap-3">
-          <StatCard valor={datos.total_presentes}  label="Presentes hoy"       color="marino" icon={Users}        />
-          <StatCard valor={datos.total_recogidos}  label="Ya recogidos"         color="green"  icon={CheckCircle2} />
-          <StatCard valor={datos.total_pendientes} label="Pendientes"           color="amber"  icon={Clock}        />
+          <StatCard valor={datos.total_presentes}  label="Presentes hoy"  color="marino" icon={Users}        />
+          <StatCard valor={datos.total_recogidos}  label="Ya recogidos"    color="green"  icon={CheckCircle2} />
+          <StatCard valor={datos.total_pendientes} label="Pendientes"      color="amber"  icon={Clock}        />
         </div>
       )}
 
-      {/* Pendientes */}
       {datos && datos.pendientes.length > 0 && (
         <div className="card overflow-hidden p-0">
           <div className="flex items-center gap-2 px-4 py-3 border-b border-amber-100 bg-amber-50">
@@ -499,7 +497,6 @@ function PanelResumen({ onVolver, pendientes }) {
         </div>
       )}
 
-      {/* Recogidos */}
       {datos && datos.recogidos.length > 0 && (
         <div className="card overflow-hidden p-0">
           <div className="flex items-center gap-2 px-4 py-3 border-b border-green-100 bg-green-50">
@@ -554,7 +551,6 @@ export default function EscanearRecojo() {
   const [dni,          setDni]          = useState('')
   const [pendientes,   setPendientes]   = useState(0)
 
-  // Cargar pendientes al montar para el badge del tab
   useEffect(() => {
     api.get('/recojo/resumen-hoy')
       .then(r => setPendientes(r.data?.total_pendientes ?? 0))
@@ -604,87 +600,93 @@ export default function EscanearRecojo() {
     setResultado(null)
     setModo('camara')
     setCamaraActiva(true)
-    // Actualizar badge de pendientes
     api.get('/recojo/resumen-hoy')
       .then(r => setPendientes(r.data?.total_pendientes ?? 0))
       .catch(() => {})
   }, [])
 
-  const irResumen  = () => { setModo('resumen');  setCamaraActiva(false) }
-  const irCamara   = () => { setModo('camara');   setCamaraActiva(true)  }
-
-  if (modo === 'resultado' && resultado) {
-    return <PantallaResultado resultado={resultado} onCerrar={cerrarResultado} />
-  }
-
-  if (modo === 'resumen') {
-    return <PanelResumen onVolver={irCamara} pendientes={pendientes} />
-  }
-
-  // ── Vista cámara ──────────────────────────────────────────────────────────
+  // El portal se renderiza encima de todo incluso cuando modo='camara' (oculto mientras resultado=null)
   return (
-    <div className="space-y-4">
+    <>
+      {/* ── Portal resultado fullscreen ─────────────────────────────────── */}
+      {modo === 'resultado' && resultado && (
+        <PantallaResultado resultado={resultado} onCerrar={cerrarResultado} />
+      )}
 
-      {/* Título */}
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold text-marino">Recojo Seguro</h1>
-        <button
-          onClick={irResumen}
-          className="relative flex items-center gap-2 px-3 py-2 bg-white border border-gray-200 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-50"
-        >
-          <BarChart2 className="w-4 h-4" />
-          <span>Resumen</span>
-          {pendientes > 0 && (
-            <span className="absolute -top-1 -right-1 min-w-[16px] h-4 bg-amber-500 text-white text-[9px] font-black rounded-full flex items-center justify-center px-1">
-              {pendientes}
-            </span>
-          )}
-        </button>
-      </div>
+      {/* ── Vista resumen ───────────────────────────────────────────────── */}
+      {modo === 'resumen' && (
+        <PanelResumen
+          onVolver={() => { setModo('camara'); setCamaraActiva(true) }}
+          pendientes={pendientes}
+        />
+      )}
 
-      {/* Scanner */}
-      <div className="card">
-        <p className="text-xs text-gray-400 text-center mb-3">
-          Apunta al QR del fotocheck del responsable — el sistema verifica la autorización automáticamente
-        </p>
-        <QRScanner activo={camaraActiva && !cargando} onResult={escanear} />
-        {cargando && (
-          <div className="flex items-center justify-center gap-2 mt-3 text-sm text-gray-500">
-            <div className="w-4 h-4 border-2 border-marino border-t-transparent rounded-full animate-spin" />
-            Verificando autorización...
+      {/* ── Vista cámara ────────────────────────────────────────────────── */}
+      {(modo === 'camara' || modo === 'resultado') && (
+        <div className={`space-y-4 ${modo === 'resultado' ? 'invisible' : ''}`}>
+
+          {/* Título */}
+          <div className="flex items-center justify-between">
+            <h1 className="text-xl font-bold text-marino">Recojo Seguro</h1>
+            <button
+              onClick={() => { setModo('resumen'); setCamaraActiva(false) }}
+              className="relative flex items-center gap-2 px-3 py-2 bg-white border border-gray-200 rounded-xl text-sm font-medium text-gray-600"
+            >
+              <BarChart2 className="w-4 h-4" />
+              <span>Resumen</span>
+              {pendientes > 0 && (
+                <span className="absolute -top-1 -right-1 min-w-[16px] h-4 bg-amber-500 text-white text-[9px] font-black rounded-full flex items-center justify-center px-1">
+                  {pendientes}
+                </span>
+              )}
+            </button>
           </div>
-        )}
-      </div>
 
-      {/* Buscar por DNI */}
-      <div className="card">
-        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
-          ¿QR no escanea? Busca por DNI del responsable
-        </p>
-        <div className="flex gap-2">
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <input
-              value={dni}
-              onChange={e => setDni(e.target.value.replace(/\D/g, '').slice(0, 8))}
-              onKeyDown={e => e.key === 'Enter' && buscarPorDni()}
-              placeholder="DNI del responsable"
-              inputMode="numeric"
-              maxLength={8}
-              className="w-full pl-9 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm outline-none focus:border-marino focus:ring-1 focus:ring-marino"
-            />
+          {/* Scanner */}
+          <div className="card">
+            <p className="text-xs text-gray-400 text-center mb-3">
+              Apunta al QR del fotocheck del responsable — el sistema verifica la autorización
+            </p>
+            <QRScanner activo={camaraActiva && !cargando} onResult={escanear} />
+            {cargando && (
+              <div className="flex items-center justify-center gap-2 mt-3 text-sm text-gray-500">
+                <div className="w-4 h-4 border-2 border-marino border-t-transparent rounded-full animate-spin" />
+                Verificando autorización...
+              </div>
+            )}
           </div>
-          <button
-            onClick={buscarPorDni}
-            disabled={dni.length < 8 || cargando}
-            className="px-4 py-2.5 bg-marino text-white rounded-xl text-sm font-bold disabled:opacity-40 flex items-center gap-1.5"
-          >
-            <Search className="w-4 h-4" />
-            Buscar
-          </button>
+
+          {/* Buscar por DNI */}
+          <div className="card">
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+              ¿QR no escanea? Busca por DNI
+            </p>
+            <div className="flex gap-2">
+              <div className="flex-1 relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <input
+                  value={dni}
+                  onChange={e => setDni(e.target.value.replace(/\D/g, '').slice(0, 8))}
+                  onKeyDown={e => e.key === 'Enter' && buscarPorDni()}
+                  placeholder="DNI del responsable"
+                  inputMode="numeric"
+                  maxLength={8}
+                  className="w-full pl-9 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm outline-none focus:border-marino focus:ring-1 focus:ring-marino"
+                />
+              </div>
+              <button
+                onClick={buscarPorDni}
+                disabled={dni.length < 8 || cargando}
+                className="px-4 py-2.5 bg-marino text-white rounded-xl text-sm font-bold disabled:opacity-40 flex items-center gap-1.5"
+              >
+                <Search className="w-4 h-4" />
+                Buscar
+              </button>
+            </div>
+          </div>
+
         </div>
-      </div>
-
-    </div>
+      )}
+    </>
   )
 }

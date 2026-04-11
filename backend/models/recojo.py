@@ -1,6 +1,7 @@
 import uuid
 
 from sqlalchemy import Boolean, Column, Date, Enum, ForeignKey, String, Text, TIMESTAMP
+from sqlalchemy.dialects.mysql import MEDIUMTEXT
 from sqlalchemy.sql import func
 
 from database import Base
@@ -23,7 +24,7 @@ class PersonaAutorizada(Base):
     apellido = Column(String(100), nullable=False)
     dni = Column(String(12), nullable=False)
     parentesco = Column(String(50), nullable=False)   # madre, padre, tio, abuelo, otro…
-    foto_url = Column(Text, nullable=True)             # base64 JPEG — solo se ve al escanear
+    foto_url = Column(MEDIUMTEXT, nullable=True)        # base64 JPEG — solo se ve al escanear (MEDIUMTEXT = 16 MB)
 
     # QR exclusivo del fotocheck — se genera cuando admin activa
     qr_token = Column(String(100), unique=True, nullable=True)
@@ -75,6 +76,6 @@ class RecojoLog(Base):
 
     # Capa 6: foto del responsable en el momento exacto de la confirmación.
     # Inmutable — no se puede editar después de creado.
-    foto_snapshot  = Column(Text, nullable=True)
+    foto_snapshot  = Column(MEDIUMTEXT, nullable=True)
 
     created_at = Column(TIMESTAMP, server_default=func.now())

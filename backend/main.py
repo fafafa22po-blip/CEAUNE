@@ -59,6 +59,9 @@ async def lifespan(app: FastAPI):
         "ALTER TABLE recojo_logs ADD COLUMN reportado TINYINT(1) NOT NULL DEFAULT 0",
         "ALTER TABLE recojo_logs ADD COLUMN reportado_motivo TEXT NULL",
         "ALTER TABLE recojo_logs ADD COLUMN reportado_at TIMESTAMP NULL",
+        # Fix: foto_url truncada — TEXT (64KB) → MEDIUMTEXT (16MB) para base64 JPEG
+        "ALTER TABLE personas_autorizadas MODIFY COLUMN foto_url MEDIUMTEXT NULL",
+        "ALTER TABLE recojo_logs MODIFY COLUMN foto_snapshot MEDIUMTEXT NULL",
     ]
     with engine.connect() as _conn:
         for _sql in _nuevas_cols:
