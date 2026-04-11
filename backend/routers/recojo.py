@@ -16,6 +16,8 @@ import io
 from datetime import date, datetime, timedelta
 from typing import Optional
 
+from PIL import Image
+
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import Response
