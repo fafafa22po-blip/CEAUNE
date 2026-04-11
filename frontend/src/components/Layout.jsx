@@ -19,27 +19,40 @@ import {
 } from 'lucide-react'
 
 // ── BOTTOM NAV — config por rol ──────────────────────────────────────
-const AUXILIAR_NAV = {
+const AUXILIAR_OVERFLOW = [
+  { a: '/auxiliar/bandeja',         icon: Inbox,         label: 'Bandeja'         },
+  { a: '/auxiliar/inspeccion',      icon: ScanSearch,    label: 'Inspección'      },
+  { a: '/auxiliar/comunicar',       icon: MessageSquare, label: 'Comunicar'       },
+  { a: '/auxiliar/justificaciones', icon: FileCheck,     label: 'Justificaciones' },
+  { a: '/auxiliar/horarios',        icon: Clock,         label: 'Horarios'        },
+  { a: '/auxiliar/horario-clases',  icon: GraduationCap, label: 'Clases'          },
+  { a: '/auxiliar/contactos',       icon: Phone,         label: 'Contactos'       },
+  { a: '/auxiliar/perfil',          icon: User,          label: 'Mi Perfil'       },
+]
+
+// Inicial: tiene Recojo en el main
+const AUXILIAR_INICIAL_NAV = {
   main: [
     { a: '/auxiliar/inicio',      icon: Home,          label: 'Inicio'     },
     { a: '/auxiliar/escanear',    icon: QrCode,        label: 'Escanear',  scan: true },
     { a: '/auxiliar/recojo',      icon: ShieldCheck,   label: 'Recojo'     },
     { a: '/auxiliar/asistencia',  icon: CalendarCheck, label: 'Asistencia' },
   ],
-  overflow: [
-    { a: '/auxiliar/bandeja',         icon: Inbox,         label: 'Bandeja'         },
-    { a: '/auxiliar/inspeccion',      icon: ScanSearch,    label: 'Inspección'      },
-    { a: '/auxiliar/comunicar',       icon: MessageSquare, label: 'Comunicar'       },
-    { a: '/auxiliar/justificaciones', icon: FileCheck,     label: 'Justificaciones' },
-    { a: '/auxiliar/horarios',        icon: Clock,         label: 'Horarios'        },
-    { a: '/auxiliar/horario-clases',  icon: GraduationCap, label: 'Clases'          },
-    { a: '/auxiliar/contactos',       icon: Phone,         label: 'Contactos'       },
-    { a: '/auxiliar/perfil',          icon: User,          label: 'Mi Perfil'       },
+  overflow: AUXILIAR_OVERFLOW,
+}
+
+// Primaria / Secundaria: sin Recojo
+const AUXILIAR_NAV = {
+  main: [
+    { a: '/auxiliar/inicio',      icon: Home,          label: 'Inicio'     },
+    { a: '/auxiliar/escanear',    icon: QrCode,        label: 'Escanear',  scan: true },
+    { a: '/auxiliar/asistencia',  icon: CalendarCheck, label: 'Asistencia' },
   ],
+  overflow: AUXILIAR_OVERFLOW,
 }
 
 const BOTTOM_NAV = {
-  'i-auxiliar': AUXILIAR_NAV,
+  'i-auxiliar': AUXILIAR_INICIAL_NAV,
   'p-auxiliar': AUXILIAR_NAV,
   's-auxiliar': AUXILIAR_NAV,
   'tutor': {
@@ -107,7 +120,6 @@ const MENUS = {
   'p-auxiliar': [
     { a: '/auxiliar/inicio',          icon: Home,            label: 'Inicio'          },
     { a: '/auxiliar/escanear',        icon: QrCode,          label: 'Escanear'        },
-    { a: '/auxiliar/recojo',          icon: ShieldCheck,     label: 'Recojo Seguro'   },
     { a: '/auxiliar/inspeccion',      icon: ScanSearch,      label: 'Inspección'      },
     { a: '/auxiliar/asistencia',      icon: LayoutDashboard, label: 'Asistencia'      },
     { a: '/auxiliar/comunicar',       icon: MessageSquare,   label: 'Comunicar'       },
@@ -121,7 +133,6 @@ const MENUS = {
   's-auxiliar': [
     { a: '/auxiliar/inicio',          icon: Home,            label: 'Inicio'          },
     { a: '/auxiliar/escanear',        icon: QrCode,          label: 'Escanear'        },
-    { a: '/auxiliar/recojo',          icon: ShieldCheck,     label: 'Recojo Seguro'   },
     { a: '/auxiliar/inspeccion',      icon: ScanSearch,      label: 'Inspección'      },
     { a: '/auxiliar/asistencia',      icon: LayoutDashboard, label: 'Asistencia'      },
     { a: '/auxiliar/comunicar',       icon: MessageSquare,   label: 'Comunicar'       },
@@ -297,6 +308,19 @@ export default function Layout() {
     ? 'apoderado'
     : (usuario?.rol || '')
 
+  const esApoderado = rolEfectivo === 'apoderado'
+
+  // Nivel del hijo activo (para filtrar recojo en apoderado)
+  const { data: hijosApoderado = [] } = useQuery({
+    queryKey: QK.misHijos,
+    queryFn:  () => api.get('/apoderado/mis-hijos').then(r => r.data || []),
+    enabled:   esApoderado,
+    staleTime: 5 * 60_000,
+  })
+  const hijoActivoId   = localStorage.getItem('ceaune_hijo_activo')
+  const hijoActivo     = hijosApoderado.find(h => String(h.id) === hijoActivoId) ?? hijosApoderado[0] ?? null
+  const esHijoInicial  = hijoActivo?.nivel === 'inicial'
+
   const menuBase      = MENUS[rolEfectivo] || []
   const bottomNavBase = BOTTOM_NAV[rolEfectivo]
 
@@ -310,7 +334,9 @@ export default function Layout() {
         { a: '/tutor/inspeccion',  icon: ScanSearch,  label: 'Inspección'    },
         ...menuBase.slice(2),
       ]
-    : menuBase
+    : esApoderado && !esHijoInicial
+      ? menuBase.filter(m => m.a !== '/apoderado/recojo')
+      : menuBase
   const bottomNav = esTutorInicial && bottomNavBase
     ? {
         main: [
@@ -325,7 +351,9 @@ export default function Layout() {
           ...bottomNavBase.overflow,
         ],
       }
-    : bottomNavBase
+    : esApoderado && !esHijoInicial && bottomNavBase
+      ? { ...bottomNavBase, main: bottomNavBase.main.filter(m => m.a !== '/apoderado/recojo') }
+      : bottomNavBase
 
   const mainTabs      = bottomNav?.main     ?? []
   const overflowTabs  = bottomNav?.overflow ?? []
@@ -336,7 +364,6 @@ export default function Layout() {
   const iniciales = `${usuario?.nombre?.[0] ?? ''}${usuario?.apellido?.[0] ?? ''}`.toUpperCase()
 
   // Badge comunicados sin leer (solo apoderado)
-  const esApoderado = rolEfectivo === 'apoderado'
   const { data: sinLeer = 0 } = useQuery({
     queryKey: QK.comunicados,
     queryFn:  () => api.get('/apoderado/comunicados').then(r =>

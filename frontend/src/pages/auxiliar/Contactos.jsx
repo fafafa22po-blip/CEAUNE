@@ -446,9 +446,8 @@ export default function Contactos() {
                     </p>
                     <div className="flex items-center gap-2 mt-1">
                       <span className={`text-[11px] font-medium px-2 py-0.5 rounded-full ${c.bg} ${c.text}`}>
-                        {est.grado}
+                        {formatGradoSeccion(est.nivel, est.grado, est.seccion)}
                       </span>
-                      <span className="text-xs text-gray-400">Sec. {est.seccion}</span>
                       <span className="text-xs text-gray-300 font-mono">{est.dni}</span>
                     </div>
                   </div>

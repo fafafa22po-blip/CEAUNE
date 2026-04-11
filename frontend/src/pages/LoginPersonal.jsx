@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Eye, EyeOff, QrCode,
-  BarChart2, Mail, CheckCircle,
+  BarChart2, Mail,
   Briefcase, Users, Download,
 } from 'lucide-react'
 import mascotaImg from '../assets/mascota.png'
@@ -28,6 +28,7 @@ export default function LoginPersonal() {
   const [verPassword, setVerPassword] = useState(false)
   const [cargando,    setCargando]    = useState(false)
   const [exito,       setExito]       = useState(false)
+  const [exitoNombre, setExitoNombre] = useState('')
   const [modalRol,    setModalRol]    = useState(null) // { usuario }
   const nav = useNavigate()
 
@@ -46,8 +47,9 @@ export default function LoginPersonal() {
         // Tiene doble rol — preguntar con qué perfil desea ingresar
         setModalRol({ usuario })
       } else {
+        setExitoNombre(usuario.nombre || '')
         setExito(true)
-        setTimeout(() => nav(obtenerRutaPorRol(usuario.rol)), 1500)
+        setTimeout(() => nav(obtenerRutaPorRol(usuario.rol)), 1800)
       }
     } catch (err) {
       localStorage.removeItem('token')
@@ -62,18 +64,56 @@ export default function LoginPersonal() {
       guardarModoSesion('apoderado')
     }
     setModalRol(null)
+    setExitoNombre(usuario.nombre || '')
     setExito(true)
-    setTimeout(() => nav(modo === 'apoderado' ? '/apoderado' : obtenerRutaPorRol(usuario.rol)), 1500)
+    setTimeout(() => nav(modo === 'apoderado' ? '/apoderado' : obtenerRutaPorRol(usuario.rol)), 1800)
   }
 
   if (exito) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-marino">
-        <div className="text-center text-white">
-          <CheckCircle size={64} className="mx-auto mb-4 text-dorado" />
-          <p className="text-2xl font-bold">¡Bienvenido!</p>
-          <p className="text-white/60 mt-1">Redirigiendo…</p>
+        <div className="text-center text-white flex flex-col items-center gap-5"
+          style={{ animation: 'ceaune-fadein 0.4s ease-out' }}>
+
+          {/* Logo */}
+          <img
+            src={logoImg}
+            alt="CEAUNE"
+            className="h-20 w-auto object-contain"
+            style={{ animation: 'ceaune-scalein 0.5s cubic-bezier(0.34,1.56,0.64,1)' }}
+          />
+
+          {/* Saludo */}
+          <div>
+            <p className="text-2xl font-bold tracking-tight">
+              ¡Bienvenido{exitoNombre ? `, ${exitoNombre}` : ''}!
+            </p>
+            <p className="text-white/50 text-sm mt-1">Ingresando al sistema…</p>
+          </div>
+
+          {/* Barra de progreso */}
+          <div className="w-48 h-0.5 bg-white/10 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-dorado rounded-full"
+              style={{ animation: 'ceaune-progress 1.6s ease-in-out forwards' }}
+            />
+          </div>
         </div>
+
+        <style>{`
+          @keyframes ceaune-fadein {
+            from { opacity: 0; transform: translateY(12px); }
+            to   { opacity: 1; transform: translateY(0);    }
+          }
+          @keyframes ceaune-scalein {
+            from { opacity: 0; transform: scale(0.7); }
+            to   { opacity: 1; transform: scale(1);   }
+          }
+          @keyframes ceaune-progress {
+            from { width: 0%;   }
+            to   { width: 100%; }
+          }
+        `}</style>
       </div>
     )
   }

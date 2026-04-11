@@ -1,6 +1,8 @@
 // Utilidad para imprimir fotochecks de recojo (vertical 72mm × 108mm).
 // Layout A4 portrait: 2 columnas × 3 filas = 6 fotochecks por hoja.
 
+import { resolveAulaInicial } from '../lib/nivelAcademico'
+
 const MARINO = '#0a1f3d'
 const DORADO = '#c9a227'
 
@@ -48,7 +50,7 @@ function fotocheckHTML(c, logoBase64) {
     : ''
 
   const aula = est.nivel === 'inicial'
-    ? `${esc(est.grado)} a&ntilde;os &mdash; Aula ${esc(est.seccion)}`
+    ? `${esc(est.grado)} a&ntilde;os &mdash; Aula ${esc(resolveAulaInicial(est.grado, est.seccion))}`
     : `${esc(est.grado)}&deg; &ldquo;${esc(est.seccion)}&rdquo;`
 
   const alumnoNombre = esc(`${est.nombre || ''} ${est.apellido || ''}`.trim())

@@ -3,7 +3,7 @@ import { Send, Users, User, Eye, Paperclip, X, Search } from 'lucide-react'
 import toast from 'react-hot-toast'
 import api from '../../lib/api'
 
-import { GRADOS_POR_NIVEL, getSecciones, formatGradoSeccion, formatGrado } from '../../lib/nivelAcademico'
+import { GRADOS_POR_NIVEL, getSecciones, formatGradoSeccion, formatGrado, resolveAulaInicial } from '../../lib/nivelAcademico'
 const NIVELES    = ['inicial', 'primaria', 'secundaria']
 const LABEL_NIVEL = { inicial: 'Inicial', primaria: 'Primaria', secundaria: 'Secundaria' }
 const MAX_CHARS  = 1000
@@ -293,7 +293,11 @@ export default function AdminComunicar() {
                   disabled={!grado}
                 >
                   <option value="">Seleccionar...</option>
-                  {getSecciones(nivel, grado).map(s => <option key={s} value={s}>{s}</option>)}
+                  {getSecciones(nivel, grado).map(s => (
+                    <option key={s} value={s}>
+                      {nivel === 'inicial' ? resolveAulaInicial(grado, s) : s}
+                    </option>
+                  ))}
                 </select>
               </div>
             </div>

@@ -192,7 +192,7 @@ function ModalPerfil({ estudiante, estadoDia, onClose, nav }) {
     const extras = [tagMsg, motivo.trim()].filter(Boolean).join('\n')
     abrirWhatsApp(tel,
       `Estimado/a apoderado/a,\nLe contactamos respecto a *${estudiante.nombre} ${estudiante.apellido}* ` +
-      `(${estudiante.grado} - Sección ${estudiante.seccion}).` +
+      `(${formatGradoSeccion(estudiante.nivel, estudiante.grado, estudiante.seccion)}).` +
       (extras ? `\n\n${extras}` : '') + `\n\n_Colegio CEAUNE_`)
   }
 
@@ -223,7 +223,7 @@ function ModalPerfil({ estudiante, estadoDia, onClose, nav }) {
                   </div>
                   <div className="min-w-0">
                     <h2 className="font-bold text-marino text-base leading-tight truncate">{estudiante.nombre} {estudiante.apellido}</h2>
-                    <p className="text-xs text-gray-400 mt-0.5">{estudiante.grado} · Sec. {estudiante.seccion} · DNI {estudiante.dni || '—'}</p>
+                    <p className="text-xs text-gray-400 mt-0.5">{formatGradoSeccion(estudiante.nivel, estudiante.grado, estudiante.seccion)} · DNI {estudiante.dni || '—'}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0">
@@ -779,7 +779,7 @@ export default function Asistencia() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-gray-100 bg-gray-50/80">
-                  {['Alumno','Grado','Sección','Hora','Estado','Correo'].map(h => (
+                  {['Alumno','Aula / Sección','Hora','Estado','Correo'].map(h => (
                     <th key={h} className="text-left text-xs font-semibold text-gray-400 uppercase tracking-wide px-4 py-3">{h}</th>
                   ))}
                 </tr>
@@ -816,8 +816,7 @@ export default function Asistencia() {
                           </div>
                         </div>
                       </td>
-                      <td className="px-4 py-3 text-gray-500">{a.estudiante?.grado}</td>
-                      <td className="px-4 py-3 text-gray-500">{a.estudiante?.seccion}</td>
+                      <td className="px-4 py-3 text-gray-500">{formatGradoSeccion(a.estudiante?.nivel, a.estudiante?.grado, a.estudiante?.seccion)}</td>
                       <td className="px-4 py-3">
                         {registro?.hora
                           ? <div className="flex items-center gap-1.5 text-gray-600"><Clock size={13} className="text-gray-400" /><span>{registro.hora}</span></div>

@@ -2,6 +2,8 @@
 // Sin foto impresa — el QR es el único elemento de identidad.
 // Mismo encabezado universitario que el carnet estudiantil.
 
+import { formatGradoSeccion } from '../lib/nivelAcademico'
+
 const MARINO = '#0a1f3d'
 const DORADO = '#c9a227'
 
@@ -52,9 +54,7 @@ function DataRow({ label, value, bg }) {
 
 export default function CarnetRecojo({ persona, qrBase64 }) {
   const est = persona.estudiante || {}
-  const aula = est.nivel === 'inicial'
-    ? `${est.grado} años — Aula ${est.seccion}`
-    : `${est.grado}° "${est.seccion}"`
+  const aula = formatGradoSeccion(est.nivel, est.grado, est.seccion)
 
   const vigencia = persona.vigencia_hasta
     ? new Date(persona.vigencia_hasta + 'T00:00:00').toLocaleDateString('es-PE', {

@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react'
+import { formatGradoSeccion } from '../../lib/nivelAcademico'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   ShieldCheck, Search, CheckCircle2, Clock, UserX,
@@ -150,7 +151,7 @@ function PanelDetalleRecojo({ apoderado, estudiante, onClose, onActivar, onImpri
                 {estudiante.nombre} {estudiante.apellido}
               </p>
               <p className="text-xs text-gray-500 capitalize">
-                Inicial · {estudiante.grado}° "{estudiante.seccion}"
+                {formatGradoSeccion(estudiante.nivel, estudiante.grado, estudiante.seccion)}
               </p>
             </div>
           </div>
@@ -319,7 +320,7 @@ function FilaRecojo({ apoderado, estudiante, onVerDetalle }) {
             {estudiante.apellido}, {estudiante.nombre}
           </span>
           {' · '}
-          {estudiante.grado}°&nbsp;"{estudiante.seccion}"
+          {formatGradoSeccion(estudiante.nivel, estudiante.grado, estudiante.seccion)}
         </p>
       </div>
 
@@ -390,7 +391,7 @@ function ModalDetalle({ persona, onClose, onActivar, onRevocar }) {
               <Foto foto_url={est.foto_url} nombre={est.nombre} className="w-10 h-10" square />
               <div>
                 <p className="font-semibold text-gray-900 text-sm">{est.nombre} {est.apellido}</p>
-                <p className="text-xs text-gray-500 capitalize">{est.nivel} · {est.grado}° "{est.seccion}"</p>
+                <p className="text-xs text-gray-500 capitalize">{est.nivel} · {formatGradoSeccion(est.nivel, est.grado, est.seccion)}</p>
               </div>
             </div>
           </div>
@@ -540,7 +541,7 @@ function CardSolicitud({ persona, onDetalle, onImprimir }) {
               {est.nombre} {est.apellido}
             </span>
             <span className="text-[10px] text-gray-400 capitalize flex-shrink-0">
-              {est.nivel} · {est.grado}°{est.seccion}
+              {est.nivel} · {formatGradoSeccion(est.nivel, est.grado, est.seccion)}
             </span>
           </div>
 

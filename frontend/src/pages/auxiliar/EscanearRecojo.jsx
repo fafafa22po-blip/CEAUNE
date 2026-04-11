@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
 import ReactDOM from 'react-dom'
+import { Navigate } from 'react-router-dom'
 import {
   ShieldCheck, ShieldX, Clock,
   CheckCircle2, AlertTriangle, UserX,
@@ -9,6 +10,7 @@ import toast from 'react-hot-toast'
 import QRScanner from '../../components/QRScanner'
 import api from '../../lib/api'
 import { hapticMedium, hapticLight } from '../../lib/haptics'
+import { obtenerUsuario } from '../../lib/auth'
 
 const AUTO_CIERRE = 10
 
@@ -552,6 +554,12 @@ function PanelResumen({ onVolver, pendientes }) {
 
 // ── Página principal ──────────────────────────────────────────────────────────
 export default function EscanearRecojo() {
+  const _u   = obtenerUsuario()
+  const _rol = _u?.rol
+  const _noAutorizado = _rol === 'p-auxiliar' || _rol === 's-auxiliar' ||
+                        (_rol === 'tutor' && _u?.nivel !== 'inicial')
+  const _redirigir = _rol === 'tutor' ? '/tutor/inicio' : '/auxiliar/inicio'
+
   const [modo,         setModo]         = useState('camara')
   const [cargando,     setCargando]     = useState(false)
   const [camaraActiva, setCamaraActiva] = useState(true)
@@ -612,6 +620,8 @@ export default function EscanearRecojo() {
       .then(r => setPendientes(r.data?.total_pendientes ?? 0))
       .catch(() => {})
   }, [])
+
+  if (_noAutorizado) return <Navigate to={_redirigir} replace />
 
   // El portal se renderiza encima de todo incluso cuando modo='camara' (oculto mientras resultado=null)
   return (

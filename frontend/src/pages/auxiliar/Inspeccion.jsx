@@ -129,11 +129,12 @@ function ModalPerfil({ perfil, onCerrar }) {
   const [tabActivo, setTabActivo]       = useState('asistencia')
 
   const { estudiante, tardanzas_mes, faltas_mes, apoderados, recojo_info } = perfil
-  const cfg         = NIVEL_CFG[estudiante.nivel] || NIVEL_CFG.primaria
-  const conTelefono = (apoderados || []).filter((a) => a.telefono)
-  const hayAlerta   = tardanzas_mes >= 3 || faltas_mes >= 3
-  const haySalud    = !!(estudiante.atencion_medica || estudiante.tiene_alergias || estudiante.condicion_mental_nee || estudiante.contacto_emergencia)
-  const hayCritico  = !!(estudiante.tiene_alergias || estudiante.contacto_emergencia)
+  const cfg          = NIVEL_CFG[estudiante.nivel] || NIVEL_CFG.primaria
+  const esInicial    = estudiante.nivel === 'inicial'
+  const conTelefono  = (apoderados || []).filter((a) => a.telefono)
+  const hayAlerta    = tardanzas_mes >= 3 || faltas_mes >= 3
+  const haySalud     = !!(estudiante.atencion_medica || estudiante.tiene_alergias || estudiante.condicion_mental_nee || estudiante.contacto_emergencia)
+  const hayCritico   = !!(estudiante.tiene_alergias || estudiante.contacto_emergencia)
 
   const ahora        = new Date()
   const mesActual    = ahora.getMonth()
@@ -252,19 +253,21 @@ function ModalPerfil({ perfil, onCerrar }) {
                   <span className="w-2 h-2 rounded-full bg-rose-400 flex-shrink-0" />
                 )}
               </button>
-              <button
-                onClick={() => setTabActivo('recojo')}
-                className={`flex-1 flex items-center justify-center gap-1.5 text-xs font-semibold py-2 rounded-lg transition-colors ${
-                  tabActivo === 'recojo'
-                    ? 'bg-marino text-white'
-                    : 'text-gray-500 hover:bg-gray-100'
-                }`}
-              >
-                Recojo
-                {recojo_info?.recojo_hoy && tabActivo !== 'recojo' && (
-                  <span className="w-2 h-2 rounded-full bg-green-400 flex-shrink-0" />
-                )}
-              </button>
+              {esInicial && (
+                <button
+                  onClick={() => setTabActivo('recojo')}
+                  className={`flex-1 flex items-center justify-center gap-1.5 text-xs font-semibold py-2 rounded-lg transition-colors ${
+                    tabActivo === 'recojo'
+                      ? 'bg-marino text-white'
+                      : 'text-gray-500 hover:bg-gray-100'
+                  }`}
+                >
+                  Recojo
+                  {recojo_info?.recojo_hoy && tabActivo !== 'recojo' && (
+                    <span className="w-2 h-2 rounded-full bg-green-400 flex-shrink-0" />
+                  )}
+                </button>
+              )}
             </div>
 
             {/* Cuerpo scrolleable */}
@@ -383,7 +386,7 @@ function ModalPerfil({ perfil, onCerrar }) {
                 </>
               )}
 
-              {tabActivo === 'recojo' && (
+              {tabActivo === 'recojo' && esInicial && (
                 <>
                   {/* Banner: ya fue recogido hoy */}
                   {recojo_info?.recojo_hoy ? (

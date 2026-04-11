@@ -23,7 +23,7 @@ const NIVELES  = [
   { v: 'secundaria', label: 'Secundaria'        },
 ]
 
-import { GRADOS_POR_NIVEL, getSecciones, formatGrado, formatGradoSeccion } from '../../lib/nivelAcademico'
+import { GRADOS_POR_NIVEL, getSecciones, formatGrado, formatGradoSeccion, resolveAulaInicial } from '../../lib/nivelAcademico'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -352,7 +352,9 @@ export default function Reportes() {
               <select className="input" value={seccion} onChange={(e) => setSeccion(e.target.value)} disabled={!grado}>
                 <option value="">Seleccionar...</option>
                 {getSecciones(nivel, grado).map((s) => (
-                  <option key={s} value={s}>{s}</option>
+                  <option key={s} value={s}>
+                    {nivel === 'inicial' ? resolveAulaInicial(grado, s) : s}
+                  </option>
                 ))}
               </select>
             </div>
@@ -450,9 +452,9 @@ export default function Reportes() {
             <div>
               <h3 className="font-bold text-marino">
                 {vista === 'alumno' && datos.alumno
-                  ? `${datos.alumno.nombre} — ${datos.alumno.grado}° ${datos.alumno.seccion}`
+                  ? `${datos.alumno.nombre} — ${formatGradoSeccion(datos.alumno.nivel, datos.alumno.grado, datos.alumno.seccion)}`
                   : vista === 'aula'
-                  ? `Aula ${grado}° ${seccion}`
+                  ? formatGradoSeccion(nivel, grado, seccion)
                   : 'Resumen general'}
               </h3>
               <p className="text-xs text-gray-400 mt-0.5">

@@ -1,8 +1,10 @@
-import { useRef, useEffect, useCallback, useState } from 'react'
-import Webcam from 'react-webcam'
-import jsQR from 'jsqr'
+import { useRef, useEffect, useState } from 'react'
+import QrScanner from 'qr-scanner'
+import QrScannerWorkerPath from 'qr-scanner/qr-scanner-worker.min.js?url'
 import { RefreshCw, ScanLine } from 'lucide-react'
 import { hapticSuccess, hapticError } from '../lib/haptics'
+
+QrScanner.WORKER_PATH = QrScannerWorkerPath
 
 // Detecta si corre en app nativa Capacitor (sin imports que rompan Vite)
 const isNative = typeof window !== 'undefined' && window.Capacitor?.isNativePlatform?.() === true
@@ -95,60 +97,74 @@ function NativeScanner({ onResult }) {
   )
 }
 
-// ── Escáner web (react-webcam + jsQR) ────────────────────────────────────────
+// ── Escáner web (qr-scanner WASM) ────────────────────────────────────────────
 function WebScanner({ onResult, activo }) {
-  const webcamRef = useRef(null)
-  const rafRef    = useRef(null)
-  const flashRef  = useRef(null)
+  const videoRef    = useRef(null)
+  const scannerRef  = useRef(null)
+  const flashRef    = useRef(null)
+  const scannedRef  = useRef(false)
   const [facingMode, setFacingMode] = useState('environment')
+  const [multiCamera, setMultiCamera] = useState(false)
 
-  const escanear = useCallback(() => {
-    if (!activo) return
-    const video = webcamRef.current?.video
-    if (video && video.readyState === 4) {
-      const canvas = document.createElement('canvas')
-      canvas.width  = video.videoWidth
-      canvas.height = video.videoHeight
-      const ctx = canvas.getContext('2d')
-      ctx.drawImage(video, 0, 0)
-      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
-      const code = jsQR(imageData.data, imageData.width, imageData.height)
-      if (code?.data) {
+  useEffect(() => {
+    if (!activo || !videoRef.current) return
+
+    scannedRef.current = false
+
+    const scanner = new QrScanner(
+      videoRef.current,
+      result => {
+        if (scannedRef.current) return
+        scannedRef.current = true
         beep()
         hapticSuccess()
         if (flashRef.current) {
           flashRef.current.style.opacity = '0.5'
           setTimeout(() => { if (flashRef.current) flashRef.current.style.opacity = '0' }, 200)
         }
-        onResult(code.data)
-        return
+        onResult(result.data)
+      },
+      {
+        preferredCamera:    'environment',
+        maxScansPerSecond:  10,
+        highlightScanRegion: false,
+        highlightCodeOutline: false,
       }
+    )
+
+    scanner.start().catch(() => {})
+    scannerRef.current = scanner
+
+    QrScanner.listCameras(false).then(cams => setMultiCamera(cams.length > 1))
+
+    return () => {
+      scanner.destroy()
+      scannerRef.current = null
     }
-    rafRef.current = requestAnimationFrame(escanear)
   }, [activo, onResult])
 
-  useEffect(() => {
-    if (activo) rafRef.current = requestAnimationFrame(escanear)
-    return () => cancelAnimationFrame(rafRef.current)
-  }, [activo, escanear])
+  const toggleCamera = async () => {
+    const next = facingMode === 'environment' ? 'user' : 'environment'
+    setFacingMode(next)
+    if (scannerRef.current) {
+      try { await scannerRef.current.setCamera(next) } catch (_) {}
+    }
+  }
 
   return (
     <div className="relative rounded-xl overflow-hidden bg-black">
-      <Webcam
-        ref={webcamRef}
-        audio={false}
-        videoConstraints={{ facingMode, width: 640, height: 480 }}
-        className="w-full"
-      />
+      <video ref={videoRef} className="w-full" />
 
-      <button
-        type="button"
-        onClick={() => setFacingMode(f => f === 'environment' ? 'user' : 'environment')}
-        className="absolute top-3 right-3 w-9 h-9 flex items-center justify-center rounded-full bg-black/40 hover:bg-black/60 text-white transition-colors"
-        title="Cambiar cámara"
-      >
-        <RefreshCw size={16} />
-      </button>
+      {multiCamera && (
+        <button
+          type="button"
+          onClick={toggleCamera}
+          className="absolute top-3 right-3 w-9 h-9 flex items-center justify-center rounded-full bg-black/40 hover:bg-black/60 text-white transition-colors"
+          title="Cambiar cámara"
+        >
+          <RefreshCw size={16} />
+        </button>
+      )}
 
       <div
         ref={flashRef}

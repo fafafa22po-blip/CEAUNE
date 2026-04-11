@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Eye, EyeOff, CheckCircle, CalendarCheck, Bell, FileText, Download } from 'lucide-react'
+import { Eye, EyeOff, CalendarCheck, Bell, FileText, Download } from 'lucide-react'
 import mascotaImg from '../assets/mascota.png'
 
 const APK_URL = import.meta.env.VITE_APK_URL || null
@@ -17,7 +17,8 @@ export default function LoginApoderado() {
   const [password,    setPassword]    = useState('')
   const [verPassword, setVerPassword] = useState(false)
   const [cargando, setCargando] = useState(false)
-  const [exito,    setExito]    = useState(false)
+  const [exito,       setExito]       = useState(false)
+  const [exitoNombre, setExitoNombre] = useState('')
   const nav = useNavigate()
 
   const handleLogin = async (e) => {
@@ -32,8 +33,9 @@ export default function LoginApoderado() {
       await resetPush().catch(() => {})
       await iniciarPush().catch(() => {})
 
+      setExitoNombre(usuario.nombre || '')
       setExito(true)
-      setTimeout(() => nav(obtenerRutaPorRol(usuario.rol)), 1500)
+      setTimeout(() => nav(obtenerRutaPorRol(usuario.rol)), 1800)
     } catch (err) {
       localStorage.removeItem('token')
       toast.error(err.response?.data?.detail || 'DNI o contraseña incorrectos')
@@ -45,11 +47,45 @@ export default function LoginApoderado() {
   if (exito) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-marino">
-        <div className="text-center text-white">
-          <CheckCircle size={64} className="mx-auto mb-4 text-dorado" />
-          <p className="text-2xl font-bold">¡Bienvenido!</p>
-          <p className="text-white/60 mt-1">Redirigiendo…</p>
+        <div className="text-center text-white flex flex-col items-center gap-5"
+          style={{ animation: 'ceaune-fadein 0.4s ease-out' }}>
+
+          <img
+            src={logoImg}
+            alt="CEAUNE"
+            className="h-20 w-auto object-contain"
+            style={{ animation: 'ceaune-scalein 0.5s cubic-bezier(0.34,1.56,0.64,1)' }}
+          />
+
+          <div>
+            <p className="text-2xl font-bold tracking-tight">
+              ¡Bienvenido{exitoNombre ? `, ${exitoNombre}` : ''}!
+            </p>
+            <p className="text-white/50 text-sm mt-1">Ingresando al sistema…</p>
+          </div>
+
+          <div className="w-48 h-0.5 bg-white/10 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-dorado rounded-full"
+              style={{ animation: 'ceaune-progress 1.6s ease-in-out forwards' }}
+            />
+          </div>
         </div>
+
+        <style>{`
+          @keyframes ceaune-fadein {
+            from { opacity: 0; transform: translateY(12px); }
+            to   { opacity: 1; transform: translateY(0);    }
+          }
+          @keyframes ceaune-scalein {
+            from { opacity: 0; transform: scale(0.7); }
+            to   { opacity: 1; transform: scale(1);   }
+          }
+          @keyframes ceaune-progress {
+            from { width: 0%;   }
+            to   { width: 100%; }
+          }
+        `}</style>
       </div>
     )
   }
