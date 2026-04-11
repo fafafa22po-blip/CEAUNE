@@ -156,7 +156,7 @@ def solicitar_autorizado(
             "nombre, apellido, dni y parentesco son obligatorios",
         )
 
-    # Procesar foto (base64 JPEG recortada a 400px, ~20-35KB → ~28-47KB en base64)
+    # Procesar foto (base64 JPEG recortada a 600px/q82 — nítida en pantallas 2x-3x DPI)
     foto_url = None
     foto_raw = body.get("foto_url") or body.get("foto")
     if foto_raw:
@@ -168,14 +168,14 @@ def solicitar_autorizado(
                 foto_b64 = foto_raw
             img_data = base64.b64decode(foto_b64)
             img = Image.open(io.BytesIO(img_data)).convert("RGB")
-            # Redimensionar: max 400px en lado mayor (suficiente para mostrar en pantalla)
-            MAX_PX = 400
+            # Redimensionar: max 600px en lado mayor — nítido en móviles 2x/3x DPI
+            MAX_PX = 600
             w, h = img.size
             if w > MAX_PX or h > MAX_PX:
                 ratio = MAX_PX / max(w, h)
                 img = img.resize((int(w * ratio), int(h * ratio)), Image.LANCZOS)
             buf = io.BytesIO()
-            img.save(buf, format="JPEG", quality=70, optimize=True)
+            img.save(buf, format="JPEG", quality=82, optimize=True)
             foto_url = "data:image/jpeg;base64," + base64.b64encode(buf.getvalue()).decode()
         except Exception:
             pass  # Foto inválida — se ignora, no bloquea la solicitud

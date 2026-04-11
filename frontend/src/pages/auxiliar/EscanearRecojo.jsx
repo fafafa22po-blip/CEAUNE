@@ -13,9 +13,16 @@ import { hapticMedium, hapticLight } from '../../lib/haptics'
 const AUTO_CIERRE = 10
 
 // ── Foto con inicial de fallback ──────────────────────────────────────────────
-function Avatar({ foto_url, nombre, className = '', textClass = '' }) {
+function Avatar({ foto_url, nombre, className = '', textClass = '', contain = false, imgStyle = {} }) {
   if (foto_url) {
-    return <img src={foto_url} alt={nombre} className={`object-cover ${className}`} />
+    return (
+      <img
+        src={foto_url}
+        alt={nombre}
+        className={`${contain ? 'object-contain' : 'object-cover'} ${className}`}
+        style={imgStyle}
+      />
+    )
   }
   return (
     <div className={`flex items-center justify-center font-black text-white/70 ${textClass} ${className}`}>
@@ -161,14 +168,15 @@ function PantallaResultado({ resultado, onCerrar }) {
               <X className="w-5 h-5 text-white" />
             </button>
 
-            {/* Foto */}
-            <div className="w-full" style={{ aspectRatio: '4/3', maxHeight: '45vh', overflow: 'hidden' }}>
+            {/* Foto — object-contain para no recortar ni distorsionar retratos */}
+            <div className="w-full bg-black flex items-center justify-center" style={{ maxHeight: '48vh', overflow: 'hidden' }}>
               <Avatar
                 foto_url={persona?.foto_url}
                 nombre={persona?.nombre}
-                className="w-full h-full"
-                textClass="text-9xl w-full h-full"
-                style={{ background: 'rgba(0,0,0,0.3)' }}
+                contain={true}
+                className="w-full"
+                textClass="text-9xl bg-gray-900 w-full"
+                imgStyle={{ maxHeight: '48vh', width: '100%' }}
               />
             </div>
 
