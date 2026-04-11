@@ -686,6 +686,175 @@ def admin_fotocheck_png(
     )
 
 
+@router.get("/admin/panel-apoderados")
+def admin_panel_apoderados(
+    nivel:   Optional[str] = Query(None),
+    grado:   Optional[str] = Query(None),
+    seccion: Optional[str] = Query(None),
+    q:       Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(require_roles("admin")),
+):
+    """
+    Panel principal: todos los alumnos activos con sus apoderados vinculados
+    y el estado de fotocheck de cada uno. Reemplaza la vista de 'tabs' anterior.
+    """
+    estudq = db.query(Estudiante).filter(Estudiante.activo == True)
+    if nivel:   estudq = estudq.filter(Estudiante.nivel == nivel)
+    if grado:   estudq = estudq.filter(Estudiante.grado == grado)
+    if seccion: estudq = estudq.filter(Estudiante.seccion == seccion)
+
+    estudiantes = estudq.order_by(
+        Estudiante.nivel, Estudiante.grado, Estudiante.seccion, Estudiante.apellido
+    ).all()
+
+    result = []
+    for est in estudiantes:
+        vinculos = db.query(ApoderadoEstudiante).filter(
+            ApoderadoEstudiante.estudiante_id == est.id
+        ).all()
+
+        apoderados_data = []
+        for v in vinculos:
+            apo = db.query(Usuario).filter(Usuario.id == v.apoderado_id).first()
+            if not apo:
+                continue
+
+            pa = (
+                db.query(PersonaAutorizada)
+                .filter(
+                    PersonaAutorizada.apoderado_id == apo.id,
+                    PersonaAutorizada.estudiante_id == est.id,
+                )
+                .order_by(PersonaAutorizada.created_at.desc())
+                .first()
+            )
+
+            apoderados_data.append({
+                "usuario_id": apo.id,
+                "nombre":     apo.nombre,
+                "apellido":   apo.apellido,
+                "dni":        apo.dni,
+                "telefono":   apo.telefono,
+                "foto_url":   apo.foto_url,
+                "fotocheck":  {
+                    "id":                   pa.id,
+                    "estado":               pa.estado,
+                    "parentesco":           pa.parentesco,
+                    "qr_token":             pa.qr_token,
+                    "vigencia_hasta":       pa.vigencia_hasta.isoformat() if pa.vigencia_hasta else None,
+                    "precio_fotocheck":     pa.precio_fotocheck,
+                    "fotocheck_emitido_at": pa.fotocheck_emitido_at.isoformat() if pa.fotocheck_emitido_at else None,
+                } if pa else None,
+            })
+
+        # Filtro de texto: alumno o algún apoderado coincide
+        if q:
+            qlow = q.lower()
+            match_est = qlow in est.nombre.lower() or qlow in est.apellido.lower()
+            match_apo = any(
+                qlow in a["nombre"].lower() or
+                qlow in a["apellido"].lower() or
+                qlow in (a["dni"] or "")
+                for a in apoderados_data
+            )
+            if not match_est and not match_apo:
+                continue
+
+        result.append({
+            "id":         est.id,
+            "nombre":     est.nombre,
+            "apellido":   est.apellido,
+            "grado":      est.grado,
+            "seccion":    est.seccion,
+            "nivel":      est.nivel,
+            "foto_url":   est.foto_url,
+            "apoderados": apoderados_data,
+        })
+
+    return result
+
+
+@router.post("/admin/activar-directo")
+def admin_activar_directo(
+    body: dict,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(require_roles("admin")),
+):
+    """
+    Admin activa directamente el fotocheck de un apoderado registrado,
+    sin que el apoderado haya enviado una solicitud previa.
+    Usa los datos del perfil del apoderado (foto, nombre, apellido, dni).
+    """
+    apoderado_id  = body.get("apoderado_id")
+    estudiante_id = body.get("estudiante_id")
+    parentesco    = body.get("parentesco", "padre")
+    precio        = str(body.get("precio", "5.00"))
+    observacion   = body.get("observacion") or ""
+
+    if not apoderado_id or not estudiante_id:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "Faltan datos requeridos")
+
+    apo = db.query(Usuario).filter(Usuario.id == apoderado_id).first()
+    est = db.query(Estudiante).filter(Estudiante.id == estudiante_id).first()
+    if not apo or not est:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Usuario o estudiante no encontrado")
+
+    vinculo = db.query(ApoderadoEstudiante).filter(
+        ApoderadoEstudiante.apoderado_id == apoderado_id,
+        ApoderadoEstudiante.estudiante_id == estudiante_id,
+    ).first()
+    if not vinculo:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "El apoderado no está vinculado a este alumno")
+
+    pa = (
+        db.query(PersonaAutorizada)
+        .filter(
+            PersonaAutorizada.apoderado_id == apoderado_id,
+            PersonaAutorizada.estudiante_id == estudiante_id,
+        )
+        .order_by(PersonaAutorizada.created_at.desc())
+        .first()
+    )
+
+    if pa and pa.estado == "activo":
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Ya tiene fotocheck activo")
+
+    if not pa:
+        pa = PersonaAutorizada(
+            estudiante_id = estudiante_id,
+            apoderado_id  = apoderado_id,
+            nombre        = apo.nombre,
+            apellido      = apo.apellido,
+            dni           = apo.dni,
+            parentesco    = parentesco,
+            foto_url      = apo.foto_url,
+        )
+        db.add(pa)
+        db.flush()
+    else:
+        # Reactivar: actualiza datos del perfil
+        pa.nombre     = apo.nombre
+        pa.apellido   = apo.apellido
+        pa.dni        = apo.dni
+        pa.parentesco = parentesco
+        pa.foto_url   = apo.foto_url
+
+    pa.estado            = "activo"
+    pa.pago_confirmado   = True
+    pa.precio_fotocheck  = precio
+    pa.observacion_admin = observacion
+
+    anio = date.today().year
+    pa.vigencia_hasta       = date(anio, 12, 31)
+    pa.fotocheck_emitido_at = datetime.now()
+    pa.qr_token = f"RECOJO-{pa.id[:8].upper()}-{generar_qr_token()[7:]}"
+
+    db.commit()
+    db.refresh(pa)
+    return {"ok": True, "persona_id": pa.id, "qr_token": pa.qr_token}
+
+
 # ════════════════════════════════════════════════════════════════════════════
 # ESCANEO — auxiliar / tutor valida el fotocheck en la puerta
 # ════════════════════════════════════════════════════════════════════════════
