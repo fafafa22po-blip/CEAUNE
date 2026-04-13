@@ -34,7 +34,7 @@ function NativeScanner({ onResult }) {
     setEscaneando(true)
     setError(null)
     try {
-      const { BarcodeScanner, BarcodeFormat } = await import(/* @vite-ignore */ '@capacitor-mlkit/barcode-scanning')
+      const { BarcodeScanner, BarcodeFormat } = await import('@capacitor-mlkit/barcode-scanning')
 
       // Verificar / solicitar permisos
       const permisos = await BarcodeScanner.checkPermissions()

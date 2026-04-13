@@ -116,7 +116,7 @@ export default function App() {
     async function hideSplash() {
       if (!window.Capacitor?.isNativePlatform?.()) return
       try {
-        const { SplashScreen } = await import(/* @vite-ignore */ '@capacitor/splash-screen')
+        const { SplashScreen } = await import('@capacitor/splash-screen')
         await SplashScreen.hide({ fadeOutDuration: 300 })
       } catch (_) {}
     }

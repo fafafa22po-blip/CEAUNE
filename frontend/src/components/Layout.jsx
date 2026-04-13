@@ -383,7 +383,7 @@ export default function Layout() {
     let listener
 
     async function addBackListener() {
-      const { App: CapApp } = await import(/* @vite-ignore */ '@capacitor/app')
+      const { App: CapApp } = await import('@capacitor/app')
       listener = await CapApp.addListener('backButton', () => {
         // 1. Cerrar el panel "Más" si está abierto
         if (masAbiertoRef.current) {
