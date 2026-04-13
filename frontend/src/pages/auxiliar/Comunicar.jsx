@@ -8,7 +8,7 @@ import toast from 'react-hot-toast'
 import api from '../../lib/api'
 import { obtenerUsuario } from '../../lib/auth'
 
-import { GRADOS_POR_NIVEL, getSecciones, formatGrado, getAulasDeNivel } from '../../lib/nivelAcademico'
+import { GRADOS_POR_NIVEL, getSecciones, formatGrado, formatGradoSeccion, getAulasDeNivel } from '../../lib/nivelAcademico'
 
 const NIVEL_POR_ROL = {
   'i-auxiliar': 'inicial',
@@ -16,6 +16,219 @@ const NIVEL_POR_ROL = {
   's-auxiliar': 'secundaria',
 }
 const MAX_CHARS = 1000
+
+// ── Bottom sheet: buscar y seleccionar alumnos individuales ─────────────────
+
+const nombreEstudiante = (est) =>
+  est.nombre_completo ||
+  [est.apellido, est.nombre].filter(Boolean).join(' ') ||
+  '—'
+
+function SheetBuscarAlumno({ destinatarios, onAgregar, onQuitar, onConfirmar }) {
+  const [busqueda, setBusqueda]           = useState('')
+  const [resultados, setResultados]       = useState([])
+  const [buscando, setBuscando]           = useState(false)
+
+  const buscar = async (q) => {
+    if (q.length < 2) { setResultados([]); setBuscando(false); return }
+    setBuscando(true)
+    try {
+      const { data } = await api.get('/estudiantes/', { params: { q } })
+      setResultados(data)
+    } catch {
+      setResultados([])
+    } finally {
+      setBuscando(false)
+    }
+  }
+
+  useEffect(() => {
+    const t = setTimeout(() => buscar(busqueda), 300)
+    return () => clearTimeout(t)
+  }, [busqueda])
+
+  const yaSeleccionado = (id) => destinatarios.some(d => d.id === id)
+
+  const toggle = (est) => {
+    if (yaSeleccionado(est.id)) onQuitar(est.id)
+    else onAgregar(est)
+  }
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-end lg:items-center justify-center">
+      {/* Backdrop */}
+      <div className="absolute inset-0 bg-black/50" onClick={onConfirmar} />
+
+      {/* Sheet — bottom en móvil, modal centrado en desktop */}
+      <div className="relative w-full sm:max-w-lg lg:max-w-xl bg-white rounded-t-3xl lg:rounded-2xl shadow-2xl max-h-[92vh] lg:max-h-[80vh] flex flex-col">
+
+        {/* Handle — solo móvil */}
+        <div className="flex-shrink-0 pt-3 pb-1 flex justify-center lg:hidden">
+          <div className="w-10 h-1 bg-gray-200 rounded-full" />
+        </div>
+
+        {/* Header */}
+        <div className="flex-shrink-0 px-5 pt-2 pb-3 flex items-center justify-between border-b border-gray-100">
+          <div>
+            <h3 className="font-bold text-marino text-sm">Buscar alumnos</h3>
+            <p className="text-[11px] text-gray-400 mt-0.5">
+              {destinatarios.length > 0
+                ? `${destinatarios.length} seleccionado${destinatarios.length !== 1 ? 's' : ''}`
+                : 'Escribe para buscar por nombre o DNI'}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onConfirmar}
+            className="w-8 h-8 rounded-lg hover:bg-gray-100 flex items-center justify-center transition-colors"
+          >
+            <X size={16} className="text-gray-500" />
+          </button>
+        </div>
+
+        {/* Buscador */}
+        <div className="flex-shrink-0 px-4 py-2.5 bg-gray-50 border-b border-gray-100 flex items-center gap-2.5">
+          <Search size={15} className="text-gray-400 flex-shrink-0" />
+          <input
+            autoFocus
+            type="text"
+            className="flex-1 text-sm bg-transparent outline-none text-gray-800 placeholder-gray-400"
+            placeholder="Nombre, apellido o DNI…"
+            value={busqueda}
+            onChange={e => setBusqueda(e.target.value)}
+          />
+          {buscando && (
+            <span className="w-4 h-4 border-2 border-dorado border-t-transparent rounded-full animate-spin flex-shrink-0" />
+          )}
+          {!buscando && busqueda && (
+            <button type="button" onClick={() => { setBusqueda(''); setResultados([]) }}>
+              <X size={13} className="text-gray-400 hover:text-gray-600" />
+            </button>
+          )}
+        </div>
+
+        {/* Chips de seleccionados */}
+        {destinatarios.length > 0 && (
+          <div className="flex-shrink-0 px-4 py-2.5 border-b border-gray-100 bg-marino/5">
+            <p className="text-[10px] font-bold text-marino uppercase tracking-wide mb-2">
+              Seleccionados · {destinatarios.length}
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              {destinatarios.map(d => (
+                <span
+                  key={d.id}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-marino text-white text-[11px] font-medium"
+                >
+                  <span>{nombreEstudiante(d)}</span>
+                  <span className="text-white/50 text-[10px]">
+                    {formatGradoSeccion(d.nivel, d.grado, d.seccion)}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => onQuitar(d.id)}
+                    className="ml-0.5 hover:bg-white/25 rounded-full w-3.5 h-3.5 flex items-center justify-center transition-colors"
+                  >
+                    <X size={9} />
+                  </button>
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Resultados */}
+        <div className="flex-1 overflow-y-auto">
+          {busqueda.length < 2 ? (
+            <div className="flex flex-col items-center justify-center py-16 px-6 text-center gap-3">
+              <div className="w-14 h-14 rounded-full bg-marino/8 flex items-center justify-center">
+                <Search size={24} className="text-marino/30" />
+              </div>
+              <p className="text-sm text-gray-400">Escribe al menos 2 caracteres<br />para buscar alumnos</p>
+            </div>
+          ) : !buscando && resultados.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-16 px-6 text-center gap-3">
+              <div className="w-14 h-14 rounded-full bg-gray-100 flex items-center justify-center">
+                <Search size={24} className="text-gray-300" />
+              </div>
+              <p className="text-sm font-medium text-gray-500">Sin resultados</p>
+              <p className="text-xs text-gray-400">Intenta con otro nombre o DNI</p>
+            </div>
+          ) : (
+            <div className="divide-y divide-gray-50">
+              {resultados.map(est => {
+                const seleccionado = yaSeleccionado(est.id)
+                return (
+                  <button
+                    key={est.id}
+                    type="button"
+                    onClick={() => toggle(est)}
+                    className={`w-full flex items-center gap-3 px-4 py-3.5 text-left transition-colors ${
+                      seleccionado ? 'bg-marino/8' : 'hover:bg-gray-50'
+                    }`}
+                  >
+                    {/* Avatar inicial */}
+                    <div className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 text-sm font-bold transition-all ${
+                      seleccionado ? 'bg-marino text-white' : 'bg-gray-100 text-gray-500'
+                    }`}>
+                      {seleccionado
+                        ? <svg viewBox="0 0 10 8" className="w-3.5 h-3" fill="none"><path d="M1 4l3 3 5-6" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                        : nombreEstudiante(est).charAt(0).toUpperCase()
+                      }
+                    </div>
+
+                    {/* Info */}
+                    <div className="flex-1 min-w-0">
+                      <p className={`text-sm font-semibold leading-tight truncate ${
+                        seleccionado ? 'text-marino' : 'text-gray-800'
+                      }`}>
+                        {nombreEstudiante(est)}
+                      </p>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <span className="text-xs text-gray-400 font-mono">DNI {est.dni}</span>
+                        <span className="w-px h-3 bg-gray-200 flex-shrink-0" />
+                        <span className="text-xs text-gray-400">
+                          {formatGradoSeccion(est.nivel, est.grado, est.seccion)}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Check badge */}
+                    {seleccionado && (
+                      <span className="w-5 h-5 rounded-full bg-marino flex items-center justify-center flex-shrink-0">
+                        <svg viewBox="0 0 10 8" className="w-2.5 h-2" fill="none">
+                          <path d="M1 4l3 3 5-6" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                      </span>
+                    )}
+                  </button>
+                )
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Footer confirmar */}
+        <div className="flex-shrink-0 p-4 border-t border-gray-100 bg-white">
+          <button
+            type="button"
+            onClick={onConfirmar}
+            disabled={destinatarios.length === 0}
+            className="w-full py-3 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed active:scale-[.98]"
+            style={{ background: '#0a1f3d', color: '#c9a227' }}
+          >
+            <Check size={16} />
+            {destinatarios.length === 0
+              ? 'Selecciona al menos un alumno'
+              : destinatarios.length === 1
+                ? 'Confirmar · 1 alumno'
+                : `Confirmar · ${destinatarios.length} alumnos`
+            }
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
 
 const toggleSet = (set, val) => {
   const next = new Set(set)
@@ -37,10 +250,8 @@ export default function Comunicar() {
   const [tipoEnvio, setTipoEnvio] = useState('individual')
 
   // Individual
-  const [busqueda, setBusqueda]                     = useState('')
-  const [resultadosBusqueda, setResultadosBusqueda] = useState([])
-  const [buscando, setBuscando]                     = useState(false)
-  const [destinatarios, setDestinatarios]           = useState([])
+  const [sheetAbierto, setSheetAbierto] = useState(false)
+  const [destinatarios, setDestinatarios] = useState([])
 
   // Por aula
   const [grado, setGrado]     = useState('')
@@ -91,32 +302,15 @@ export default function Comunicar() {
     fetch()
   }, [grado, seccion, tipoEnvio])
 
-  // Búsqueda con debounce
-  const buscarEstudiantes = async (q) => {
-    if (q.length < 2) { setResultadosBusqueda([]); setBuscando(false); return }
-    setBuscando(true)
-    try {
-      const { data } = await api.get('/estudiantes/', { params: { busqueda: q } })
-      setResultadosBusqueda(data)
-    } catch {
-      setResultadosBusqueda([])
-    } finally {
-      setBuscando(false)
-    }
-  }
-
-  useEffect(() => {
-    const t = setTimeout(() => buscarEstudiantes(busqueda), 300)
-    return () => clearTimeout(t)
-  }, [busqueda])
-
   const agregarDestinatario = (est) => {
-    if (!destinatarios.find(d => d.id === est.id)) setDestinatarios([...destinatarios, est])
-    setBusqueda('')
-    setResultadosBusqueda([])
+    if (!destinatarios.find(d => d.id === est.id)) setDestinatarios(prev => [...prev, est])
   }
 
   const quitarDestinatario = (id) => setDestinatarios(destinatarios.filter(d => d.id !== id))
+
+  const cerrarSheet = () => {
+    setSheetAbierto(false)
+  }
 
   const cambiarTipo = (tipo) => {
     setTipoEnvio(tipo)
@@ -124,6 +318,7 @@ export default function Comunicar() {
     setDestinatarios([])
     setAulasMasivoSet(new Set())
     setContadorApoderados(null)
+    cerrarSheet()
   }
 
   // ── Masivo helpers ───────────────────────────────────────────────────────────
@@ -317,7 +512,7 @@ export default function Comunicar() {
           {tipoEnvio === 'individual' && (
             <div className="card space-y-3">
               <div className="flex items-center justify-between">
-                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Buscar alumno</p>
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Destinatarios</p>
                 {destinatarios.length > 0 && (
                   <span className="text-xs font-semibold text-marino bg-marino/10 px-2.5 py-1 rounded-full">
                     {destinatarios.length} seleccionado{destinatarios.length !== 1 ? 's' : ''}
@@ -325,65 +520,16 @@ export default function Comunicar() {
                 )}
               </div>
 
-              <div className="relative">
-                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-                <input
-                  className="input pl-9"
-                  value={busqueda}
-                  onChange={(e) => setBusqueda(e.target.value)}
-                  placeholder="Busca por nombre completo o DNI..."
-                />
-                {buscando && (
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 animate-spin w-4 h-4 border-2 border-dorado border-t-transparent rounded-full" />
-                )}
-
-                {!buscando && busqueda.length >= 2 && resultadosBusqueda.length === 0 && (
-                  <div className="absolute z-10 w-full bg-white border border-gray-200 rounded-xl shadow-lg mt-1 px-4 py-3 text-sm text-gray-400">
-                    Sin resultados para "{busqueda}"
-                  </div>
-                )}
-
-                {resultadosBusqueda.length > 0 && (
-                  <div className="absolute z-10 w-full bg-white border border-gray-200 rounded-xl shadow-lg mt-1 overflow-hidden max-h-56 overflow-y-auto">
-                    {resultadosBusqueda.map((est) => {
-                      const yaAgregado = destinatarios.some(d => d.id === est.id)
-                      return (
-                        <button key={est.id} type="button"
-                          onClick={() => !yaAgregado && agregarDestinatario(est)}
-                          className={`w-full text-left px-4 py-3 border-b border-gray-100 last:border-0 transition-colors ${
-                            yaAgregado ? 'bg-emerald-50 cursor-default' : 'hover:bg-gray-50'
-                          }`}>
-                          <div className="flex items-center justify-between gap-2">
-                            <div className="min-w-0">
-                              <p className={`text-sm font-semibold leading-tight ${yaAgregado ? 'text-emerald-700' : 'text-gray-800'}`}>
-                                {est.nombre_completo}
-                              </p>
-                              <div className="flex items-center gap-3 mt-0.5">
-                                <span className="text-xs text-gray-400 font-mono">DNI {est.dni}</span>
-                                <span className="w-px h-3 bg-gray-200 flex-shrink-0" />
-                                <span className="text-xs text-gray-400">{est.grado}° Sec. {est.seccion}</span>
-                              </div>
-                            </div>
-                            {yaAgregado && (
-                              <span className="w-5 h-5 rounded-full bg-emerald-500 flex items-center justify-center flex-shrink-0">
-                                <Check size={11} className="text-white" strokeWidth={3} />
-                              </span>
-                            )}
-                          </div>
-                        </button>
-                      )
-                    })}
-                  </div>
-                )}
-              </div>
-
+              {/* Chips de seleccionados */}
               {destinatarios.length > 0 && (
-                <div className="flex flex-wrap gap-2 pt-1">
+                <div className="flex flex-wrap gap-2">
                   {destinatarios.map((d) => (
-                    <span key={d.id} className="flex items-center gap-1.5 bg-marino text-white text-xs px-3 py-1.5 rounded-full">
-                      <span className="font-medium">{d.nombre_completo}</span>
-                      <span className="text-white/55 font-normal">· {formatGradoSeccion(d.nivel, d.grado, d.seccion)}</span>
-                      <button type="button" onClick={() => quitarDestinatario(d.id)} className="hover:opacity-70 ml-0.5">
+                    <span key={d.id} className="flex items-center gap-1.5 bg-marino text-white text-xs px-3 py-1.5 rounded-xl">
+                      <span className="font-semibold">{nombreEstudiante(d)}</span>
+                      <span className="text-white/50">·</span>
+                      <span className="text-white/65">{formatGradoSeccion(d.nivel, d.grado, d.seccion)}</span>
+                      <button type="button" onClick={() => quitarDestinatario(d.id)}
+                        className="ml-0.5 hover:opacity-70 transition-opacity">
                         <X size={11} />
                       </button>
                     </span>
@@ -391,11 +537,28 @@ export default function Comunicar() {
                 </div>
               )}
 
-              {destinatarios.length === 0 && busqueda.length < 2 && (
-                <p className="text-xs text-gray-400 text-center py-1">
-                  Escribe mínimo 2 caracteres para buscar
-                </p>
-              )}
+              {/* Botón para abrir el sheet */}
+              <button
+                type="button"
+                onClick={() => setSheetAbierto(true)}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl border-2 transition-all text-left ${
+                  destinatarios.length > 0
+                    ? 'border-dashed border-marino/30 hover:border-marino/50 bg-marino/3'
+                    : 'border-dashed border-gray-300 hover:border-marino/50 hover:bg-marino/3'
+                }`}
+              >
+                <div className="w-8 h-8 rounded-lg bg-marino/10 flex items-center justify-center flex-shrink-0">
+                  <Search size={15} className="text-marino" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-marino">
+                    {destinatarios.length > 0 ? 'Agregar más alumnos' : 'Buscar alumnos'}
+                  </p>
+                  <p className="text-xs text-gray-400 mt-0.5">
+                    Busca por nombre, apellido o DNI
+                  </p>
+                </div>
+              </button>
             </div>
           )}
 
@@ -866,6 +1029,16 @@ export default function Comunicar() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* ═══════════════════════════════════════ SHEET BÚSQUEDA INDIVIDUAL */}
+      {sheetAbierto && (
+        <SheetBuscarAlumno
+          destinatarios={destinatarios}
+          onAgregar={agregarDestinatario}
+          onQuitar={quitarDestinatario}
+          onConfirmar={cerrarSheet}
+        />
       )}
 
     </div>

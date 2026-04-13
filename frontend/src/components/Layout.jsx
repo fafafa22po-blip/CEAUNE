@@ -539,6 +539,65 @@ export default function Layout() {
           </NavLink>
         )}
 
+        {/* ── Cambiar perfil (solo para personal con doble rol) ── */}
+        {usuario?.es_apoderado && usuario?.rol !== 'apoderado' && (
+          <div className="mx-2 mb-2 border-t border-white/10 pt-2">
+            {colapsado ? (
+              /* ── Estado colapsado: ícono que alterna rol directo ── */
+              <button
+                onClick={() => elegirModo(rolEfectivo === 'apoderado' ? 'personal' : 'apoderado')}
+                title={rolEfectivo === 'apoderado' ? `Cambiar a ${NIVEL_LABEL[usuario.rol]}` : 'Cambiar a Apoderado'}
+                className="w-full flex items-center justify-center py-2.5 rounded-xl text-white/60 hover:bg-white/10 hover:text-white transition-all"
+              >
+                <ArrowLeftRight size={17} />
+              </button>
+            ) : (
+              /* ── Estado expandido: dos opciones con indicador activo ── */
+              <div>
+                <p className="text-[10px] font-bold text-white/30 uppercase tracking-widest px-1 mb-2">
+                  Cambiar perfil
+                </p>
+                <div className="space-y-1">
+                  {/* Perfil personal */}
+                  <button
+                    onClick={() => rolEfectivo !== 'apoderado' ? null : elegirModo('personal')}
+                    className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl transition-all text-sm ${
+                      rolEfectivo !== 'apoderado'
+                        ? 'bg-dorado/20 text-white cursor-default'
+                        : 'text-white/50 hover:bg-white/10 hover:text-white'
+                    }`}
+                  >
+                    <Briefcase size={15} className="flex-shrink-0" />
+                    <span className="truncate flex-1 text-left">{NIVEL_LABEL[usuario.rol]}</span>
+                    {rolEfectivo !== 'apoderado' && (
+                      <span className="text-[9px] bg-dorado text-white px-1.5 py-0.5 rounded-full font-bold flex-shrink-0">
+                        Activo
+                      </span>
+                    )}
+                  </button>
+                  {/* Perfil apoderado */}
+                  <button
+                    onClick={() => rolEfectivo === 'apoderado' ? null : elegirModo('apoderado')}
+                    className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl transition-all text-sm ${
+                      rolEfectivo === 'apoderado'
+                        ? 'bg-dorado/20 text-white cursor-default'
+                        : 'text-white/50 hover:bg-white/10 hover:text-white'
+                    }`}
+                  >
+                    <Users size={15} className="flex-shrink-0" />
+                    <span className="flex-1 text-left">Apoderado</span>
+                    {rolEfectivo === 'apoderado' && (
+                      <span className="text-[9px] bg-dorado text-white px-1.5 py-0.5 rounded-full font-bold flex-shrink-0">
+                        Activo
+                      </span>
+                    )}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Cerrar sesión */}
         <button
           onClick={handleLogout}

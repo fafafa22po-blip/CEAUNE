@@ -26,8 +26,7 @@ import Toast from './components/Toast'
 import ActualizadorApp from './components/ActualizadorApp'
 import ProtectedRoute from './components/ProtectedRoute'
 import Layout from './components/Layout'
-import LoginApoderado from './pages/LoginApoderado'
-import LoginPersonal  from './pages/LoginPersonal'
+import Login from './pages/Login'
 import { obtenerUsuario, obtenerRutaPorRol, estaAutenticado } from './lib/auth'
 import { iniciarPush, setPushNavigate } from './lib/pushNotifications'
 import SinConexion from './components/SinConexion'
@@ -141,8 +140,8 @@ export default function App() {
         <Toast />
         <ErrorBoundary>
         <Routes>
-          <Route path="/login"    element={<LoginApoderado />} />
-          <Route path="/personal" element={<LoginPersonal />} />
+          <Route path="/login"    element={<Login />} />
+          <Route path="/personal" element={<Login />} />
           <Route path="/" element={<RootRedirect />} />
 
           {/* AUXILIAR — ProtectedRoute → Layout → páginas */}

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Eye, EyeOff, QrCode, Mail, BarChart2, CheckCircle, Lock, User } from 'lucide-react'
+import { Eye, EyeOff, QrCode, Mail, BarChart2, Lock, User } from 'lucide-react'
 import toast from 'react-hot-toast'
 import api from '../lib/api'
 import { guardarSesion, obtenerRutaPorRol } from '../lib/auth'
@@ -19,6 +19,7 @@ export default function Login() {
   const [verPassword, setVerPassword] = useState(false)
   const [cargando,    setCargando]    = useState(false)
   const [exito,       setExito]       = useState(false)
+  const [exitoNombre, setExitoNombre] = useState('')
   const nav = useNavigate()
 
   const handleLogin = async (e) => {
@@ -26,12 +27,28 @@ export default function Login() {
     if (!dni || !password) return toast.error('Complete todos los campos')
     setCargando(true)
     try {
-      const { data: tokenData } = await api.post('/auth/login', { dni, password })
+      // Intentar con DNI puro; si falla autenticación, reintentar con prefijo CE
+      let tokenData
+      try {
+        const res = await api.post('/auth/login', { dni, password })
+        tokenData = res.data
+      } catch (firstErr) {
+        const status = firstErr.response?.status
+        if (status === 401 || status === 400) {
+          const res = await api.post('/auth/login', { dni: `CE${dni}`, password })
+          tokenData = res.data
+        } else {
+          throw firstErr
+        }
+      }
+
       localStorage.setItem('token', tokenData.access_token)
       const { data: usuario } = await api.get('/auth/me')
       guardarSesion(tokenData.access_token, usuario)
       await resetPush().catch(() => {})
       await iniciarPush().catch(() => {})
+
+      setExitoNombre(usuario.nombre || '')
       setExito(true)
       setTimeout(() => nav(obtenerRutaPorRol(usuario.rol)), 1500)
     } catch (err) {
@@ -50,13 +67,43 @@ export default function Login() {
   if (exito) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-marino">
-        <div className="text-center text-white">
-          <div className="w-24 h-24 rounded-full bg-dorado/20 flex items-center justify-center mx-auto mb-6">
-            <CheckCircle size={48} className="text-dorado" />
+        <div
+          className="text-center text-white flex flex-col items-center gap-5"
+          style={{ animation: 'ceaune-fadein 0.4s ease-out' }}
+        >
+          <img
+            src={logoImg}
+            alt="CEAUNE"
+            className="h-20 w-auto object-contain"
+            style={{ animation: 'ceaune-scalein 0.5s cubic-bezier(0.34,1.56,0.64,1)' }}
+          />
+          <div>
+            <p className="text-2xl font-bold tracking-tight">
+              ¡Bienvenido{exitoNombre ? `, ${exitoNombre}` : ''}!
+            </p>
+            <p className="text-white/50 text-sm mt-1">Ingresando al sistema...</p>
           </div>
-          <p className="text-2xl font-black">¡Bienvenido!</p>
-          <p className="text-white/40 mt-2 text-sm">Ingresando al sistema...</p>
+          <div className="w-48 h-0.5 bg-white/10 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-dorado rounded-full"
+              style={{ animation: 'ceaune-progress 1.4s ease-in-out forwards' }}
+            />
+          </div>
         </div>
+        <style>{`
+          @keyframes ceaune-fadein {
+            from { opacity: 0; transform: translateY(12px); }
+            to   { opacity: 1; transform: translateY(0);    }
+          }
+          @keyframes ceaune-scalein {
+            from { opacity: 0; transform: scale(0.7); }
+            to   { opacity: 1; transform: scale(1);   }
+          }
+          @keyframes ceaune-progress {
+            from { width: 0%;   }
+            to   { width: 100%; }
+          }
+        `}</style>
       </div>
     )
   }
@@ -69,10 +116,9 @@ export default function Login() {
         className="hidden lg:flex flex-col justify-between px-16 py-16 text-white flex-shrink-0"
         style={{ width: '52%', background: '#0a1f3d' }}
       >
-        {/* Logo + título */}
         <div>
-          <div className="w-14 h-14 bg-dorado rounded-2xl flex items-center justify-center mb-8 shadow-lg">
-            <span className="text-white font-black text-xl tracking-tight">CE</span>
+          <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-8">
+            <img src={logoImg} alt="CEAUNE" className="w-14 h-14 object-contain drop-shadow-lg" />
           </div>
           <p className="text-dorado text-[11px] font-bold uppercase tracking-widest mb-1">
             Universidad Nacional de Educación Enrique Guzmán y Valle
@@ -90,8 +136,6 @@ export default function Login() {
             Sistema unificado para el seguimiento y control de asistencia escolar en tiempo real.
           </p>
         </div>
-
-        {/* Features */}
         <div className="space-y-4">
           {FEATURES.map(({ icon: Icon, text }) => (
             <div key={text} className="flex items-center gap-4">
@@ -117,17 +161,9 @@ export default function Login() {
             borderRadius: '0 0 2.8rem 2.8rem',
           }}
         >
-          {/* Círculo decorativo de fondo */}
-          <div
-            className="absolute -top-16 -right-16 w-48 h-48 rounded-full opacity-5"
-            style={{ background: '#c9a227' }}
-          />
-          <div
-            className="absolute -bottom-8 -left-10 w-32 h-32 rounded-full opacity-5"
-            style={{ background: '#c9a227' }}
-          />
+          <div className="absolute -top-16 -right-16 w-48 h-48 rounded-full opacity-5" style={{ background: '#c9a227' }} />
+          <div className="absolute -bottom-8 -left-10 w-32 h-32 rounded-full opacity-5" style={{ background: '#c9a227' }} />
 
-          {/* Logo */}
           <div className="relative mb-4">
             <div
               className="w-20 h-20 rounded-full flex items-center justify-center shadow-2xl"
@@ -137,10 +173,8 @@ export default function Login() {
             </div>
           </div>
 
-          {/* Separador dorado */}
           <div className="w-10 h-0.5 rounded-full mb-3" style={{ background: '#c9a227', opacity: 0.7 }} />
 
-          {/* Textos institucionales */}
           <p
             className="text-center font-bold uppercase tracking-widest mb-1 leading-snug"
             style={{ fontSize: '9px', color: '#c9a227', letterSpacing: '0.12em' }}
@@ -162,6 +196,11 @@ export default function Login() {
         <div className="flex-1 flex flex-col justify-center px-7 sm:px-12 py-8">
           <div className="max-w-sm w-full mx-auto">
 
+            {/* Logo desktop — encima del formulario */}
+            <div className="hidden lg:flex justify-center mb-6">
+              <img src={logoImg} alt="CEAUNE" className="w-20 h-20 object-contain drop-shadow-sm" />
+            </div>
+
             <div className="mb-7">
               <h2 className="text-[22px] font-black text-marino">Iniciar sesión</h2>
               <p className="text-gray-400 text-sm mt-1">
@@ -171,7 +210,6 @@ export default function Login() {
 
             <form onSubmit={handleLogin} className="space-y-4">
 
-              {/* DNI */}
               <div>
                 <label className="block text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">
                   DNI
@@ -181,7 +219,7 @@ export default function Login() {
                   <input
                     className="input pl-10"
                     value={dni}
-                    onChange={(e) => setDni(e.target.value)}
+                    onChange={(e) => setDni(e.target.value.replace(/\D/g, '').slice(0, 8))}
                     placeholder="Ej: 12345678"
                     autoComplete="username"
                     inputMode="numeric"
@@ -190,7 +228,6 @@ export default function Login() {
                 </div>
               </div>
 
-              {/* Contraseña */}
               <div>
                 <label className="block text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">
                   Contraseña
@@ -215,7 +252,6 @@ export default function Login() {
                 </div>
               </div>
 
-              {/* Botón */}
               <button
                 type="submit"
                 disabled={cargando || !dni || !password}
@@ -238,11 +274,11 @@ export default function Login() {
           </div>
         </div>
 
-        {/* Footer */}
         <p className="text-center text-[10px] text-gray-300 pb-5 px-4">
           CEAUNE © {new Date().getFullYear()} · Sistema de Control de Asistencia
         </p>
       </div>
+
     </div>
   )
 }
