@@ -5,7 +5,7 @@ import {
   ShieldCheck, Search, CheckCircle2, Clock, UserX,
   Printer, X, ChevronDown, AlertCircle, Eye,
   ShieldX, CalendarCheck, QrCode,
-  RotateCcw, UserCheck, Users, ChevronRight,
+  UserCheck, Users, ChevronRight,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import api from '../../lib/api'
@@ -56,11 +56,7 @@ const ESTADO_CFG = {
   },
 }
 
-const TABS_SOL = [
-  { key: 'pendiente', label: 'Pendientes', Icon: Clock },
-  { key: 'activo',    label: 'Activos',    Icon: CheckCircle2 },
-  { key: 'revocado',  label: 'Revocados',  Icon: UserX },
-]
+const ESTADO_ORDER = { pendiente: 0, activo: 1, revocado: 2 }
 
 // ── Foto ──────────────────────────────────────────────────────────────────────
 function Foto({ foto_url, nombre, className = 'w-9 h-9', square = false }) {
@@ -82,7 +78,7 @@ function Foto({ foto_url, nombre, className = 'w-9 h-9', square = false }) {
 
 
 // ── Panel detalle recojo ──────────────────────────────────────────────────────
-function PanelDetalleRecojo({ apoderado, estudiante, onClose, onActivar, onImprimir, onRevocar }) {
+function PanelDetalleRecojo({ apoderado, estudiante, onClose, onActivar, onImprimir, onRevocar, inline = false }) {
   const ft     = apoderado.fotocheck
   const estado = ft?.estado || 'sin_fotocheck'
   const cfg    = ESTADO_CFG[estado]
@@ -102,12 +98,146 @@ function PanelDetalleRecojo({ apoderado, estudiante, onClose, onActivar, onImpri
     setLoading(false)
   }
 
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center"
-      style={{ background: 'rgba(10,31,61,0.6)', backdropFilter: 'blur(4px)' }}
-      onClick={e => { if (e.target === e.currentTarget) onClose() }}
-    >
+  if (inline) return (
+    <div className="bg-white rounded-3xl border border-gray-200 shadow-xl overflow-hidden relative">
+      {/* Botón cerrar */}
+      <button
+        onClick={onClose}
+        className="absolute top-4 right-4 z-10 w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors"
+      >
+        <X className="w-4 h-4 text-gray-500" />
+      </button>
+
+      {/* Foto + identidad */}
+      <div className="px-6 pt-8 pb-6 flex flex-col items-center text-center border-b border-gray-100">
+        <Foto foto_url={apoderado.foto_url} nombre={apoderado.nombre} className="w-24 h-24" square />
+        <h2 className="font-black text-[#0a1f3d] text-xl mt-4 leading-tight">
+          {apoderado.nombre} {apoderado.apellido}
+        </h2>
+        <p className="text-gray-400 text-xs font-mono mt-1">DNI {apoderado.dni}</p>
+        {apoderado.telefono && (
+          <p className="text-gray-500 text-xs mt-0.5">{apoderado.telefono}</p>
+        )}
+        <div className="flex items-center gap-2 mt-3 flex-wrap justify-center">
+          <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold border ${cfg.badge}`}>
+            <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} />
+            {cfg.label}
+          </span>
+          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-blue-50 text-blue-600 border border-blue-200">
+            <UserCheck className="w-3 h-3" />
+            Apoderado registrado
+          </span>
+        </div>
+      </div>
+
+      {/* Alumno vinculado */}
+      <div className="px-6 py-4 border-b border-gray-100">
+        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Alumno vinculado</p>
+        <div className="flex items-center gap-3 bg-gray-50 rounded-xl p-3">
+          <Foto foto_url={estudiante.foto_url} nombre={estudiante.nombre} className="w-10 h-10" square />
+          <div>
+            <p className="font-semibold text-gray-900 text-sm">{estudiante.nombre} {estudiante.apellido}</p>
+            <p className="text-xs text-gray-500 capitalize">
+              {formatGradoSeccion(estudiante.nivel, estudiante.grado, estudiante.seccion)}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Acciones según estado */}
+      <div className={`overflow-y-auto max-h-[calc(100vh-420px)] px-6 py-4 space-y-3`}>
+
+        {estado === 'activo' && ft && (
+          <>
+            <div className="bg-green-50 border border-green-100 rounded-xl px-4 py-3 space-y-1">
+              <p className="text-xs font-bold text-green-700 flex items-center gap-1.5">
+                <CheckCircle2 className="w-3.5 h-3.5" /> Fotocheck activo
+              </p>
+              <p className="text-xs text-green-600">
+                Parentesco: <strong>{ft.parentesco}</strong>
+                {ft.vigencia_hasta && (
+                  <> · Vigente hasta{' '}
+                    {new Date(ft.vigencia_hasta + 'T00:00:00').toLocaleDateString('es-PE', { day: '2-digit', month: 'long', year: 'numeric' })}
+                  </>
+                )}
+              </p>
+              {ft.precio_fotocheck && <p className="text-xs text-gray-400">Pago: S/. {ft.precio_fotocheck}</p>}
+            </div>
+            <button
+              onClick={() => onImprimir(apoderado)}
+              className="w-full py-3 bg-[#0a1f3d] text-white rounded-2xl font-bold text-sm flex items-center justify-center gap-2"
+            >
+              <Printer className="w-4 h-4" /> Imprimir fotocheck
+            </button>
+            <div className="border border-red-100 rounded-2xl p-4 space-y-2">
+              <p className="text-xs font-bold text-red-500 uppercase tracking-wide">Zona de riesgo</p>
+              <p className="text-xs text-gray-500">Revocar desactivará el QR inmediatamente.</p>
+              <button
+                onClick={() => onRevocar(ft)}
+                className="w-full py-2.5 border border-red-300 text-red-600 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 hover:bg-red-50 transition-colors"
+              >
+                <ShieldX className="w-4 h-4" /> Revocar fotocheck
+              </button>
+            </div>
+          </>
+        )}
+
+        {(estado === 'sin_fotocheck' || estado === 'revocado') && (
+          <div className="space-y-3">
+            {estado === 'revocado' && (
+              <div className="bg-red-50 border border-red-100 rounded-xl px-3 py-2.5 flex items-center gap-2">
+                <ShieldX className="w-4 h-4 text-red-400 flex-shrink-0" />
+                <p className="text-xs text-red-600">Fotocheck revocado — genera uno nuevo para reactivar.</p>
+              </div>
+            )}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs text-gray-500 font-medium">Parentesco</label>
+                <div className="relative mt-1">
+                  <select value={parentesco} onChange={e => setParentesco(e.target.value)}
+                    className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-[#0a1f3d]/20 appearance-none bg-white">
+                    {PARENTESCOS.map(p => <option key={p} value={p}>{p.charAt(0).toUpperCase() + p.slice(1)}</option>)}
+                  </select>
+                  <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
+                </div>
+              </div>
+              <div>
+                <label className="text-xs text-gray-500 font-medium">Precio cobrado (S/.)</label>
+                <input type="number" step="0.50" min="0" value={precio} onChange={e => setPrecio(e.target.value)}
+                  className="mt-1 w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-green-300" />
+              </div>
+            </div>
+            <div>
+              <label className="text-xs text-gray-500 font-medium">Observación (opcional)</label>
+              <textarea value={observacion} onChange={e => setObservacion(e.target.value)} rows={2}
+                placeholder="Notas internas..." className="mt-1 w-full border border-gray-200 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-green-300 resize-none" />
+            </div>
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 flex items-start gap-2">
+              <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
+              <p className="text-xs text-amber-700">Verifica el DNI <strong>{apoderado.dni}</strong> antes de generar.</p>
+            </div>
+            <button onClick={handleActivar} disabled={loading}
+              className="w-full py-3 bg-green-600 text-white rounded-2xl font-bold text-sm disabled:opacity-60 flex items-center justify-center gap-2">
+              {loading
+                ? <><span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Generando...</>
+                : <><CheckCircle2 className="w-4 h-4" /> Generar fotocheck</>}
+            </button>
+          </div>
+        )}
+
+        {estado === 'pendiente' && (
+          <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-2">
+            <Clock className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
+            <p className="text-xs text-amber-700">
+              Este apoderado tiene una solicitud pendiente. Gestiona desde la pestaña <strong>Solicitudes</strong>.
+            </p>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+
+  const card = (
       <div className="bg-white w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl shadow-2xl max-h-[92vh] flex flex-col overflow-hidden">
 
         {/* Header */}
@@ -126,7 +256,7 @@ function PanelDetalleRecojo({ apoderado, estudiante, onClose, onActivar, onImpri
           </button>
         </div>
 
-        <div className="overflow-y-auto flex-1 px-5 py-5 space-y-4">
+        <div className={`overflow-y-auto flex-1 px-5 py-5 space-y-4 ${inline ? 'max-h-[calc(100vh-220px)]' : ''}`}>
 
           {/* Badges de contacto */}
           <div className="flex items-center gap-2 flex-wrap">
@@ -287,6 +417,15 @@ function PanelDetalleRecojo({ apoderado, estudiante, onClose, onActivar, onImpri
 
         </div>
       </div>
+  )
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center"
+      style={{ background: 'rgba(10,31,61,0.6)', backdropFilter: 'blur(4px)' }}
+      onClick={e => { if (e.target === e.currentTarget) onClose() }}
+    >
+      {card}
     </div>
   )
 }
@@ -334,7 +473,7 @@ function FilaRecojo({ apoderado, estudiante, onVerDetalle }) {
 }
 
 // ── Modal Detalle (solicitudes de terceros) ───────────────────────────────────
-function ModalDetalle({ persona, onClose, onActivar, onRevocar }) {
+function ModalDetalle({ persona, onClose, onActivar, onRevocar, inline = false }) {
   const [precio,   setPrecio]   = useState(persona.precio_fotocheck || '5.00')
   const [obsAdmin, setObsAdmin] = useState(persona.observacion_admin || '')
   const [loading,  setLoading]  = useState(false)
@@ -349,12 +488,11 @@ function ModalDetalle({ persona, onClose, onActivar, onRevocar }) {
   const apo = persona.apoderado  || {}
   const cfg = ESTADO_CFG[persona.estado] || ESTADO_CFG.pendiente
 
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ background: 'rgba(10,31,61,0.75)', backdropFilter: 'blur(6px)' }}
-    >
-      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md max-h-[92vh] flex flex-col overflow-hidden">
+  const card = (
+      <div className={inline
+        ? 'bg-white rounded-3xl border border-gray-200 shadow-xl w-full flex flex-col overflow-hidden'
+        : 'bg-white rounded-3xl shadow-2xl w-full max-w-md max-h-[92vh] flex flex-col overflow-hidden'
+      }>
 
         <div className="bg-[#0a1f3d] px-5 py-4 flex items-center justify-between flex-shrink-0">
           <div className="flex items-center gap-2.5">
@@ -366,7 +504,7 @@ function ModalDetalle({ persona, onClose, onActivar, onRevocar }) {
           </button>
         </div>
 
-        <div className="overflow-y-auto flex-1 px-5 py-5 space-y-4">
+        <div className={`overflow-y-auto flex-1 px-5 py-5 space-y-4 ${inline ? 'max-h-[calc(100vh-220px)]' : ''}`}>
 
           {/* Persona */}
           <div className="flex items-center gap-4 bg-gray-50 rounded-2xl p-4">
@@ -500,6 +638,126 @@ function ModalDetalle({ persona, onClose, onActivar, onRevocar }) {
           )}
         </div>
       </div>
+  )
+
+  if (inline) return (
+    <div className="bg-white rounded-3xl border border-gray-200 shadow-xl overflow-hidden relative">
+      {/* Botón cerrar */}
+      <button
+        onClick={onClose}
+        className="absolute top-4 right-4 z-10 w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors"
+      >
+        <X className="w-4 h-4 text-gray-500" />
+      </button>
+
+      {/* Foto + identidad */}
+      <div className="px-6 pt-8 pb-6 flex flex-col items-center text-center border-b border-gray-100">
+        <Foto foto_url={persona.foto_url} nombre={persona.nombre} className="w-24 h-24" square />
+        <h2 className="font-black text-[#0a1f3d] text-xl mt-4 leading-tight">
+          {persona.nombre} {persona.apellido}
+        </h2>
+        <p className="text-gray-500 text-sm mt-0.5 capitalize">{persona.parentesco}</p>
+        <p className="text-gray-400 text-xs font-mono mt-0.5">DNI {persona.dni}</p>
+        <span className={`inline-flex items-center gap-1.5 mt-3 px-2.5 py-1 rounded-full text-xs font-semibold border ${cfg.badge}`}>
+          <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} />
+          {cfg.label}
+        </span>
+      </div>
+
+      {/* Alumno + solicitante */}
+      <div className="px-6 py-4 border-b border-gray-100 space-y-3">
+        <div>
+          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Alumno</p>
+          <div className="flex items-center gap-3 bg-gray-50 rounded-xl p-3">
+            <Foto foto_url={est.foto_url} nombre={est.nombre} className="w-10 h-10" square />
+            <div>
+              <p className="font-semibold text-gray-900 text-sm">{est.nombre} {est.apellido}</p>
+              <p className="text-xs text-gray-500 capitalize">{est.nivel} · {formatGradoSeccion(est.nivel, est.grado, est.seccion)}</p>
+            </div>
+          </div>
+        </div>
+        <div>
+          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Solicitado por</p>
+          <div className="bg-gray-50 rounded-xl p-3">
+            <p className="font-medium text-gray-900 text-sm">{apo.nombre} {apo.apellido}</p>
+            {apo.telefono && <p className="text-xs text-gray-500 mt-0.5">{apo.telefono}</p>}
+          </div>
+        </div>
+        {persona.created_at && (
+          <p className="text-xs text-gray-400 flex items-center gap-1.5">
+            <CalendarCheck className="w-3.5 h-3.5" />
+            Solicitado el{' '}
+            {new Date(persona.created_at).toLocaleDateString('es-PE', { day: '2-digit', month: 'long', year: 'numeric' })}
+          </p>
+        )}
+      </div>
+
+      {/* Acciones */}
+      <div className="px-6 py-4 space-y-3 overflow-y-auto max-h-[calc(100vh-520px)]">
+        {persona.estado === 'pendiente' && (
+          <div className="space-y-3">
+            <p className="text-sm font-bold text-gray-800">Activar fotocheck</p>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs text-gray-500 font-medium">Precio cobrado (S/.)</label>
+                <input type="number" step="0.50" min="0" value={precio} onChange={e => setPrecio(e.target.value)}
+                  className="mt-1 w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-green-300" />
+              </div>
+              <div>
+                <label className="text-xs text-gray-500 font-medium">Vigencia hasta</label>
+                <input type="text" readOnly value="31/12/2025"
+                  className="mt-1 w-full border border-gray-100 rounded-xl px-3 py-2.5 text-sm bg-gray-50 text-gray-400" />
+              </div>
+            </div>
+            <div>
+              <label className="text-xs text-gray-500 font-medium">Observación (opcional)</label>
+              <textarea value={obsAdmin} onChange={e => setObsAdmin(e.target.value)} rows={2}
+                placeholder="Notas internas..." className="mt-1 w-full border border-gray-200 rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-green-300 resize-none" />
+            </div>
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 flex items-start gap-2">
+              <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
+              <p className="text-xs text-amber-700">Verifica el DNI original de <strong>{persona.nombre}</strong> antes de activar.</p>
+            </div>
+            <button onClick={activar} disabled={loading}
+              className="w-full py-3 bg-green-600 text-white rounded-2xl font-bold text-sm disabled:opacity-60 flex items-center justify-center gap-2">
+              {loading
+                ? <><span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Activando...</>
+                : <><CheckCircle2 className="w-4 h-4" /> Confirmar pago y activar</>}
+            </button>
+          </div>
+        )}
+        {persona.estado === 'activo' && (
+          <div className="space-y-3">
+            {persona.vigencia_hasta && (
+              <div className="bg-green-50 border border-green-100 rounded-xl px-3 py-2.5 flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-green-500 flex-shrink-0" />
+                <p className="text-xs text-green-700 font-medium">
+                  Vigente hasta{' '}
+                  {new Date(persona.vigencia_hasta + 'T00:00:00').toLocaleDateString('es-PE', { day: '2-digit', month: 'long', year: 'numeric' })}
+                </p>
+              </div>
+            )}
+            {persona.precio_fotocheck && <p className="text-xs text-gray-400">Pago registrado: S/. {persona.precio_fotocheck}</p>}
+            <div className="border border-red-100 rounded-2xl p-4 space-y-2">
+              <p className="text-xs font-bold text-red-500 uppercase tracking-wide">Zona de riesgo</p>
+              <p className="text-xs text-gray-500">Revocar desactivará el QR inmediatamente.</p>
+              <button onClick={() => onRevocar(persona)}
+                className="w-full py-2.5 border border-red-300 text-red-600 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 hover:bg-red-50 transition-colors">
+                <ShieldX className="w-4 h-4" /> Revocar este fotocheck
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{ background: 'rgba(10,31,61,0.75)', backdropFilter: 'blur(6px)' }}
+    >
+      {card}
     </div>
   )
 }
@@ -610,8 +868,8 @@ export default function AdminRecojo() {
   const [confirmRev,    setConfirmRev]    = useState(null)
   const [loadRev,       setLoadRev]       = useState(false)
 
-  // Tab solicitudes
-  const [tabSol, setTabSol] = useState('pendiente')
+  // Chip filter solicitudes
+  const [tabSol, setTabSol] = useState('todos')
 
   // ── Queries ────────────────────────────────────────────────────────────────
   const { data: stats = { pendiente: 0, activo: 0, revocado: 0 } } = useQuery({
@@ -630,10 +888,15 @@ export default function AdminRecojo() {
   })
 
   const { data: solicitudes = [], isLoading: solLoading } = useQuery({
-    queryKey: ['admin-recojo', tabSol],
+    queryKey: ['admin-recojo-solicitudes'],
     queryFn:  () =>
-      api.get('/recojo/admin/solicitudes', { params: { estado: tabSol } })
-        .then(r => r.data),
+      api.get('/recojo/admin/solicitudes')
+        .then(r => r.data.slice().sort((a, b) => {
+          const diff = (ESTADO_ORDER[a.estado] ?? 9) - (ESTADO_ORDER[b.estado] ?? 9)
+          if (diff !== 0) return diff
+          if (a.estado === 'pendiente') return new Date(a.created_at) - new Date(b.created_at)
+          return 0
+        })),
     enabled: vista === 'solicitudes',
   })
 
@@ -662,16 +925,17 @@ export default function AdminRecojo() {
   }, [filas, buscar])
 
   const solFiltradas = useMemo(() => {
-    if (!buscar) return solicitudes
+    let list = tabSol === 'todos' ? solicitudes : solicitudes.filter(p => p.estado === tabSol)
+    if (!buscar) return list
     const q = buscar.toLowerCase()
-    return solicitudes.filter(p =>
+    return list.filter(p =>
       p.nombre?.toLowerCase().includes(q) ||
       p.apellido?.toLowerCase().includes(q) ||
       p.dni?.includes(q) ||
       p.estudiante?.nombre?.toLowerCase().includes(q) ||
       p.estudiante?.apellido?.toLowerCase().includes(q)
     )
-  }, [solicitudes, buscar])
+  }, [solicitudes, buscar, tabSol])
 
   // Stats del panel (calculados del lado cliente)
   const panelStats = useMemo(() => ({
@@ -695,7 +959,7 @@ export default function AdminRecojo() {
   const activar = async (id, precio, obs) => {
     try {
       await api.put(`/recojo/admin/${id}/activar`, { precio, observacion: obs })
-      queryClient.invalidateQueries({ queryKey: ['admin-recojo'] })
+      queryClient.invalidateQueries({ queryKey: ['admin-recojo-solicitudes'] })
       queryClient.invalidateQueries({ queryKey: ['admin-recojo-stats'] })
       toast.success('Fotocheck activado correctamente')
       setDetalle(null)
@@ -709,7 +973,7 @@ export default function AdminRecojo() {
     setLoadRev(true)
     try {
       await api.put(`/recojo/admin/${persona.id}/revocar`, { motivo: 'Revocado por admin' })
-      queryClient.invalidateQueries({ queryKey: ['admin-recojo'] })
+      queryClient.invalidateQueries({ queryKey: ['admin-recojo-solicitudes'] })
       queryClient.invalidateQueries({ queryKey: ['admin-recojo-panel'] })
       queryClient.invalidateQueries({ queryKey: ['admin-recojo-stats'] })
       toast.success('Fotocheck revocado')
@@ -724,10 +988,10 @@ export default function AdminRecojo() {
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
-    <div className="max-w-2xl mx-auto px-4 py-5 space-y-5 pb-24">
+    <div className="px-4 pt-5 pb-24">
 
-      {/* Header */}
-      <div className="flex items-center justify-between gap-3">
+      {/* Header — ancho completo */}
+      <div className="flex items-center justify-between gap-3 mb-5">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-2xl bg-[#0a1f3d] flex items-center justify-center flex-shrink-0">
             <ShieldCheck className="w-5 h-5 text-white" />
@@ -745,6 +1009,12 @@ export default function AdminRecojo() {
           Imprimir por sección
         </button>
       </div>
+
+      {/* Grid master-detail */}
+      <div className="lg:grid lg:grid-cols-[1fr_380px] lg:gap-6 lg:items-start space-y-5 lg:space-y-0">
+
+      {/* ── Columna izquierda ── */}
+      <div className="space-y-5">
 
       {/* Stats */}
       <div className="grid grid-cols-3 gap-3">
@@ -772,7 +1042,7 @@ export default function AdminRecojo() {
 
         {/* Solicitudes de terceros — clickable */}
         <button
-          onClick={() => { setVista('solicitudes'); setTabSol('pendiente') }}
+          onClick={() => { setVista('solicitudes'); setTabSol('todos') }}
           className={`rounded-2xl border p-3.5 flex flex-col gap-1 text-left transition-all ${
             stats.pendiente > 0
               ? 'bg-amber-50 border-amber-200 shadow-sm'
@@ -794,7 +1064,7 @@ export default function AdminRecojo() {
       {/* Banner de alerta — solicitudes pendientes */}
       {stats.pendiente > 0 && vista === 'panel' && (
         <button
-          onClick={() => { setVista('solicitudes'); setTabSol('pendiente') }}
+          onClick={() => { setVista('solicitudes'); setTabSol('todos') }}
           className="w-full flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3 text-left"
         >
           <AlertCircle className="w-5 h-5 text-amber-500 flex-shrink-0" />
@@ -833,11 +1103,11 @@ export default function AdminRecojo() {
         >
           <Clock className="w-3.5 h-3.5" />
           Solicitudes
-          {(stats.pendiente + stats.activo + stats.revocado) > 0 && (
+          {stats.pendiente > 0 && (
             <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${
-              vista === 'solicitudes' ? 'bg-[#0a1f3d] text-white' : 'bg-gray-200 text-gray-600'
+              vista === 'solicitudes' ? 'bg-[#0a1f3d] text-white' : 'bg-amber-500 text-white'
             }`}>
-              {stats.pendiente + stats.activo + stats.revocado}
+              {stats.pendiente}
             </span>
           )}
         </button>
@@ -899,29 +1169,45 @@ export default function AdminRecojo() {
       {vista === 'solicitudes' && (
         <div className="space-y-4">
 
-          {/* Sub-tabs */}
-          <div className="flex bg-gray-100 rounded-2xl p-1 gap-1">
-            {TABS_SOL.map(({ key, label, Icon }) => (
-              <button
-                key={key}
-                onClick={() => { setTabSol(key); setBuscar('') }}
-                className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-semibold transition-all ${
-                  tabSol === key
-                    ? 'bg-white shadow text-[#0a1f3d]'
-                    : 'text-gray-500 hover:text-gray-700'
-                }`}
-              >
-                <Icon className="w-3.5 h-3.5" />
-                {label}
-                {stats[key] > 0 && (
-                  <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${
-                    tabSol === key ? 'bg-[#0a1f3d] text-white' : 'bg-gray-200 text-gray-600'
-                  }`}>
-                    {stats[key]}
-                  </span>
-                )}
-              </button>
-            ))}
+          {/* Filter chips */}
+          <div className="flex gap-2 flex-wrap">
+            {[
+              { key: 'todos',     label: 'Todos' },
+              { key: 'pendiente', label: 'Pendientes' },
+              { key: 'activo',    label: 'Activos'    },
+              { key: 'revocado',  label: 'Revocados'  },
+            ].map(({ key, label }) => {
+              const active = tabSol === key
+              const count  = key === 'todos'
+                ? solicitudes.length
+                : solicitudes.filter(p => p.estado === key).length
+              return (
+                <button
+                  key={key}
+                  onClick={() => setTabSol(key)}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${
+                    active
+                      ? key === 'pendiente'
+                        ? 'bg-amber-500 text-white border-amber-500'
+                        : key === 'activo'
+                        ? 'bg-green-600 text-white border-green-600'
+                        : key === 'revocado'
+                        ? 'bg-red-500 text-white border-red-500'
+                        : 'bg-[#0a1f3d] text-white border-[#0a1f3d]'
+                      : 'bg-white text-gray-500 border-gray-200 hover:border-gray-300 hover:text-gray-700'
+                  }`}
+                >
+                  {label}
+                  {count > 0 && (
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${
+                      active ? 'bg-white/25 text-white' : key === 'pendiente' ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-500'
+                    }`}>
+                      {count}
+                    </span>
+                  )}
+                </button>
+              )
+            })}
           </div>
 
           {solLoading ? (
@@ -933,8 +1219,10 @@ export default function AdminRecojo() {
               <ShieldCheck className="w-12 h-12 mb-3 opacity-20" />
               <p className="text-sm font-medium">
                 {buscar
-                  ? 'Sin resultados'
-                  : `Sin solicitudes ${TABS_SOL.find(t => t.key === tabSol)?.label.toLowerCase()}`
+                  ? 'Sin resultados para tu búsqueda'
+                  : tabSol === 'todos'
+                  ? 'Sin solicitudes registradas'
+                  : `Sin solicitudes ${tabSol === 'pendiente' ? 'pendientes' : tabSol === 'activo' ? 'activas' : 'revocadas'}`
                 }
               </p>
             </div>
@@ -957,41 +1245,105 @@ export default function AdminRecojo() {
         </div>
       )}
 
-      {/* ── Modals ── */}
+      </div> {/* fin columna izquierda */}
 
-      {/* Panel detalle apoderado (panel view) */}
-      {panelDetalle && (
-        <PanelDetalleRecojo
-          apoderado={panelDetalle.apoderado}
-          estudiante={panelDetalle.estudiante}
-          onClose={() => setPanelDetalle(null)}
-          onActivar={activarDirecto}
-          onImprimir={apo => {
-            if (!apo.fotocheck) return
-            setPanelDetalle(null)
-            setModalImprimir({
-              ...apo.fotocheck,
-              nombre:   apo.nombre,
-              apellido: apo.apellido,
-              foto_url: apo.foto_url,
-            })
-          }}
-          onRevocar={ft => {
-            setPanelDetalle(null)
-            setConfirmRev(ft)
-          }}
-        />
-      )}
+      {/* ── Columna derecha (solo desktop) ── */}
+      <div className="hidden lg:block">
+        <div className="sticky top-6 max-h-[calc(100vh-100px)] overflow-y-auto rounded-3xl bg-[#0a1f3d]/5 p-1.5">
+          {panelDetalle ? (
+            <PanelDetalleRecojo
+              apoderado={panelDetalle.apoderado}
+              estudiante={panelDetalle.estudiante}
+              onClose={() => setPanelDetalle(null)}
+              onActivar={activarDirecto}
+              onImprimir={apo => {
+                if (!apo.fotocheck) return
+                setPanelDetalle(null)
+                setModalImprimir({ ...apo.fotocheck, nombre: apo.nombre, apellido: apo.apellido, foto_url: apo.foto_url })
+              }}
+              onRevocar={ft => { setPanelDetalle(null); setConfirmRev(ft) }}
+              inline
+            />
+          ) : detalle ? (
+            <ModalDetalle
+              persona={detalle}
+              onClose={() => setDetalle(null)}
+              onActivar={activar}
+              onRevocar={setConfirmRev}
+              inline
+            />
+          ) : (
+            <div className="bg-white rounded-3xl border border-gray-200 shadow-xl overflow-hidden">
+              {/* Franja navy decorativa */}
+              <div className="bg-[#0a1f3d] px-6 py-5">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center">
+                    <ShieldCheck className="w-5 h-5 text-white/60" />
+                  </div>
+                  <div>
+                    <p className="text-white font-bold text-sm">Panel de detalle</p>
+                    <p className="text-white/40 text-xs">Recojo Responsable</p>
+                  </div>
+                </div>
+              </div>
+              {/* Cuerpo vacío */}
+              <div className="px-6 py-12 flex flex-col items-center justify-center text-center gap-3">
+                <div className="w-16 h-16 rounded-2xl bg-gray-50 border border-gray-100 flex items-center justify-center">
+                  <Users className="w-7 h-7 text-gray-300" />
+                </div>
+                <div>
+                  <p className="font-semibold text-gray-500 text-sm">Ningún registro seleccionado</p>
+                  <p className="text-xs text-gray-400 mt-1 max-w-[200px]">
+                    Haz clic en un apoderado de la lista para ver su detalle aquí
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
 
-      {/* Detalle solicitud de tercero */}
-      {detalle && (
-        <ModalDetalle
-          persona={detalle}
-          onClose={() => setDetalle(null)}
-          onActivar={activar}
-          onRevocar={setConfirmRev}
-        />
-      )}
+      </div> {/* fin grid */}
+
+      {/* ── Modals móvil (ocultos en desktop, ya que el panel derecho los reemplaza) ── */}
+
+      {/* Panel detalle apoderado (mobile) */}
+      <div className="lg:hidden">
+        {panelDetalle && (
+          <PanelDetalleRecojo
+            apoderado={panelDetalle.apoderado}
+            estudiante={panelDetalle.estudiante}
+            onClose={() => setPanelDetalle(null)}
+            onActivar={activarDirecto}
+            onImprimir={apo => {
+              if (!apo.fotocheck) return
+              setPanelDetalle(null)
+              setModalImprimir({
+                ...apo.fotocheck,
+                nombre:   apo.nombre,
+                apellido: apo.apellido,
+                foto_url: apo.foto_url,
+              })
+            }}
+            onRevocar={ft => {
+              setPanelDetalle(null)
+              setConfirmRev(ft)
+            }}
+          />
+        )}
+      </div>
+
+      {/* Detalle solicitud de tercero (mobile) */}
+      <div className="lg:hidden">
+        {detalle && (
+          <ModalDetalle
+            persona={detalle}
+            onClose={() => setDetalle(null)}
+            onActivar={activar}
+            onRevocar={setConfirmRev}
+          />
+        )}
+      </div>
 
       {/* Imprimir fotochecks */}
       {modalImprimir && (
