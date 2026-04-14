@@ -26,8 +26,9 @@ function beep() {
 }
 
 // ── Escáner nativo (ML Kit) ──────────────────────────────────────────────────
-function NativeScanner({ onResult }) {
+function NativeScanner({ onResult, onFallback }) {
   const [escaneando, setEscaneando] = useState(false)
+  const [instalando, setInstalando] = useState(false)
   const [error, setError]           = useState(null)
 
   const escanear = async () => {
@@ -36,18 +37,37 @@ function NativeScanner({ onResult }) {
     try {
       const { BarcodeScanner, BarcodeFormat } = await import('@capacitor-mlkit/barcode-scanning')
 
-      // Verificar / solicitar permisos
+      // 1. Verificar que el módulo ML Kit esté instalado en el dispositivo.
+      //    En el primer uso puede no estar disponible y necesita descargarse.
+      const { available } = await BarcodeScanner.isGoogleBarcodeScannerModuleAvailable()
+      if (!available) {
+        setInstalando(true)
+        setEscaneando(false)
+        try {
+          await BarcodeScanner.installGoogleBarcodeScannerModule()
+          // La instalación es asíncrona en background; avisamos al usuario
+          setError('Módulo instalado correctamente. Toca "Escanear QR" para continuar.')
+        } catch (_) {
+          // Sin Google Play Services o sin conexión → usar escáner web como respaldo
+          onFallback?.()
+        } finally {
+          setInstalando(false)
+        }
+        return
+      }
+
+      // 2. Verificar / solicitar permiso de cámara
       const permisos = await BarcodeScanner.checkPermissions()
       if (permisos.camera !== 'granted') {
         const solicitado = await BarcodeScanner.requestPermissions()
         if (solicitado.camera !== 'granted') {
-          setError('Se necesita permiso de cámara para escanear.')
+          setError('Permiso de cámara denegado. Ve a Configuración → Aplicaciones → CEAUNE → Permisos → Cámara.')
           setEscaneando(false)
           return
         }
       }
 
-      // Abrir escáner nativo (pantalla completa, Google ML Kit)
+      // 3. Abrir escáner nativo (pantalla completa, Google ML Kit)
       const { barcodes } = await BarcodeScanner.scan({ formats: [BarcodeFormat.QrCode] })
 
       if (barcodes.length > 0) {
@@ -56,14 +76,42 @@ function NativeScanner({ onResult }) {
         onResult(barcodes[0].rawValue)
       }
     } catch (err) {
-      if (err?.message !== 'scan cancelled') {
-        hapticError()
-        setError('No se pudo escanear. Intenta de nuevo.')
+      const msg = err?.message ?? ''
+
+      // El usuario cerró el escáner — no es error
+      if (msg === 'scan cancelled') {
+        setEscaneando(false)
+        return
+      }
+
+      hapticError()
+
+      if (msg.toLowerCase().includes('permission')) {
+        setError('Sin permiso de cámara. Ve a Configuración → Aplicaciones → CEAUNE → Permisos → Cámara.')
+      } else if (
+        msg.toLowerCase().includes('module') ||
+        msg.toLowerCase().includes('google') ||
+        msg.toLowerCase().includes('play')
+      ) {
+        // ML Kit no disponible en este dispositivo → fallback al escáner web
+        onFallback?.()
+        return
+      } else {
+        setError('No se pudo abrir la cámara. Intenta de nuevo.')
       }
     } finally {
       setEscaneando(false)
     }
   }
+
+  const labelBoton = instalando
+    ? 'Instalando módulo…'
+    : escaneando
+      ? 'Abriendo cámara…'
+      : 'Escanear QR'
+
+  const esError   = error && !error.startsWith('Módulo instalado')
+  const esOk      = error && error.startsWith('Módulo instalado')
 
   return (
     <div className="flex flex-col items-center justify-center py-8 gap-5">
@@ -78,17 +126,21 @@ function NativeScanner({ onResult }) {
 
       <button
         onClick={escanear}
-        disabled={escaneando}
+        disabled={escaneando || instalando}
         className="btn-primary px-10 py-3.5 flex items-center gap-2 text-base"
       >
-        {escaneando
+        {(escaneando || instalando)
           ? <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
           : <ScanLine size={18} />
         }
-        {escaneando ? 'Abriendo cámara…' : 'Escanear QR'}
+        {labelBoton}
       </button>
 
-      {error && <p className="text-red-500 text-sm text-center px-4">{error}</p>}
+      {error && (
+        <p className={`text-sm text-center px-4 ${esOk ? 'text-green-600' : esError ? 'text-red-500' : ''}`}>
+          {error}
+        </p>
+      )}
 
       <p className="text-gray-400 text-xs text-center px-6">
         Toca el botón para abrir la cámara y apunta al fotocheck del alumno
@@ -125,9 +177,9 @@ function WebScanner({ onResult, activo }) {
         onResult(result.data)
       },
       {
-        preferredCamera:    'environment',
-        maxScansPerSecond:  10,
-        highlightScanRegion: false,
+        preferredCamera:      'environment',
+        maxScansPerSecond:    10,
+        highlightScanRegion:  false,
         highlightCodeOutline: false,
       }
     )
@@ -198,9 +250,20 @@ function WebScanner({ onResult, activo }) {
 
 // ── Componente principal ──────────────────────────────────────────────────────
 export default function QRScanner({ onResult, activo }) {
+  // useFallback: true cuando ML Kit falla y caemos al escáner web
+  const [useFallback, setUseFallback] = useState(false)
+
   if (!activo) return null
 
-  return isNative
-    ? <NativeScanner onResult={onResult} />
-    : <WebScanner onResult={onResult} activo={activo} />
+  // En nativo usamos ML Kit; si falla por módulo/Play Services usamos WebScanner
+  if (isNative && !useFallback) {
+    return (
+      <NativeScanner
+        onResult={onResult}
+        onFallback={() => setUseFallback(true)}
+      />
+    )
+  }
+
+  return <WebScanner onResult={onResult} activo={activo} />
 }
