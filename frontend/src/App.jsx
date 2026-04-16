@@ -30,6 +30,7 @@ import Login from './pages/Login'
 import { obtenerUsuario, obtenerRutaPorRol, estaAutenticado } from './lib/auth'
 import { iniciarPush, setPushNavigate } from './lib/pushNotifications'
 import SinConexion from './components/SinConexion'
+import OnboardingPermisos from './components/OnboardingPermisos'
 
 // Registra el navigate de React Router en el módulo push para que el tap
 // de notificaciones use navegación SPA en vez de window.location.href
@@ -131,6 +132,18 @@ export default function App() {
     }
   }, [])
 
+  // Keyboard: evitar que el WebView se deforme al abrir el teclado virtual
+  useEffect(() => {
+    if (!window.Capacitor?.isNativePlatform?.()) return
+    async function initKeyboard() {
+      try {
+        const { Keyboard } = await import('@capacitor/keyboard')
+        await Keyboard.setAccessoryBarVisible({ isVisible: false })
+      } catch (_) {}
+    }
+    initKeyboard()
+  }, [])
+
   return (
     <SinConexion>
     <QueryClientProvider client={queryClient}>
@@ -138,6 +151,7 @@ export default function App() {
       <BrowserRouter>
         <PushNavigateSync />
         <Toast />
+        <OnboardingPermisos />
         <ErrorBoundary>
         <Routes>
           <Route path="/login"    element={<Login />} />

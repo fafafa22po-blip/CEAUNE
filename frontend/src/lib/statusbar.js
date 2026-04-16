@@ -4,8 +4,8 @@
 export async function setStatusBarDark() {
   if (!window.Capacitor?.isNativePlatform?.()) return
   try {
-    const { SystemBars } = await import(/* @vite-ignore */ '@capacitor/core')
-    await SystemBars.setBackgroundColor({ color: '#0a1f3d' })
-    await SystemBars.setStyle({ style: 'LIGHT' })
+    const { StatusBar } = await import('@capacitor/status-bar')
+    await StatusBar.setBackgroundColor({ color: '#0a1f3d' })
+    await StatusBar.setStyle({ style: 'LIGHT' })
   } catch (_) {}
 }

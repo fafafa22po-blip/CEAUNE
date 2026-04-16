@@ -2,7 +2,15 @@ import { useState, useEffect, useCallback } from 'react'
 import { Bell, Settings } from 'lucide-react'
 import { iniciarPush, marcarOnboardingAceptado, abrirAjustesNotificaciones } from '../lib/pushNotifications'
 
-const ONBOARDING_KEY = 'push_onboarding_done'
+const ONBOARDING_KEY  = 'push_onboarding_done'
+const POSPONER_HORAS  = 24  // horas antes de volver a mostrar el aviso tras "Ahora no"
+
+/** Devuelve true si el aviso fue pospuesto hace menos de POSPONER_HORAS */
+function estaPospuesto(key) {
+  const ts = localStorage.getItem(key)
+  if (!ts) return false
+  return Date.now() - Number(ts) < POSPONER_HORAS * 60 * 60 * 1000
+}
 
 /**
  * Overlay de permisos push con dos modos:
@@ -35,15 +43,15 @@ export default function OnboardingPermisos() {
       }
 
       if (receive === 'denied') {
-        // Permiso denegado por el sistema: mostrar pantalla de ajustes (una vez por sesión)
-        if (!sessionStorage.getItem('push_ajustes_pospuesto')) {
+        // Permiso denegado: mostrar pantalla de ajustes si no fue pospuesta recientemente
+        if (!estaPospuesto('push_ajustes_pospuesto')) {
           setVista('ajustes')
         }
         return
       }
 
       // 'prompt' / 'prompt-with-rationale': el sistema puede mostrar el diálogo
-      if (!sessionStorage.getItem('push_onboarding_pospuesto')) {
+      if (!estaPospuesto('push_onboarding_pospuesto')) {
         setVista('onboarding')
       }
     } catch (_) {}
@@ -56,10 +64,8 @@ export default function OnboardingPermisos() {
     return () => window.removeEventListener('ceaune:sesion-iniciada', check)
   }, [check])
 
-  // Cuando el usuario vuelve de Ajustes del sistema, re-verificar el permiso
-  // para cerrar el overlay automáticamente si lo activó
+  // Re-verificar siempre que la app vuelve al frente (desde cualquier estado del overlay)
   useEffect(() => {
-    if (vista !== 'ajustes') return
     let listener = null
     async function setupResume() {
       try {
@@ -71,7 +77,7 @@ export default function OnboardingPermisos() {
     }
     setupResume()
     return () => { listener?.remove().catch(() => {}) }
-  }, [vista, check])
+  }, [check])
 
   if (!vista) return null
 
@@ -88,7 +94,7 @@ export default function OnboardingPermisos() {
 
   function posponer() {
     const key = vista === 'ajustes' ? 'push_ajustes_pospuesto' : 'push_onboarding_pospuesto'
-    sessionStorage.setItem(key, '1')
+    localStorage.setItem(key, String(Date.now()))
     ocultar()
   }
 

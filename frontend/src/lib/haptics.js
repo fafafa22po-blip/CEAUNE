@@ -1,22 +1,53 @@
 /**
- * Haptic feedback — usa Web Vibration API (soportada en Android WebView).
- * En iOS WebView y desktop no hace nada (silencioso).
+ * Haptic feedback — nativo con @capacitor/haptics en APK,
+ * fallback a Web Vibration API en navegador.
  */
+const isNative = () => window.Capacitor?.isNativePlatform?.() === true
+
 const vibrar = (pattern) => {
   try { navigator?.vibrate?.(pattern) } catch (_) {}
 }
 
+async function nativeImpact(style) {
+  try {
+    const { Haptics } = await import('@capacitor/haptics')
+    await Haptics.impact({ style })
+  } catch (_) {}
+}
+
+async function nativeNotification(type) {
+  try {
+    const { Haptics } = await import('@capacitor/haptics')
+    await Haptics.notification({ type })
+  } catch (_) {}
+}
+
 /** Tap ligero — para toques simples, navegación */
-export const hapticLight = () => vibrar(25)
+export const hapticLight = () => {
+  if (isNative()) { nativeImpact('LIGHT'); return }
+  vibrar(25)
+}
 
 /** Tap medio — para confirmaciones, selecciones */
-export const hapticMedium = () => vibrar(50)
+export const hapticMedium = () => {
+  if (isNative()) { nativeImpact('MEDIUM'); return }
+  vibrar(50)
+}
 
 /** Éxito — doble pulso corto (escaneo QR correcto, guardado OK) */
-export const hapticSuccess = () => vibrar([40, 60, 40])
+export const hapticSuccess = () => {
+  if (isNative()) { nativeNotification('SUCCESS'); return }
+  vibrar([40, 60, 40])
+}
 
 /** Error — pulso largo (escaneo fallido, error de validación) */
-export const hapticError = () => vibrar(120)
+export const hapticError = () => {
+  if (isNative()) { nativeNotification('ERROR'); return }
+  vibrar(120)
+}
 
 /** Advertencia — pulso medio-largo */
-export const hapticWarning = () => vibrar(80)
+export const hapticWarning = () => {
+  if (isNative()) { nativeNotification('WARNING'); return }
+  vibrar(80)
+}

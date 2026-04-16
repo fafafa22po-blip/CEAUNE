@@ -5,6 +5,30 @@ export default function SinConexion({ children }) {
   const [online, setOnline] = useState(navigator.onLine)
 
   useEffect(() => {
+    // En APK usamos @capacitor/network (más confiable que eventos browser en Android)
+    if (window.Capacitor?.isNativePlatform?.()) {
+      let listener
+      async function initNetwork() {
+        try {
+          const { Network } = await import('@capacitor/network')
+          const status = await Network.getStatus()
+          setOnline(status.connected)
+          listener = await Network.addListener('networkStatusChange', (s) => {
+            setOnline(s.connected)
+          })
+        } catch (_) {
+          // Fallback a eventos browser si el plugin falla
+          const onOnline  = () => setOnline(true)
+          const onOffline = () => setOnline(false)
+          window.addEventListener('online',  onOnline)
+          window.addEventListener('offline', onOffline)
+        }
+      }
+      initNetwork()
+      return () => { listener?.remove() }
+    }
+
+    // Web: eventos browser estándar
     const onOnline  = () => setOnline(true)
     const onOffline = () => setOnline(false)
     window.addEventListener('online',  onOnline)

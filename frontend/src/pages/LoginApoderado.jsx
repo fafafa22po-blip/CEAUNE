@@ -30,6 +30,7 @@ export default function LoginApoderado() {
       localStorage.setItem('token', tokenData.access_token)
       const { data: usuario } = await api.get('/auth/me')
       guardarSesion(tokenData.access_token, usuario)
+      window.dispatchEvent(new CustomEvent('ceaune:sesion-iniciada'))
       await resetPush().catch(() => {})
       await iniciarPush().catch(() => {})
 
