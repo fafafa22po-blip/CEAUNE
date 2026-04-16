@@ -1,6 +1,12 @@
 import api from './api'
 
-const FCM_TOKEN_KEY = 'push_fcm_token'
+const FCM_TOKEN_KEY  = 'push_fcm_token'
+const ONBOARDING_KEY = 'push_onboarding_done'
+
+/** Llamar cuando el usuario acepta el onboarding de permisos */
+export function marcarOnboardingAceptado() {
+  localStorage.setItem(ONBOARDING_KEY, '1')
+}
 
 let tokenActual = null
 let listeners = []
@@ -43,12 +49,19 @@ async function _dbg(paso, detalle = '') {
 /**
  * Registra el dispositivo para push notifications.
  * Solo funciona dentro de la APK nativa (Capacitor).
+ * Requiere que el usuario haya completado el onboarding de permisos.
  */
 export async function iniciarPush() {
   if (yaRegistrado) { await _dbg('YA_REGISTRADO'); return }
 
   const Capacitor = window.Capacitor
   if (!Capacitor?.isNativePlatform?.()) { await _dbg('NO_NATIVE'); return }
+
+  // No solicitar permisos hasta que el usuario vea la pantalla de onboarding
+  if (localStorage.getItem(ONBOARDING_KEY) !== '1') {
+    await _dbg('ESPERANDO_ONBOARDING')
+    return
+  }
 
   yaRegistrado = true
   await _dbg('INICIO')
@@ -147,6 +160,21 @@ export async function iniciarPush() {
     await _dbg('ERROR_FATAL', err?.message || String(err))
     yaRegistrado = false
   }
+}
+
+/**
+ * Abre los ajustes de notificaciones de la app en Android.
+ * El bridge de Capacitor intercepta el intent: URL en shouldOverrideUrlLoading
+ * y lanza el Activity del sistema con ACTION_APP_NOTIFICATION_SETTINGS.
+ * No requiere plugins adicionales ni recompilar la APK.
+ */
+export function abrirAjustesNotificaciones() {
+  if (!window.Capacitor?.isNativePlatform?.()) return
+  try {
+    window.location.href =
+      'intent:#Intent;action=android.settings.APP_NOTIFICATION_SETTINGS;' +
+      'S.android.provider.extra.APP_PACKAGE=com.ceaune.app;end'
+  } catch (_) {}
 }
 
 async function _registrarToken(token) {
