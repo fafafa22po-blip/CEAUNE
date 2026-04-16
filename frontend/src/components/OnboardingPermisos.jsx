@@ -31,19 +31,25 @@ export default function OnboardingPermisos() {
     if (!window.Capacitor?.isNativePlatform?.()) return
     if (!localStorage.getItem('token')) return
     try {
-      const { PushNotifications } = await import('@capacitor/push-notifications')
-      const { receive } = await PushNotifications.checkPermissions()
+      const { PushNotifications }  = await import('@capacitor/push-notifications')
+      const { LocalNotifications } = await import('@capacitor/local-notifications')
 
-      if (receive === 'granted') {
-        // Permiso activo: asegurar que el gate de iniciarPush esté abierto y registrar
+      // receive → permiso formal POST_NOTIFICATIONS (Android 13+)
+      // display → areNotificationsEnabled() → toggle real en Ajustes del sistema
+      // Necesitamos AMBOS en 'granted' para considerar las notificaciones activas.
+      const { receive } = await PushNotifications.checkPermissions()
+      const { display } = await LocalNotifications.checkPermissions()
+
+      if (receive === 'granted' && display === 'granted') {
+        // Todo activo: asegurar gate de iniciarPush abierto y registrar
         if (localStorage.getItem(ONBOARDING_KEY) !== '1') marcarOnboardingAceptado()
         setVista(null)
         iniciarPush().catch(() => {})
         return
       }
 
-      if (receive === 'denied') {
-        // Permiso denegado: mostrar pantalla de ajustes si no fue pospuesta recientemente
+      if (receive === 'denied' || display === 'denied') {
+        // Permiso denegado O toggle de Ajustes desactivado → guiar al usuario
         if (!estaPospuesto('push_ajustes_pospuesto')) {
           setVista('ajustes')
         }
