@@ -163,17 +163,15 @@ export async function iniciarPush() {
 }
 
 /**
- * Abre los ajustes de notificaciones de la app en Android.
- * El bridge de Capacitor intercepta el intent: URL en shouldOverrideUrlLoading
- * y lanza el Activity del sistema con ACTION_APP_NOTIFICATION_SETTINGS.
- * No requiere plugins adicionales ni recompilar la APK.
+ * Abre los ajustes de notificaciones de la app en Android usando el plugin
+ * nativo ExternalLink, que dispara ACTION_APP_NOTIFICATION_SETTINGS directamente.
  */
-export function abrirAjustesNotificaciones() {
+export async function abrirAjustesNotificaciones() {
   if (!window.Capacitor?.isNativePlatform?.()) return
   try {
-    window.location.href =
-      'intent:#Intent;action=android.settings.APP_NOTIFICATION_SETTINGS;' +
-      'S.android.provider.extra.APP_PACKAGE=com.ceaune.app;end'
+    const { registerPlugin } = await import('@capacitor/core')
+    const ExternalLink = registerPlugin('ExternalLink')
+    await ExternalLink.openNotificationSettings()
   } catch (_) {}
 }
 

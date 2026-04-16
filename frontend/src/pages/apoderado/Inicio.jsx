@@ -5,7 +5,7 @@ import { useHijo } from '../../context/HijoContext'
 import {
   CheckCircle2, Clock, XCircle, HelpCircle,
   MessageSquare, AlertTriangle, BookOpen,
-  ChevronRight, GraduationCap,
+  ChevronRight, GraduationCap, BellOff,
 } from 'lucide-react'
 import { BarraAsistencia } from '../../components/BarraAsistencia'
 import { formatGradoSeccion } from '../../lib/nivelAcademico'
@@ -13,7 +13,7 @@ import { format, startOfMonth, endOfMonth, parseISO } from 'date-fns'
 import { es } from 'date-fns/locale'
 import api from '../../lib/api'
 import toast from 'react-hot-toast'
-import { onPushRecibido } from '../../lib/pushNotifications'
+import { onPushRecibido, abrirAjustesNotificaciones } from '../../lib/pushNotifications'
 import { obtenerUsuario } from '../../lib/auth'
 import { abrirWhatsApp } from '../../lib/externo'
 import { QK } from '../../lib/queryKeys'
@@ -359,6 +359,35 @@ export default function Inicio() {
   // Badge de alertas por hijo (solo para los dots del selector en esta página)
   const [alertasPorHijo, setAlertasPorHijo] = useState({})
 
+  // Banner: notificaciones desactivadas en Ajustes del sistema
+  const [notifDesactivadas, setNotifDesactivadas] = useState(false)
+
+  useEffect(() => {
+    if (!window.Capacitor?.isNativePlatform?.()) return
+    let capListener = null
+
+    async function verificarNotif() {
+      try {
+        const { LocalNotifications } = await import('@capacitor/local-notifications')
+        const { display } = await LocalNotifications.checkPermissions()
+        setNotifDesactivadas(display === 'denied')
+      } catch (_) {}
+    }
+
+    async function setupListener() {
+      try {
+        const { App: CapApp } = await import('@capacitor/app')
+        capListener = await CapApp.addListener('appStateChange', ({ isActive }) => {
+          if (isActive) verificarNotif()
+        })
+      } catch (_) {}
+    }
+
+    verificarNotif()
+    setupListener()
+    return () => { capListener?.remove().catch(() => {}) }
+  }, [])
+
   const handleAlertChange = useCallback((id, tiene) => {
     setAlertasPorHijo(prev => {
       if (prev[id] === tiene) return prev
@@ -467,6 +496,31 @@ export default function Inicio() {
           </div>
         </div>
       </div>
+
+      {/* ── Banner: notificaciones desactivadas ── */}
+      {notifDesactivadas && (
+        <button
+          onClick={abrirAjustesNotificaciones}
+          className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl active:scale-[0.98] transition-transform text-left"
+          style={{ background: 'rgba(231,76,60,0.08)', border: '1.5px solid rgba(231,76,60,0.22)' }}
+        >
+          <BellOff size={17} style={{ color: '#e74c3c', flexShrink: 0 }} />
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-bold leading-tight" style={{ color: '#c0392b' }}>
+              Notificaciones desactivadas
+            </p>
+            <p className="text-xs leading-tight mt-0.5" style={{ color: 'rgba(192,57,43,0.75)' }}>
+              No recibirás alertas de asistencia en tiempo real
+            </p>
+          </div>
+          <span
+            className="text-xs font-bold px-3 py-1.5 rounded-xl flex-shrink-0"
+            style={{ background: '#e74c3c', color: 'white' }}
+          >
+            Activar
+          </span>
+        </button>
+      )}
 
       {/* ── selector de hijo (solo si hay más de uno) ── */}
       {hijos.length > 1 && (
