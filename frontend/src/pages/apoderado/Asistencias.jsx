@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { ChevronLeft, ChevronRight, FileText, AlertTriangle, X, Clock, ArrowDownLeft, ArrowUpRight, CalendarOff } from 'lucide-react'
@@ -187,6 +187,20 @@ export default function Asistencias() {
 
   // Cerrar detalle al cambiar mes o hijo
   useEffect(() => { setDiaSeleccionado(null) }, [mesAnio, hijoActivo?.id])
+
+  // Bloquea touch events para que NO lleguen al pull-to-refresh del Layout
+  const backdropRef = useRef(null)
+  useEffect(() => {
+    const el = backdropRef.current
+    if (!el) return
+    const stop = (e) => e.stopPropagation()
+    el.addEventListener('touchstart', stop, { passive: true })
+    el.addEventListener('touchmove',  stop, { passive: true })
+    return () => {
+      el.removeEventListener('touchstart', stop)
+      el.removeEventListener('touchmove',  stop)
+    }
+  }, [diaSeleccionado]) // re-ejecuta al abrir/cerrar el modal
 
   // ── datos del día seleccionado ──────────────────────────────────────────
   const regsDetalle      = diaSeleccionado ? (mapaDetalle[diaSeleccionado] || []) : []
@@ -384,7 +398,8 @@ export default function Asistencias() {
       {/* ── BOTTOM SHEET: detalle del día seleccionado ───────────────────── */}
       {diaSeleccionado && (
         <div
-          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center animate-fade-in"
+          ref={backdropRef}
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center animate-fade-in modal-nav-offset"
           onClick={() => setDiaSeleccionado(null)}
         >
           {/* Backdrop */}
@@ -392,16 +407,19 @@ export default function Asistencias() {
 
           {/* Panel */}
           <div
-            className="relative w-full max-w-md bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl animate-slide-up sm:mx-4"
+            className="relative w-full max-w-md bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl animate-slide-up sm:mx-4 flex flex-col"
+            style={{ maxHeight: 'calc(90vh - var(--nav-h) - env(safe-area-inset-bottom, 0px))' }}
             onClick={e => e.stopPropagation()}
-            style={{ paddingBottom: 'max(1.25rem, env(safe-area-inset-bottom))' }}
           >
             {/* Handle (solo móvil) */}
-            <div className="flex justify-center pt-3 pb-1 sm:hidden">
+            <div className="flex justify-center pt-3 pb-1 sm:hidden flex-shrink-0">
               <div className="w-10 h-1 bg-gray-200 rounded-full" />
             </div>
 
-            <div className="px-5 pt-3 pb-5">
+            <div
+              className="px-5 pt-3 overflow-y-auto"
+              style={{ paddingBottom: 'max(1.25rem, env(safe-area-inset-bottom))', overscrollBehavior: 'contain' }}
+            >
               {/* Cabecera: fecha + cerrar */}
               <div className="flex items-start justify-between mb-4">
                 <div>

@@ -1,5 +1,7 @@
 import { useEffect, Component } from 'react'
-import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom'
+import { Capacitor } from '@capacitor/core'
+import { StatusBar, Style } from '@capacitor/status-bar'
 
 class ErrorBoundary extends Component {
   state = { crashed: false }
@@ -40,6 +42,16 @@ function PushNavigateSync() {
     setPushNavigate(navigate)
     return () => setPushNavigate(null)
   }, [navigate])
+  return null
+}
+
+// Barra de estado siempre en azul marino con íconos blancos (consistent con el header)
+function StatusBarManager() {
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return
+    StatusBar.setStyle({ style: Style.Light }).catch(() => {})
+    StatusBar.setBackgroundColor({ color: '#0a1f3d' }).catch(() => {})
+  }, [])
   return null
 }
 
@@ -150,6 +162,7 @@ export default function App() {
       <ActualizadorApp />
       <BrowserRouter>
         <PushNavigateSync />
+        <StatusBarManager />
         <Toast />
         <OnboardingPermisos />
         <ErrorBoundary>

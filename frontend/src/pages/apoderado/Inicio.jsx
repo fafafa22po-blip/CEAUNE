@@ -444,7 +444,7 @@ export default function Inicio() {
     <div className="space-y-5 max-w-2xl mx-auto">
 
       {/* ── Banner de bienvenida ── */}
-      <div className="relative overflow-hidden rounded-2xl bg-marino px-8 py-7">
+      <div className="relative overflow-hidden rounded-2xl bg-marino px-6 py-5">
         <div className="absolute -top-16 -right-16 w-72 h-72 rounded-full bg-white/[0.04] pointer-events-none" />
         <div className="absolute top-6 right-52    w-14 h-14 rounded-full bg-dorado/20  pointer-events-none" />
         <div className="absolute -bottom-20 right-32 w-56 h-56 rounded-full bg-dorado/10  pointer-events-none" />
@@ -452,14 +452,14 @@ export default function Inicio() {
 
         <div className="relative z-10 flex items-center justify-between gap-6">
           <div className="flex-1 min-w-0">
-            <p className="text-white/40 text-xs capitalize tracking-wide mb-2">
+            <p className="text-white/40 text-xs capitalize tracking-wide mb-1">
               {format(new Date(), "EEEE d 'de' MMMM yyyy", { locale: es })}
             </p>
-            <h1 className="text-3xl font-black text-white leading-tight">
+            <h1 className="text-2xl font-black text-white leading-tight">
               {saludo},<br />
               <span className="text-dorado">{usuario?.nombre ? usuario.nombre.split(' ')[0] : 'Apoderado'}</span>
             </h1>
-            <p className="mt-2 text-white/55 text-sm">
+            <p className="mt-1.5 text-white/55 text-sm">
               {hijos.length === 1
                 ? <>Apoderado de <span className="font-semibold text-white/80">{hijos[0].nombre}</span></>
                 : hijos.length > 1
@@ -468,7 +468,7 @@ export default function Inicio() {
             </p>
             <button
               onClick={() => nav('/apoderado/asistencias')}
-              className="mt-5 inline-flex items-center gap-2 bg-dorado text-marino text-sm font-bold px-5 py-2.5 rounded-xl hover:brightness-110 transition-all shadow-lg shadow-dorado/20"
+              className="mt-3 inline-flex items-center gap-2 bg-dorado text-marino text-sm font-bold px-4 py-2 rounded-xl hover:brightness-110 transition-all shadow-lg shadow-dorado/20"
             >
               Ver asistencias <ChevronRight size={14} />
             </button>

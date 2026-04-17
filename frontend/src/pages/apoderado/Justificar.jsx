@@ -1,11 +1,11 @@
 import { useState, useEffect, useRef } from 'react'
 import {
   Paperclip, Send, CheckCircle2, XCircle, Clock,
-  AlertTriangle, X, FileText, Calendar, ChevronRight, ScanLine,
+  AlertTriangle, X, FileText, Calendar, ChevronRight, ScanLine, Camera,
 } from 'lucide-react'
 import api from '../../lib/api'
 import toast from 'react-hot-toast'
-import { scanDocument, esNativo } from '../../lib/documentScanner'
+import { scanDocument, takePhoto, compressImage, esNativo } from '../../lib/documentScanner'
 import {
   format, parseISO,
   eachDayOfInterval, startOfMonth, getDay,
@@ -13,12 +13,16 @@ import {
 import { es } from 'date-fns/locale'
 import { useHijo } from '../../context/HijoContext'
 
+const MAX_BYTES     = 10 * 1024 * 1024
+const MIMES_VALIDOS = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp', 'image/jpg']
+
 // ── Modal de justificación ────────────────────────────────────────────────────
 function ModalJustificar({ falta, hijoId, onCerrar, onEnviado }) {
   const [motivo, setMotivo]     = useState('')
   const [adjunto, setAdjunto]   = useState(null)
-  const [enviando, setEnviando] = useState(false)
+  const [enviando, setEnviando]   = useState(false)
   const [escaneando, setEscaneando] = useState(false)
+  const [tomando, setTomando]     = useState(false)
   const fileRef = useRef()
 
   const handleEscanear = async () => {
@@ -33,11 +37,27 @@ function ModalJustificar({ falta, hijoId, onCerrar, onEnviado }) {
     }
   }
 
+  const handleTomarFoto = async () => {
+    setTomando(true)
+    try {
+      const { file } = await takePhoto()
+      setAdjunto(file)
+    } catch (err) {
+      if (err?.code !== 'CANCELLED') toast.error('No se pudo acceder a la cámara')
+    } finally {
+      setTomando(false)
+    }
+  }
+
   const esTardanza = falta.tipo === 'tardanza'
 
   const handleEnviar = async (e) => {
     e.preventDefault()
     if (!motivo.trim()) return toast.error('El motivo es obligatorio')
+    if (adjunto && adjunto.size > MAX_BYTES)
+      return toast.error('El archivo supera el límite de 10 MB')
+    if (adjunto && !MIMES_VALIDOS.includes(adjunto.type))
+      return toast.error('Solo se permiten PDF e imágenes (JPG, PNG, WEBP)')
     setEnviando(true)
     try {
       const formData = new FormData()
@@ -138,12 +158,12 @@ function ModalJustificar({ falta, hijoId, onCerrar, onEnviado }) {
                 </button>
               </div>
             ) : esNativo ? (
-              /* Nativo: botón principal escanear + opción galería */
+              /* Nativo: escanear + tomar foto + galería/archivos */
               <div className="space-y-2">
                 <button
                   type="button"
                   onClick={handleEscanear}
-                  disabled={escaneando}
+                  disabled={escaneando || tomando}
                   className="w-full flex items-center gap-3 bg-marino/5 hover:bg-marino/10 border-2 border-marino/20 hover:border-marino/40 rounded-xl px-4 py-3.5 transition-colors group"
                 >
                   <div className="w-9 h-9 bg-marino rounded-xl flex items-center justify-center flex-shrink-0">
@@ -161,7 +181,27 @@ function ModalJustificar({ falta, hijoId, onCerrar, onEnviado }) {
                 </button>
                 <button
                   type="button"
+                  onClick={handleTomarFoto}
+                  disabled={escaneando || tomando}
+                  className="w-full flex items-center gap-3 bg-dorado/5 hover:bg-dorado/10 border-2 border-dorado/20 hover:border-dorado/40 rounded-xl px-4 py-3.5 transition-colors group"
+                >
+                  <div className="w-9 h-9 bg-dorado rounded-xl flex items-center justify-center flex-shrink-0">
+                    {tomando
+                      ? <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      : <Camera size={16} className="text-white" />
+                    }
+                  </div>
+                  <div className="text-left">
+                    <p className="text-xs font-bold text-dorado">
+                      {tomando ? 'Abriendo cámara...' : 'Tomar foto'}
+                    </p>
+                    <p className="text-[10px] text-dorado/60">Captura directa con la cámara del dispositivo</p>
+                  </div>
+                </button>
+                <button
+                  type="button"
                   onClick={() => fileRef.current?.click()}
+                  disabled={escaneando || tomando}
                   className="w-full flex items-center gap-2 px-4 py-2 rounded-xl hover:bg-gray-50 transition-colors"
                 >
                   <Paperclip size={13} className="text-gray-400" />
@@ -189,7 +229,12 @@ function ModalJustificar({ falta, hijoId, onCerrar, onEnviado }) {
               type="file"
               className="hidden"
               accept="image/*,application/pdf"
-              onChange={(e) => setAdjunto(e.target.files[0] || null)}
+              onChange={async (e) => {
+                const raw = e.target.files[0]
+                if (!raw) return setAdjunto(null)
+                const file = await compressImage(raw)
+                setAdjunto(file)
+              }}
             />
           </div>
 

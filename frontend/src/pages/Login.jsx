@@ -51,6 +51,11 @@ export default function Login() {
 
       setExitoNombre(usuario.nombre || '')
       setExito(true)
+      // Cierra el teclado antes de navegar para evitar que el layout
+      // llegue al dashboard con el viewport encogido
+      if (window.Capacitor?.isNativePlatform?.()) {
+        import('@capacitor/keyboard').then(({ Keyboard }) => Keyboard.hide()).catch(() => {})
+      }
       setTimeout(() => nav(obtenerRutaPorRol(usuario.rol)), 1500)
     } catch (err) {
       localStorage.removeItem('token')
@@ -110,7 +115,7 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen flex">
+    <div className="min-h-screen flex" style={{ backgroundColor: '#0a1f3d' }}>
 
       {/* ── Panel izquierdo (solo desktop) ─────────────────────────────── */}
       <div
@@ -194,7 +199,7 @@ export default function Login() {
         </div>
 
         {/* ── Formulario ── */}
-        <div className="flex-1 flex flex-col justify-center px-7 sm:px-12 py-8">
+        <div className="flex-1 flex flex-col justify-start px-7 sm:px-12 pt-8 pb-4">
           <div className="max-w-sm w-full mx-auto">
 
             {/* Logo desktop — encima del formulario */}

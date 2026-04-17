@@ -53,11 +53,12 @@
        Esto hace que TODOS los tamaños rem de Tailwind escalen
        proporcionalmente sin tocar cada componente. */
     font-size: clamp(14px, 3.8vw, 16px);
-    padding-top: env(safe-area-inset-top);
-    padding-bottom: env(safe-area-inset-bottom);
     -webkit-tap-highlight-color: transparent;
     -webkit-text-size-adjust: 100%;
     overscroll-behavior: none;
+    /* Fondo marino: cuando el WebView hace overscroll (bounce de Android)
+       el área que asoma arriba/abajo coincide con el color del header */
+    background-color: #0a1f3d;
   }
   body {
     @apply bg-crema text-gray-900 antialiased;
@@ -249,6 +250,13 @@
 
 /* ── UTILITIES ────────────────────────────────────────────────────────── */
 @layer utilities {
+  /* Modal bottom sheet: en móvil sube el panel por encima del bottom nav */
+  @media (max-width: 639px) {
+    .modal-nav-offset {
+      padding-bottom: calc(var(--nav-h) + env(safe-area-inset-bottom, 0px));
+    }
+  }
+
   .scrollbar-none::-webkit-scrollbar { display: none; }
   .scrollbar-none { -ms-overflow-style: none; scrollbar-width: none; }
 

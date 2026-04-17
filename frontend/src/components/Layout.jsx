@@ -681,7 +681,7 @@ export default function Layout() {
           {bottomNav && (
             <div
               className="lg:hidden"
-              style={{ height: 'calc(var(--nav-h) + env(safe-area-inset-bottom, 0px) + 0.5rem)' }}
+              style={{ height: 'calc(var(--nav-h) + env(safe-area-inset-bottom, 0px) + 1rem)' }}
               aria-hidden="true"
             />
           )}

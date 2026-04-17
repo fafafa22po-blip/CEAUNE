@@ -8,6 +8,11 @@
     "allowNavigation": ["*"]
   },
   "plugins": {
+    "StatusBar": {
+      "style": "LIGHT",
+      "backgroundColor": "#0a1f3d",
+      "overlaysWebView": false
+    },
     "SplashScreen": {
       "launchShowDuration": 0,
       "launchAutoHide": false,
@@ -25,9 +30,9 @@
       "iconColor": "#0a1f3d"
     },
     "Keyboard": {
-      "resize": "body",
+      "resize": "none",
       "style": "dark",
-      "resizeOnFullScreen": true
+      "resizeOnFullScreen": false
     }
   }
 }
