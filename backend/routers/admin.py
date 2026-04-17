@@ -433,6 +433,192 @@ def desvincular_hijo(
 
 
 # ---------------------------------------------------------------------------
+# APODERADOS — importación masiva Excel
+# ---------------------------------------------------------------------------
+
+@router.get("/apoderados/plantilla-excel")
+def plantilla_apoderados(
+    current_user: Usuario = Depends(require_roles("admin")),
+):
+    from io import BytesIO
+    import openpyxl
+    from openpyxl.styles import Alignment, Font, PatternFill
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Apoderados"
+
+    fill_hdr = PatternFill(start_color="1E3A5F", end_color="1E3A5F", fill_type="solid")
+    font_hdr = Font(color="FFFFFF", bold=True)
+    headers  = ["DNI", "Nombre", "Apellido", "Email", "Telefono"]
+    widths   = [12, 20, 25, 30, 14]
+
+    for col, h in enumerate(headers, 1):
+        cell = ws.cell(row=1, column=col, value=h)
+        cell.fill = fill_hdr
+        cell.font = font_hdr
+        cell.alignment = Alignment(horizontal="center")
+    for col, w in enumerate(widths, 1):
+        ws.column_dimensions[ws.cell(row=1, column=col).column_letter].width = w
+
+    ws_n = wb.create_sheet("Instrucciones")
+    fill_t = PatternFill(start_color="1E3A5F", end_color="1E3A5F", fill_type="solid")
+    instrucciones = [
+        ["Campo",     "Qué escribir"],
+        ["DNI",       "8 dígitos numéricos  (ej: 12345678)"],
+        ["Nombre",    "Nombre(s) del apoderado"],
+        ["Apellido",  "Apellido paterno y materno"],
+        ["Email",     "Correo electrónico único — se usa para iniciar sesión"],
+        ["Telefono",  "Número de 9 dígitos sin prefijo  (ej: 987654321)  — opcional"],
+        ["", ""],
+        ["NOTA", "La contraseña inicial será el DNI del apoderado. Puede cambiarla después."],
+    ]
+    for i, fila in enumerate(instrucciones, 1):
+        for col, val in enumerate(fila, 1):
+            cell = ws_n.cell(row=i, column=col, value=val)
+            if i == 1:
+                cell.fill = fill_t
+                cell.font = Font(color="FFFFFF", bold=True)
+    ws_n.column_dimensions["A"].width = 12
+    ws_n.column_dimensions["B"].width = 55
+
+    buf = BytesIO()
+    wb.save(buf)
+    buf.seek(0)
+    from fastapi.responses import StreamingResponse
+    return StreamingResponse(
+        buf,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": "attachment; filename=plantilla_apoderados.xlsx"},
+    )
+
+
+@router.post("/apoderados/importar-excel")
+async def importar_apoderados_excel(
+    archivo: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(require_roles("admin")),
+):
+    from io import BytesIO
+    import openpyxl
+
+    ext = (archivo.filename or "").rsplit(".", 1)[-1].lower()
+    if ext not in ("xlsx", "xls"):
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Solo se aceptan archivos .xlsx o .xls")
+
+    contenido = await archivo.read()
+    if not contenido:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "El archivo está vacío")
+    if len(contenido) > 5 * 1024 * 1024:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "El archivo supera 5 MB")
+
+    try:
+        wb  = openpyxl.load_workbook(BytesIO(contenido), read_only=True, data_only=True)
+        ws  = wb.active
+        rows = list(ws.iter_rows(values_only=True))
+    except Exception:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "No se pudo leer el archivo Excel")
+
+    if len(rows) < 2:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "El archivo no tiene datos")
+
+    raw_headers = [str(c).strip().lower() if c is not None else "" for c in rows[0]]
+    ALIASES = {
+        "dni":      ["dni"],
+        "nombre":   ["nombre"],
+        "apellido": ["apellido"],
+        "email":    ["email", "correo"],
+        "telefono": ["telefono", "teléfono", "cel", "celular"],
+    }
+    col_idx: dict = {}
+    for field, aliases in ALIASES.items():
+        for alias in aliases:
+            if alias in raw_headers:
+                col_idx[field] = raw_headers.index(alias)
+                break
+
+    missing = [f for f in ("dni", "nombre", "apellido", "email") if f not in col_idx]
+    if missing:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST,
+            f"Columnas faltantes: {', '.join(missing)}. Descarga la plantilla.")
+
+    def _get(row, field):
+        idx = col_idx.get(field)
+        if idx is None or idx >= len(row): return ""
+        v = row[idx]
+        return str(v).strip() if v is not None else ""
+
+    importados = 0
+    omitidos   = 0
+    errores    = []
+    dni_batch  = {}
+
+    for row_num, row in enumerate(rows[1:], start=2):
+        if all(c is None or str(c).strip() == "" for c in row):
+            continue
+
+        dni      = _get(row, "dni")
+        nombre   = _get(row, "nombre")
+        apellido = _get(row, "apellido")
+        email    = _get(row, "email").lower()
+        telefono = _get(row, "telefono") or None
+
+        def _err(msg):
+            errores.append({"fila": row_num, **({"dni": dni} if dni else {}), "motivo": msg})
+
+        if not dni:      _err("DNI vacío");      omitidos += 1; continue
+        if not nombre:   _err("Nombre vacío");   omitidos += 1; continue
+        if not apellido: _err("Apellido vacío"); omitidos += 1; continue
+        if not email:    _err("Email vacío");    omitidos += 1; continue
+
+        # Normalizar DNI (Excel puede traer float)
+        if "." in dni:
+            dni = dni.split(".")[0]
+        if not dni.isdigit() or len(dni) != 8:
+            _err(f"DNI inválido '{dni}' (debe ser 8 dígitos)"); omitidos += 1; continue
+
+        if "@" not in email or "." not in email.split("@")[-1]:
+            _err(f"Email inválido '{email}'"); omitidos += 1; continue
+
+        # Teléfono: limpiar y normalizar
+        if telefono:
+            tel_num = re.sub(r'[^0-9]', '', telefono.split(".")[0])
+            telefono = tel_num if tel_num else None
+
+        if dni in dni_batch:
+            _err(f"DNI duplicado en el archivo (fila {dni_batch[dni]})"); omitidos += 1; continue
+        dni_batch[dni] = row_num
+
+        if db.query(Usuario).filter(Usuario.dni == dni).first():
+            _err(f"DNI ya registrado"); omitidos += 1; continue
+        if db.query(Usuario).filter(Usuario.email == email).first():
+            _err(f"Email ya registrado"); omitidos += 1; continue
+
+        try:
+            db.add(Usuario(
+                dni=dni,
+                nombre=nombre,
+                apellido=apellido,
+                email=email,
+                password_hash=get_password_hash(dni),
+                rol="apoderado",
+                telefono=telefono,
+                activo=True,
+            ))
+            db.flush()
+            importados += 1
+        except Exception as exc:
+            _err(f"Error al crear: {exc}"); omitidos += 1
+
+    if importados:
+        db.commit()
+    else:
+        db.rollback()
+
+    return {"importados": importados, "omitidos": omitidos, "errores": errores}
+
+
+# ---------------------------------------------------------------------------
 # HORARIOS
 # ---------------------------------------------------------------------------
 

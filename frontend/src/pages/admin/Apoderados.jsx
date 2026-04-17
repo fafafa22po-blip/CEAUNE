@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useMemo } from 'react'
 import {
   Search, Plus, X, RefreshCw, Pencil, Key, UserMinus, UserPlus,
   Link2, Unlink, UserCheck, Phone, PhoneOff, Mail, Copy, RotateCcw,
-  GraduationCap,
+  GraduationCap, FileDown, Upload, CheckCircle, XCircle, AlertTriangle,
 } from 'lucide-react'
 import api from '../../lib/api'
 import toast from 'react-hot-toast'
@@ -250,6 +250,40 @@ export default function Apoderados() {
   const [buscandoEst, setBuscandoEst]       = useState(false)
   const [vinculando, setVinculando]         = useState(null)
   const [desvinculando, setDesvinculando]   = useState(null)
+  const [importando, setImportando]         = useState(false)
+  const [modalResultados, setModalResultados] = useState(null)
+  const fileRef = useRef()
+
+  const descargarPlantilla = async () => {
+    try {
+      const resp = await api.get('/admin/apoderados/plantilla-excel', { responseType: 'blob' })
+      const url = URL.createObjectURL(new Blob([resp.data]))
+      const a = document.createElement('a')
+      a.href = url
+      a.download = 'plantilla_apoderados.xlsx'
+      document.body.appendChild(a); a.click(); document.body.removeChild(a)
+    } catch { toast.error('No se pudo descargar la plantilla') }
+  }
+
+  const handleImportar = async (e) => {
+    const archivo = e.target.files[0]
+    if (!archivo) return
+    setImportando(true)
+    try {
+      const formData = new FormData()
+      formData.append('archivo', archivo)
+      const { data } = await api.post('/admin/apoderados/importar-excel', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      })
+      setModalResultados(data)
+      if (data.importados > 0) cargar()
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Error al importar el archivo')
+    } finally {
+      setImportando(false)
+      e.target.value = ''
+    }
+  }
 
   // ── Carga principal ───────────────────────────────────────────────────
   const cargar = async () => {
@@ -424,10 +458,18 @@ export default function Apoderados() {
             </p>
           )}
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           <button onClick={cargar} className="btn-secondary flex items-center gap-2 text-sm">
             <RefreshCw size={14} /> Actualizar
           </button>
+          <button onClick={descargarPlantilla} className="btn-secondary flex items-center gap-2 text-sm">
+            <FileDown size={14} /> Plantilla
+          </button>
+          <label className={`btn-secondary flex items-center gap-2 text-sm cursor-pointer ${importando ? 'opacity-50 pointer-events-none' : ''}`}>
+            <Upload size={14} />
+            {importando ? 'Subiendo...' : 'Subir Excel'}
+            <input ref={fileRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={handleImportar} />
+          </label>
           <button onClick={() => setModalNuevo(true)} className="btn-primary flex items-center gap-2 text-sm">
             <Plus size={14} /> Nuevo apoderado
           </button>
@@ -888,6 +930,53 @@ export default function Apoderados() {
           onGestionarHijos={(apo) => abrirHijos(apo)}
         />
       )}
+
+      {/* Modal resultados importación */}
+      {modalResultados && (() => {
+        const { importados, omitidos, errores } = modalResultados
+        const exito   = importados > 0 && errores.length === 0
+        const parcial = importados > 0 && errores.length > 0
+        return (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-2xl p-6 max-w-lg w-full max-h-[85vh] flex flex-col">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  {exito   && <CheckCircle size={22} className="text-emerald-500" />}
+                  {parcial && <AlertTriangle size={22} className="text-amber-500" />}
+                  {!exito && !parcial && <XCircle size={22} className="text-red-500" />}
+                  <h3 className="font-bold text-gray-800">
+                    {exito ? 'Importación completada' : parcial ? 'Importación con advertencias' : 'Importación fallida'}
+                  </h3>
+                </div>
+                <button onClick={() => setModalResultados(null)} className="text-gray-400 hover:text-gray-600"><X size={18} /></button>
+              </div>
+              <div className="flex gap-4 mb-4">
+                <div className="flex-1 bg-emerald-50 rounded-xl p-3 text-center">
+                  <p className="text-2xl font-bold text-emerald-600">{importados}</p>
+                  <p className="text-xs text-emerald-500">importados</p>
+                </div>
+                <div className="flex-1 bg-red-50 rounded-xl p-3 text-center">
+                  <p className="text-2xl font-bold text-red-500">{omitidos}</p>
+                  <p className="text-xs text-red-400">omitidos</p>
+                </div>
+              </div>
+              {errores.length > 0 && (
+                <div className="overflow-y-auto flex-1 space-y-1.5 mb-4">
+                  {errores.map((e, i) => (
+                    <div key={i} className="bg-red-50 rounded-lg px-3 py-2 text-xs text-red-700">
+                      <span className="font-semibold">Fila {e.fila}{e.dni ? ` (${e.dni})` : ''}: </span>{e.motivo}
+                    </div>
+                  ))}
+                </div>
+              )}
+              <p className="text-xs text-gray-400 mb-3">
+                La contraseña inicial de cada apoderado importado es su DNI.
+              </p>
+              <button onClick={() => setModalResultados(null)} className="btn-primary w-full">Cerrar</button>
+            </div>
+          </div>
+        )
+      })()}
 
     </div>
   )

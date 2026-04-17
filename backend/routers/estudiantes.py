@@ -60,48 +60,110 @@ def listar(
 
 @router.get("/plantilla-excel")
 def descargar_plantilla(
+    nivel: Optional[str] = Query(None, description="inicial | primaria | secundaria"),
     current_user: Usuario = Depends(require_roles("admin")),
 ):
     from io import BytesIO
-
     import openpyxl
     from openpyxl.styles import Alignment, Font, PatternFill
+    from openpyxl.worksheet.datavalidation import DataValidation
+
+    AULAS_INICIAL_T = {
+        "2": ["Amarilla"],
+        "3": ["Crema", "Blanca"],
+        "4": ["Verde Limon", "Rosada"],
+        "5": ["Celeste", "Lila"],
+    }
+    COLORES_HEADER = {
+        "inicial": "2D7A3A", "primaria": "1A5EA8", "secundaria": "6B3FA0",
+    }
 
     wb = openpyxl.Workbook()
     ws = wb.active
     ws.title = "Estudiantes"
 
-    headers = ["DNI", "Nombre", "Apellido", "Nivel", "Grado", "Seccion"]
-    fill = PatternFill(start_color="1E3A5F", end_color="1E3A5F", fill_type="solid")
+    color = COLORES_HEADER.get(nivel, "1E3A5F")
+    fill_hdr = PatternFill(start_color=color, end_color=color, fill_type="solid")
     font_hdr = Font(color="FFFFFF", bold=True)
+    aln_c    = Alignment(horizontal="center")
+
+    # Encabezados sin columna Nivel — el nivel se pasa como param al importar
+    if nivel == "inicial":
+        headers = ["DNI", "Nombre", "Apellido", "Edad", "Aula"]
+        widths  = [12, 20, 25, 8, 16]
+    else:
+        headers = ["DNI", "Nombre", "Apellido", "Grado", "Seccion"]
+        widths  = [12, 20, 25, 8, 12]
+
     for col, h in enumerate(headers, 1):
         cell = ws.cell(row=1, column=col, value=h)
-        cell.fill = fill
+        cell.fill = fill_hdr
         cell.font = font_hdr
-        cell.alignment = Alignment(horizontal="center")
-
-    for col, w in enumerate([12, 20, 25, 15, 8, 10], 1):
+        cell.alignment = aln_c
+    for col, w in enumerate(widths, 1):
         ws.column_dimensions[ws.cell(row=1, column=col).column_letter].width = w
 
-    ws_n = wb.create_sheet("Notas")
-    for fila in [
-        ["Campo", "Valores válidos"],
-        ["DNI", "8 dígitos numéricos exactos"],
-        ["Nivel", "inicial | primaria | secundaria"],
-        ["Grado (inicial)", "3, 4 o 5"],
-        ["Grado (primaria)", "1, 2, 3, 4, 5 o 6"],
-        ["Grado (secundaria)", "1, 2, 3, 4 o 5"],
-        ["Seccion", "A, B, C, D o E"],
-    ]:
-        ws_n.append(fila)
+    # Dropdowns según nivel
+    if nivel == "inicial":
+        dv_edad = DataValidation(type="list", formula1='"2,3,4,5"', allow_blank=True)
+        dv_edad.sqref = "D2:D501"
+        ws.add_data_validation(dv_edad)
+        todos_colores = [c for cols in AULAS_INICIAL_T.values() for c in cols]
+        dv_aula = DataValidation(type="list", formula1='"{}"'.format(",".join(todos_colores)), allow_blank=True)
+        dv_aula.sqref = "E2:E501"
+        ws.add_data_validation(dv_aula)
+    elif nivel == "primaria":
+        dv_g = DataValidation(type="list", formula1='"1,2,3,4,5,6"', allow_blank=True)
+        dv_g.sqref = "D2:D501"
+        ws.add_data_validation(dv_g)
+        dv_s = DataValidation(type="list", formula1='"A,B,C"', allow_blank=True)
+        dv_s.sqref = "E2:E501"
+        ws.add_data_validation(dv_s)
+    elif nivel == "secundaria":
+        dv_g = DataValidation(type="list", formula1='"1,2,3,4,5"', allow_blank=True)
+        dv_g.sqref = "D2:D501"
+        ws.add_data_validation(dv_g)
+        dv_s = DataValidation(type="list", formula1='"A,B,C,D,E"', allow_blank=True)
+        dv_s.sqref = "E2:E501"
+        ws.add_data_validation(dv_s)
 
+    # Hoja instrucciones
+    ws_n = wb.create_sheet("Instrucciones")
+    fill_t = PatternFill(start_color=color, end_color=color, fill_type="solid")
+    rows_inst = [["Campo", "Qué escribir"]]
+    rows_inst.append(["DNI", "8 dígitos numéricos  (ej: 12345678)"])
+    rows_inst.append(["Nombre", "Solo el nombre del estudiante"])
+    rows_inst.append(["Apellido", "Apellido paterno y materno"])
+    if nivel == "inicial":
+        rows_inst.append(["Edad", "2, 3, 4 o 5  (años de edad)"])
+        rows_inst.append(["Aula", "Nombre del color del aula:"])
+        for g, cols in AULAS_INICIAL_T.items():
+            rows_inst.append([f"  · {g} años", "  →  " + "  ó  ".join(cols)])
+    elif nivel == "primaria":
+        rows_inst.append(["Grado", "1, 2, 3, 4, 5 o 6"])
+        rows_inst.append(["Seccion", "A o B  (grados 1°,2°,3°,6°)"])
+        rows_inst.append(["Seccion", "A, B o C  (grados 4° y 5°)"])
+    elif nivel == "secundaria":
+        rows_inst.append(["Grado", "1, 2, 3, 4 o 5"])
+        rows_inst.append(["Seccion", "A, B, C, D o E"])
+
+    for i, fila in enumerate(rows_inst, 1):
+        for col, val in enumerate(fila, 1):
+            cell = ws_n.cell(row=i, column=col, value=val)
+            if i == 1:
+                cell.fill = fill_t
+                cell.font = Font(color="FFFFFF", bold=True)
+    ws_n.column_dimensions["A"].width = 20
+    ws_n.column_dimensions["B"].width = 42
+
+    nombre_archivo = f"plantilla_{nivel}.xlsx" if nivel else "plantilla_estudiantes.xlsx"
     buf = BytesIO()
     wb.save(buf)
     buf.seek(0)
     return StreamingResponse(
         buf,
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        headers={"Content-Disposition": "attachment; filename=plantilla_estudiantes.xlsx"},
+        headers={"Content-Disposition": f"attachment; filename={nombre_archivo}"},
     )
 
 
@@ -112,6 +174,7 @@ def descargar_plantilla(
 @router.post("/importar-excel")
 async def importar_excel(
     archivo: UploadFile = File(...),
+    nivel_param: Optional[str] = Query(None, alias="nivel"),
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(require_roles("admin")),
 ):
@@ -121,11 +184,26 @@ async def importar_excel(
 
     NIVELES_VALIDOS = {"inicial", "primaria", "secundaria"}
     GRADOS_POR_NIVEL_MAP = {
-        "inicial":    {"3", "4", "5"},
+        "inicial":    {"2", "3", "4", "5"},
         "primaria":   {"1", "2", "3", "4", "5", "6"},
         "secundaria": {"1", "2", "3", "4", "5"},
     }
-    SECCIONES_VALIDAS = {"A", "B", "C", "D", "E"}
+    # Aulas inicial: letra → nombre de color (acepta ambos en el Excel)
+    AULAS_INICIAL = {
+        "2": ["Amarilla"],
+        "3": ["Crema", "Blanca"],
+        "4": ["Verde Limon", "Rosada"],
+        "5": ["Celeste", "Lila"],
+    }
+    SECCIONES_PRIMARIA = {
+        "1": {"A", "B"},
+        "2": {"A", "B"},
+        "3": {"A", "B"},
+        "4": {"A", "B", "C"},
+        "5": {"A", "B", "C"},
+        "6": {"A", "B"},
+    }
+    SECCIONES_SECUNDARIA = {"A", "B", "C", "D", "E"}
 
     # Validar extensión
     ext = (archivo.filename or "").rsplit(".", 1)[-1].lower()
@@ -162,8 +240,8 @@ async def importar_excel(
         "nombre":   ["nombre"],
         "apellido": ["apellido"],
         "nivel":    ["nivel"],
-        "grado":    ["grado"],
-        "seccion":  ["seccion", "sección"],
+        "grado":    ["grado", "edad"],
+        "seccion":  ["seccion", "sección", "aula"],
         "foto_url": ["foto_url", "foto url", "foto"],
     }
     col_idx: dict = {}
@@ -173,7 +251,13 @@ async def importar_excel(
                 col_idx[field] = raw_headers.index(alias)
                 break
 
-    missing = [f for f in ("dni", "nombre", "apellido", "nivel", "grado", "seccion") if f not in col_idx]
+    # nivel puede venir como columna en el Excel O como parámetro de la URL
+    tiene_col_nivel = "nivel" in col_idx
+    if not tiene_col_nivel and not nivel_param:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Falta indicar el nivel (inicial, primaria o secundaria)")
+
+    campos_req = ["dni", "nombre", "apellido", "grado", "seccion"]
+    missing = [f for f in campos_req if f not in col_idx]
     if missing:
         raise HTTPException(
             status.HTTP_400_BAD_REQUEST,
@@ -201,7 +285,7 @@ async def importar_excel(
         dni       = _get(row, "dni")
         nombre    = _get(row, "nombre")
         apellido  = _get(row, "apellido")
-        nivel     = _get(row, "nivel").lower()
+        nivel     = (_get(row, "nivel").lower() if tiene_col_nivel else (nivel_param or "")).lower().strip()
         grado_raw = _get(row, "grado")
         sec_raw   = _get(row, "seccion")
         foto_url  = _get(row, "foto_url") or None
@@ -226,16 +310,38 @@ async def importar_excel(
         if nivel not in NIVELES_VALIDOS:
             _err(f"Nivel inválido '{nivel}' (válidos: inicial, primaria, secundaria)"); omitidos += 1; continue
 
-        # Normalizar grado (elimina ordinales: "5to" → "5", "1er" → "1")
-        grado = re.sub(r'(?i)(er|ro|do|to|vo|mo|th|st|nd)$', '', grado_raw.strip()).strip()
-        if "." in grado:
-            grado = grado.split(".")[0]
+        # Normalizar grado: extraer solo el número (maneja "2", 2, 2.0, "2to", etc.)
+        grado_num = re.sub(r'[^0-9]', '', grado_raw.split(".")[0].strip())
+        grado = grado_num if grado_num else grado_raw.strip()
         if grado not in GRADOS_POR_NIVEL_MAP.get(nivel, set()):
-            _err(f"Grado '{grado}' no es válido para nivel '{nivel}'"); omitidos += 1; continue
+            _err(f"Edad/Grado '{grado_raw}' no válido para {nivel} (válidos: {', '.join(sorted(GRADOS_POR_NIVEL_MAP.get(nivel, set())))})")
+            omitidos += 1; continue
 
-        seccion = sec_raw.upper()
-        if seccion not in SECCIONES_VALIDAS:
-            _err(f"Sección '{seccion}' inválida (válidas: A-E)"); omitidos += 1; continue
+        # Validar aula/sección según nivel
+        if nivel == "inicial":
+            colores = AULAS_INICIAL.get(grado, [])
+            letras_validas = [chr(65 + i) for i in range(len(colores))]
+            # normalizar: quitar espacios extra, comparar sin tildes ni mayúsculas
+            sec_norm = " ".join(sec_raw.strip().split())
+            if sec_norm.upper() in letras_validas:
+                seccion = sec_norm.upper()
+            elif sec_norm.lower() in [c.lower() for c in colores]:
+                seccion = letras_validas[[c.lower() for c in colores].index(sec_norm.lower())]
+            else:
+                validas_str = " | ".join(f"{l}={c}" for l, c in zip(letras_validas, colores))
+                _err(f"Aula '{sec_raw}' inválida para {grado} años. Válidas: {validas_str}")
+                omitidos += 1; continue
+        elif nivel == "primaria":
+            seccion = sec_raw.strip().upper()
+            validas = SECCIONES_PRIMARIA.get(grado, set())
+            if seccion not in validas:
+                _err(f"Sección '{seccion}' inválida para {grado}° primaria (válidas: {', '.join(sorted(validas))})")
+                omitidos += 1; continue
+        else:
+            seccion = sec_raw.strip().upper()
+            if seccion not in SECCIONES_SECUNDARIA:
+                _err(f"Sección '{seccion}' inválida (válidas: A, B, C, D, E)")
+                omitidos += 1; continue
 
         # Duplicado dentro del mismo archivo
         if dni in dni_batch:

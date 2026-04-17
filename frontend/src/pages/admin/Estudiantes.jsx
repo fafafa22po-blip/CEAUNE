@@ -172,16 +172,18 @@ export default function Estudiantes() {
   const hayFiltros = filtroNivel || filtroGrado || filtroSeccion
   const filtroCompleto = filtroNivel && filtroGrado && filtroSeccion
 
-  const handleImportar = async (e) => {
+  const handleImportar = async (e, nivelImport) => {
     const archivo = e.target.files[0]
     if (!archivo) return
     setImportando(true)
     try {
       const formData = new FormData()
       formData.append('archivo', archivo)
-      const { data } = await api.post('/estudiantes/importar-excel', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      })
+      const { data } = await api.post(
+        `/estudiantes/importar-excel?nivel=${nivelImport}`,
+        formData,
+        { headers: { 'Content-Type': 'multipart/form-data' } }
+      )
       setModalResultados(data)
       if (data.importados > 0) cargar()
     } catch (err) {
@@ -192,13 +194,19 @@ export default function Estudiantes() {
     }
   }
 
-  const descargarPlantilla = async () => {
+  const [modalPlantilla, setModalPlantilla] = useState(false)
+  const [modalImportarNivel, setModalImportarNivel] = useState(false)
+  const nivelImportRef = useRef(null)
+
+  const descargarPlantilla = async (nivel) => {
+    setModalPlantilla(false)
     try {
-      const resp = await api.get('/estudiantes/plantilla-excel', { responseType: 'blob' })
+      const params = nivel ? `?nivel=${nivel}` : ''
+      const resp = await api.get(`/estudiantes/plantilla-excel${params}`, { responseType: 'blob' })
       const url = URL.createObjectURL(new Blob([resp.data]))
       const a = document.createElement('a')
       a.href = url
-      a.download = 'plantilla_estudiantes.xlsx'
+      a.download = nivel ? `plantilla_${nivel}.xlsx` : 'plantilla_estudiantes.xlsx'
       document.body.appendChild(a)
       a.click()
       document.body.removeChild(a)
@@ -412,16 +420,20 @@ export default function Estudiantes() {
             <Printer size={14} /> Imprimir Carnets
           </button>
           <button
-            onClick={descargarPlantilla}
+            onClick={() => setModalPlantilla(true)}
             className="btn-secondary flex items-center gap-2 text-sm"
           >
             <FileDown size={14} /> Plantilla
           </button>
-          <label className={`btn-secondary flex items-center gap-2 text-sm cursor-pointer ${importando ? 'opacity-50 pointer-events-none' : ''}`}>
+          <button
+            onClick={() => setModalImportarNivel(true)}
+            disabled={importando}
+            className={`btn-secondary flex items-center gap-2 text-sm ${importando ? 'opacity-50 pointer-events-none' : ''}`}
+          >
             <Upload size={14} />
             {importando ? 'Subiendo...' : 'Subir Excel'}
-            <input ref={fileRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={handleImportar} />
-          </label>
+          </button>
+          <input ref={fileRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={(e) => handleImportar(e, nivelImportRef.current)} />
           {!mostrarInactivos && (
             <button onClick={() => setModalNuevo(true)} className="btn-primary flex items-center gap-2 text-sm">
               <Plus size={14} /> Nuevo
@@ -1426,6 +1438,88 @@ export default function Estudiantes() {
               >
                 Reactivar
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal selección de nivel para importar */}
+      {modalImportarNivel && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 animate-fade-in">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm">
+            <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-gray-100">
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-widest text-marino/50 mb-0.5">Importar Excel</p>
+                <h3 className="font-bold text-gray-800 text-base">¿Qué nivel vas a subir?</h3>
+              </div>
+              <button onClick={() => setModalImportarNivel(false)} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors text-gray-400">
+                <X size={16} />
+              </button>
+            </div>
+            <div className="p-4 space-y-2.5">
+              {[
+                { nivel: 'inicial',    label: 'Inicial',    sub: 'Columnas: DNI, Nombre, Apellido, Edad, Aula',    color: 'hover:bg-green-50 hover:border-green-300',   badge: 'bg-green-100 text-green-700'   },
+                { nivel: 'primaria',   label: 'Primaria',   sub: 'Columnas: DNI, Nombre, Apellido, Grado, Seccion', color: 'hover:bg-blue-50 hover:border-blue-300',     badge: 'bg-blue-100 text-blue-700'     },
+                { nivel: 'secundaria', label: 'Secundaria', sub: 'Columnas: DNI, Nombre, Apellido, Grado, Seccion', color: 'hover:bg-purple-50 hover:border-purple-300', badge: 'bg-purple-100 text-purple-700' },
+              ].map(({ nivel, label, sub, color, badge }) => (
+                <button
+                  key={nivel}
+                  onClick={() => { nivelImportRef.current = nivel; setModalImportarNivel(false); fileRef.current.click() }}
+                  className={`w-full flex items-center gap-3 border border-gray-200 rounded-xl px-4 py-3 transition-colors text-left ${color}`}
+                >
+                  <div className={`text-[11px] font-bold px-2 py-0.5 rounded-full flex-shrink-0 ${badge}`}>{label}</div>
+                  <div>
+                    <p className="text-xs font-semibold text-gray-700">{label}</p>
+                    <p className="text-[10px] text-gray-400">{sub}</p>
+                  </div>
+                  <Upload size={14} className="ml-auto text-gray-300 flex-shrink-0" />
+                </button>
+              ))}
+            </div>
+            <div className="px-4 pb-4">
+              <button onClick={() => setModalImportarNivel(false)} className="btn-secondary w-full text-sm">Cancelar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal selección de plantilla por nivel */}
+      {modalPlantilla && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 animate-fade-in">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm">
+            <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-gray-100">
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-widest text-marino/50 mb-0.5">Excel</p>
+                <h3 className="font-bold text-gray-800 text-base">¿Para qué nivel?</h3>
+              </div>
+              <button onClick={() => setModalPlantilla(false)} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors text-gray-400">
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="p-4 space-y-2.5">
+              {[
+                { nivel: 'inicial',    label: 'Inicial',    sub: '2, 3, 4 y 5 años — aulas por color', color: 'hover:bg-green-50 hover:border-green-300', badge: 'bg-green-100 text-green-700' },
+                { nivel: 'primaria',   label: 'Primaria',   sub: '1° al 6° grado — secciones A, B, C', color: 'hover:bg-blue-50 hover:border-blue-300',  badge: 'bg-blue-100 text-blue-700'  },
+                { nivel: 'secundaria', label: 'Secundaria', sub: '1° al 5° año — secciones A hasta E',  color: 'hover:bg-purple-50 hover:border-purple-300', badge: 'bg-purple-100 text-purple-700' },
+              ].map(({ nivel, label, sub, color, badge }) => (
+                <button
+                  key={nivel}
+                  onClick={() => descargarPlantilla(nivel)}
+                  className={`w-full flex items-center gap-3 border border-gray-200 rounded-xl px-4 py-3 transition-colors text-left ${color}`}
+                >
+                  <div className={`text-[11px] font-bold px-2 py-0.5 rounded-full flex-shrink-0 ${badge}`}>{label}</div>
+                  <div>
+                    <p className="text-xs font-semibold text-gray-700">{label}</p>
+                    <p className="text-[10px] text-gray-400">{sub}</p>
+                  </div>
+                  <FileDown size={14} className="ml-auto text-gray-300 flex-shrink-0" />
+                </button>
+              ))}
+            </div>
+
+            <div className="px-4 pb-4">
+              <button onClick={() => setModalPlantilla(false)} className="btn-secondary w-full text-sm">Cancelar</button>
             </div>
           </div>
         </div>
