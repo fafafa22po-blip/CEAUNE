@@ -23,7 +23,21 @@ function ModalJustificar({ falta, hijoId, onCerrar, onEnviado }) {
   const [enviando, setEnviando]   = useState(false)
   const [escaneando, setEscaneando] = useState(false)
   const [tomando, setTomando]     = useState(false)
-  const fileRef = useRef()
+  const fileRef     = useRef()
+  const backdropRef = useRef(null)
+
+  // Bloquea touch events para que NO lleguen al pull-to-refresh del Layout
+  useEffect(() => {
+    const el = backdropRef.current
+    if (!el) return
+    const stop = e => e.stopPropagation()
+    el.addEventListener('touchstart', stop, { passive: true })
+    el.addEventListener('touchmove',  stop, { passive: true })
+    return () => {
+      el.removeEventListener('touchstart', stop)
+      el.removeEventListener('touchmove',  stop)
+    }
+  })
 
   const handleEscanear = async () => {
     setEscaneando(true)
@@ -80,20 +94,26 @@ function ModalJustificar({ falta, hijoId, onCerrar, onEnviado }) {
   const fecha = parseISO(falta.fecha)
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center animate-fade-in">
+    <div
+      ref={backdropRef}
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center animate-fade-in modal-nav-offset"
+    >
       {/* Backdrop */}
       <div className="absolute inset-0 bg-black/50" onClick={onCerrar} />
 
-      {/* Panel */}
-      <div className="relative bg-white w-full sm:max-w-md sm:rounded-2xl rounded-t-2xl shadow-2xl animate-slide-up sm:animate-in z-10">
-
+      {/* Panel — flex column con altura máxima para que el botón Enviar siempre sea visible */}
+      <div
+        className="relative bg-white w-full sm:max-w-md sm:rounded-2xl rounded-t-2xl shadow-2xl animate-slide-up sm:animate-in z-10 flex flex-col"
+        style={{ maxHeight: 'calc(90vh - var(--nav-h) - env(safe-area-inset-bottom, 0px))' }}
+        onClick={e => e.stopPropagation()}
+      >
         {/* Handle mobile */}
-        <div className="sm:hidden flex justify-center pt-3 pb-1">
+        <div className="sm:hidden flex justify-center pt-3 pb-1 flex-shrink-0">
           <div className="w-10 h-1 bg-gray-200 rounded-full" />
         </div>
 
-        {/* Header */}
-        <div className="flex items-start justify-between px-5 pt-4 pb-4 border-b border-gray-100">
+        {/* Header fijo */}
+        <div className="flex items-start justify-between px-5 pt-3 pb-4 border-b border-gray-100 flex-shrink-0">
           <div>
             <p className={`text-[11px] font-bold uppercase tracking-widest mb-1 ${esTardanza ? 'text-amber-500' : 'text-red-500'}`}>
               {esTardanza ? 'Justificar tardanza' : 'Justificar inasistencia'}
@@ -110,136 +130,140 @@ function ModalJustificar({ falta, hijoId, onCerrar, onEnviado }) {
           </button>
         </div>
 
-        {/* Form */}
-        <form onSubmit={handleEnviar} className="px-5 py-5 space-y-4">
+        {/* Form — contenido scrollable + botones fijos */}
+        <form onSubmit={handleEnviar} className="flex flex-col flex-1 overflow-hidden">
 
-          {/* Motivo */}
-          <div>
-            <label className="block text-xs font-semibold text-gray-600 mb-1.5">
-              {esTardanza ? 'Motivo de la tardanza' : 'Motivo de la inasistencia'}{' '}
-              <span className="text-red-500">*</span>
-            </label>
-            <textarea
-              className="input resize-none"
-              rows={4}
-              value={motivo}
-              onChange={(e) => setMotivo(e.target.value)}
-              placeholder={esTardanza
-                ? 'Ej: El estudiante tuvo cita médica por la mañana...'
-                : 'Ej: El estudiante presentó fiebre y fue al médico...'}
-              autoFocus
-            />
-          </div>
+          {/* Área scrollable */}
+          <div className="flex-1 overflow-y-auto px-5 pt-4 pb-2 space-y-4" style={{ overscrollBehavior: 'contain' }}>
 
-          {/* Adjunto */}
-          <div>
-            <label className="block text-xs font-semibold text-gray-600 mb-1.5">
-              Documento de respaldo{' '}
-              <span className="text-gray-400 font-normal">(opcional)</span>
-            </label>
+            {/* Motivo */}
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 mb-1.5">
+                {esTardanza ? 'Motivo de la tardanza' : 'Motivo de la inasistencia'}{' '}
+                <span className="text-red-500">*</span>
+              </label>
+              <textarea
+                className="input resize-none"
+                rows={3}
+                value={motivo}
+                onChange={(e) => setMotivo(e.target.value)}
+                placeholder={esTardanza
+                  ? 'Ej: El estudiante tuvo cita médica por la mañana...'
+                  : 'Ej: El estudiante presentó fiebre y fue al médico...'}
+              />
+            </div>
 
-            {adjunto ? (
-              <div className="flex items-center gap-3 bg-blue-50 border border-blue-200 rounded-xl px-4 py-3">
-                <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <FileText size={14} className="text-white" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-semibold text-blue-800 truncate">{adjunto.name}</p>
-                  <p className="text-[10px] text-blue-500 mt-0.5">
-                    {(adjunto.size / 1024).toFixed(0)} KB
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setAdjunto(null)}
-                  className="text-blue-400 hover:text-blue-600 transition-colors"
-                >
-                  <X size={14} />
-                </button>
-              </div>
-            ) : esNativo ? (
-              /* Nativo: escanear + tomar foto + galería/archivos */
-              <div className="space-y-2">
-                <button
-                  type="button"
-                  onClick={handleEscanear}
-                  disabled={escaneando || tomando}
-                  className="w-full flex items-center gap-3 bg-marino/5 hover:bg-marino/10 border-2 border-marino/20 hover:border-marino/40 rounded-xl px-4 py-3.5 transition-colors group"
-                >
-                  <div className="w-9 h-9 bg-marino rounded-xl flex items-center justify-center flex-shrink-0">
-                    {escaneando
-                      ? <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                      : <ScanLine size={16} className="text-white" />
-                    }
+            {/* Adjunto */}
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 mb-1.5">
+                Documento de respaldo{' '}
+                <span className="text-gray-400 font-normal">(opcional)</span>
+              </label>
+
+              {adjunto ? (
+                <div className="flex items-center gap-3 bg-blue-50 border border-blue-200 rounded-xl px-4 py-3">
+                  <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <FileText size={14} className="text-white" />
                   </div>
-                  <div className="text-left">
-                    <p className="text-xs font-bold text-marino">
-                      {escaneando ? 'Abriendo escáner...' : 'Escanear documento'}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-semibold text-blue-800 truncate">{adjunto.name}</p>
+                    <p className="text-[10px] text-blue-500 mt-0.5">
+                      {(adjunto.size / 1024).toFixed(0)} KB
                     </p>
-                    <p className="text-[10px] text-marino/60">Toma foto con efecto escaneo · multi-página PDF</p>
                   </div>
-                </button>
-                <button
-                  type="button"
-                  onClick={handleTomarFoto}
-                  disabled={escaneando || tomando}
-                  className="w-full flex items-center gap-3 bg-dorado/5 hover:bg-dorado/10 border-2 border-dorado/20 hover:border-dorado/40 rounded-xl px-4 py-3.5 transition-colors group"
-                >
-                  <div className="w-9 h-9 bg-dorado rounded-xl flex items-center justify-center flex-shrink-0">
-                    {tomando
-                      ? <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                      : <Camera size={16} className="text-white" />
-                    }
-                  </div>
-                  <div className="text-left">
-                    <p className="text-xs font-bold text-dorado">
-                      {tomando ? 'Abriendo cámara...' : 'Tomar foto'}
-                    </p>
-                    <p className="text-[10px] text-dorado/60">Captura directa con la cámara del dispositivo</p>
-                  </div>
-                </button>
+                  <button
+                    type="button"
+                    onClick={() => setAdjunto(null)}
+                    className="text-blue-400 hover:text-blue-600 transition-colors"
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
+              ) : esNativo ? (
+                /* Nativo: escanear + tomar foto + galería/archivos */
+                <div className="space-y-2">
+                  <button
+                    type="button"
+                    onClick={handleEscanear}
+                    disabled={escaneando || tomando}
+                    className="w-full flex items-center gap-3 bg-marino/5 hover:bg-marino/10 border-2 border-marino/20 hover:border-marino/40 rounded-xl px-4 py-3.5 transition-colors group"
+                  >
+                    <div className="w-9 h-9 bg-marino rounded-xl flex items-center justify-center flex-shrink-0">
+                      {escaneando
+                        ? <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        : <ScanLine size={16} className="text-white" />
+                      }
+                    </div>
+                    <div className="text-left">
+                      <p className="text-xs font-bold text-marino">
+                        {escaneando ? 'Abriendo escáner...' : 'Escanear documento'}
+                      </p>
+                      <p className="text-[10px] text-marino/60">Toma foto con efecto escaneo · multi-página PDF</p>
+                    </div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleTomarFoto}
+                    disabled={escaneando || tomando}
+                    className="w-full flex items-center gap-3 bg-dorado/5 hover:bg-dorado/10 border-2 border-dorado/20 hover:border-dorado/40 rounded-xl px-4 py-3.5 transition-colors group"
+                  >
+                    <div className="w-9 h-9 bg-dorado rounded-xl flex items-center justify-center flex-shrink-0">
+                      {tomando
+                        ? <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        : <Camera size={16} className="text-white" />
+                      }
+                    </div>
+                    <div className="text-left">
+                      <p className="text-xs font-bold text-dorado">
+                        {tomando ? 'Abriendo cámara...' : 'Tomar foto'}
+                      </p>
+                      <p className="text-[10px] text-dorado/60">Captura directa con la cámara del dispositivo</p>
+                    </div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => fileRef.current?.click()}
+                    disabled={escaneando || tomando}
+                    className="w-full flex items-center gap-2 px-4 py-2 rounded-xl hover:bg-gray-50 transition-colors"
+                  >
+                    <Paperclip size={13} className="text-gray-400" />
+                    <p className="text-[11px] text-gray-400">Elegir desde archivos o galería</p>
+                  </button>
+                </div>
+              ) : (
+                /* Web: file picker normal */
                 <button
                   type="button"
                   onClick={() => fileRef.current?.click()}
-                  disabled={escaneando || tomando}
-                  className="w-full flex items-center gap-2 px-4 py-2 rounded-xl hover:bg-gray-50 transition-colors"
+                  className="w-full flex items-center gap-3 border-2 border-dashed border-gray-200 hover:border-dorado rounded-xl px-4 py-3 transition-colors group"
                 >
-                  <Paperclip size={13} className="text-gray-400" />
-                  <p className="text-[11px] text-gray-400">Elegir desde archivos o galería</p>
+                  <div className="w-8 h-8 bg-gray-100 group-hover:bg-dorado/10 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors">
+                    <Paperclip size={14} className="text-gray-400 group-hover:text-dorado transition-colors" />
+                  </div>
+                  <div className="text-left">
+                    <p className="text-xs font-semibold text-gray-600">Adjuntar archivo</p>
+                    <p className="text-[10px] text-gray-400">PDF, imagen u otro documento</p>
+                  </div>
                 </button>
-              </div>
-            ) : (
-              /* Web: file picker normal */
-              <button
-                type="button"
-                onClick={() => fileRef.current?.click()}
-                className="w-full flex items-center gap-3 border-2 border-dashed border-gray-200 hover:border-dorado rounded-xl px-4 py-3 transition-colors group"
-              >
-                <div className="w-8 h-8 bg-gray-100 group-hover:bg-dorado/10 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors">
-                  <Paperclip size={14} className="text-gray-400 group-hover:text-dorado transition-colors" />
-                </div>
-                <div className="text-left">
-                  <p className="text-xs font-semibold text-gray-600">Adjuntar archivo</p>
-                  <p className="text-[10px] text-gray-400">PDF, imagen u otro documento</p>
-                </div>
-              </button>
-            )}
-            <input
-              ref={fileRef}
-              type="file"
-              className="hidden"
-              accept="image/*,application/pdf"
-              onChange={async (e) => {
-                const raw = e.target.files[0]
-                if (!raw) return setAdjunto(null)
-                const file = await compressImage(raw)
-                setAdjunto(file)
-              }}
-            />
-          </div>
+              )}
+              <input
+                ref={fileRef}
+                type="file"
+                className="hidden"
+                accept="image/*,application/pdf"
+                onChange={async (e) => {
+                  const raw = e.target.files[0]
+                  if (!raw) return setAdjunto(null)
+                  const file = await compressImage(raw)
+                  setAdjunto(file)
+                }}
+              />
+            </div>
 
-          {/* Acciones */}
-          <div className="flex gap-3 pt-1">
+          </div>{/* fin área scrollable */}
+
+          {/* Botones fijos — siempre visibles sin importar el contenido */}
+          <div className="flex-shrink-0 flex gap-3 px-5 pt-3 pb-5 border-t border-gray-100">
             <button type="button" onClick={onCerrar} className="btn-secondary flex-1">
               Cancelar
             </button>

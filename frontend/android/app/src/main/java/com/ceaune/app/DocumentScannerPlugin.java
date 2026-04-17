@@ -22,10 +22,15 @@ public class DocumentScannerPlugin extends Plugin {
 
     private static final int REQUEST_CODE = 21232;
     private PluginCall savedCall;
+    // Guardamos el callbackId para recuperar el call si Android recrea la Activity
+    private String savedCallbackId;
 
     @PluginMethod
     public void scan(PluginCall call) {
+        // setKeepAlive evita que Capacitor libere el call mientras el escáner está abierto
+        call.setKeepAlive(true);
         savedCall = call;
+        savedCallbackId = call.getCallbackId();
 
         GmsDocumentScannerOptions options = new GmsDocumentScannerOptions.Builder()
                 .setGalleryImportAllowed(true)
@@ -53,14 +58,21 @@ public class DocumentScannerPlugin extends Plugin {
     @Override
     protected void handleOnActivityResult(int requestCode, int resultCode, Intent data) {
         super.handleOnActivityResult(requestCode, resultCode, data);
-        if (requestCode != REQUEST_CODE || savedCall == null) return;
+        if (requestCode != REQUEST_CODE) return;
 
+        // Recuperar el call: puede haberse perdido si Android recreó la Activity
         PluginCall call = savedCall;
+        if (call == null && savedCallbackId != null) {
+            call = bridge.getSavedCall(savedCallbackId);
+        }
+        if (call == null) return;
+
         savedCall = null;
+        savedCallbackId = null;
 
         if (resultCode == Activity.RESULT_OK) {
             GmsDocumentScanningResult result = GmsDocumentScanningResult.fromActivityResultIntent(data);
-            if (result == null) { call.reject("No se obtuvo resultado del escáner"); return; }
+            if (result == null) { call.setKeepAlive(false); call.reject("No se obtuvo resultado del escáner"); return; }
 
             try {
                 List<GmsDocumentScanningResult.Page> pages = result.getPages();
@@ -77,6 +89,7 @@ public class DocumentScannerPlugin extends Plugin {
                     ret.put("mimeType", "image/jpeg");
                     ret.put("name", "documento_escaneado.jpg");
                     ret.put("pageCount", 1);
+                    call.setKeepAlive(false);
                     call.resolve(ret);
 
                 // Varias páginas → PDF
@@ -91,17 +104,22 @@ public class DocumentScannerPlugin extends Plugin {
                     ret.put("mimeType", "application/pdf");
                     ret.put("name", "documento_escaneado.pdf");
                     ret.put("pageCount", result.getPdf().getPageCount());
+                    call.setKeepAlive(false);
                     call.resolve(ret);
 
                 } else {
+                    call.setKeepAlive(false);
                     call.reject("No se obtuvo resultado del escáner");
                 }
             } catch (Exception e) {
+                call.setKeepAlive(false);
                 call.reject("Error al procesar documento: " + e.getMessage());
             }
         } else if (resultCode == Activity.RESULT_CANCELED) {
+            call.setKeepAlive(false);
             call.reject("Cancelado", "CANCELLED");
         } else {
+            call.setKeepAlive(false);
             call.reject("Error en el escáner");
         }
     }

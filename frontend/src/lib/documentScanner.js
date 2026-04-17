@@ -16,12 +16,24 @@ export async function scanDocument() {
   }
 
   try {
-    const result = await DocumentScannerNative.scan()
+    // Race con timeout: si Android pierde el resultado de la Activity
+    // (recreación por rotación / presión de memoria), el spinner no queda infinito
+    const timeout = new Promise((_, reject) =>
+      setTimeout(
+        () => reject(Object.assign(new Error('Timeout'), { code: 'SCAN_TIMEOUT' })),
+        120_000,
+      )
+    )
+    const result = await Promise.race([DocumentScannerNative.scan(), timeout])
     const raw  = base64ToFile(result.base64, result.name, result.mimeType)
     const file = await enhanceDocument(raw)
     return { file, pageCount: result.pageCount }
   } catch (err) {
     if (err?.code === 'CANCELLED') throw err
+    if (err?.code === 'SCAN_TIMEOUT') {
+      // Devolver como cancelado para que el modal no muestre error rojo
+      throw Object.assign(new Error('Timeout'), { code: 'CANCELLED' })
+    }
     // Plugin no disponible en esta versión del APK → fallback al picker
     return webFilePicker()
   }
@@ -116,32 +128,37 @@ export async function enhanceDocument(file) {
         leveled[i+3] = src[i+3]
       }
 
-      // 3. Sharpening con kernel 3×3 (0,-1,0 / -1,5,-1 / 0,-1,0)
-      const out = new Uint8ClampedArray(leveled.length)
-      for (let y = 0; y < height; y++) {
-        for (let x = 0; x < width; x++) {
-          const idx = (y * width + x) * 4
-          if (x === 0 || x === width - 1 || y === 0 || y === height - 1) {
-            out[idx] = leveled[idx]; out[idx+1] = leveled[idx+1]
-            out[idx+2] = leveled[idx+2]; out[idx+3] = leveled[idx+3]
-            continue
+      // 3. Sharpening — doble pasada con kernel 3×3 (center*5 - 4 vecinos)
+      //    para compensar que ML Kit sin "Mejorar" entrega imagen sin filtro documento
+      function sharpenPass(src) {
+        const dst = new Uint8ClampedArray(src.length)
+        for (let y = 0; y < height; y++) {
+          for (let x = 0; x < width; x++) {
+            const idx = (y * width + x) * 4
+            if (x === 0 || x === width - 1 || y === 0 || y === height - 1) {
+              dst[idx] = src[idx]; dst[idx+1] = src[idx+1]
+              dst[idx+2] = src[idx+2]; dst[idx+3] = src[idx+3]
+              continue
+            }
+            for (let c = 0; c < 3; c++) {
+              const n = src[((y-1)*width + x    ) * 4 + c]
+              const s = src[((y+1)*width + x    ) * 4 + c]
+              const e = src[(y    *width + x + 1) * 4 + c]
+              const w = src[(y    *width + x - 1) * 4 + c]
+              dst[idx+c] = Math.min(255, Math.max(0, 5*src[idx+c] - n - s - e - w))
+            }
+            dst[idx+3] = src[idx+3]
           }
-          for (let c = 0; c < 3; c++) {
-            const center = leveled[idx + c]
-            const n  = leveled[((y-1)*width + x    ) * 4 + c]
-            const s  = leveled[((y+1)*width + x    ) * 4 + c]
-            const e  = leveled[(y    *width + x + 1) * 4 + c]
-            const w  = leveled[(y    *width + x - 1) * 4 + c]
-            out[idx+c] = Math.min(255, Math.max(0, 5*center - n - s - e - w))
-          }
-          out[idx+3] = leveled[idx+3]
         }
+        return dst
       }
+      const pass1 = sharpenPass(leveled)
+      const out   = sharpenPass(pass1)
 
       ctx.putImageData(new ImageData(out, width, height), 0, 0)
       canvas.toBlob(
         (blob) => resolve(new File([blob], file.name.replace(/\.[^.]+$/, '.jpg'), { type: 'image/jpeg' })),
-        'image/jpeg', 0.92,
+        'image/jpeg', 0.95,
       )
     }
     img.onerror = () => { URL.revokeObjectURL(url); resolve(file) }
