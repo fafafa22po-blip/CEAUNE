@@ -4,7 +4,7 @@ import api from '../../lib/api'
 import toast from 'react-hot-toast'
 import ModalImprimirCarnets from './ModalImprimirCarnets'
 
-import { GRADOS_POR_NIVEL, getSecciones, formatGradoSeccion, formatGrado, labelSeccion } from '../../lib/nivelAcademico'
+import { GRADOS_POR_NIVEL, getSecciones, formatGradoSeccion, formatGrado, labelSeccion, resolveAulaInicial } from '../../lib/nivelAcademico'
 
 const NIVEL_BADGE = {
   inicial:    { label: 'Inicial',    cls: 'bg-green-100 text-green-700' },
@@ -476,7 +476,7 @@ export default function Estudiantes() {
           onChange={(e) => { setFiltroSeccion(e.target.value); setPagina(1) }}
         >
           <option value="">{filtroNivel === 'inicial' ? 'Todas las aulas' : 'Todas las secciones'}</option>
-          {getSecciones(filtroNivel, filtroGrado).map(s => <option key={s} value={s}>{s}</option>)}
+          {getSecciones(filtroNivel, filtroGrado).map(s => <option key={s} value={s}>{filtroNivel === 'inicial' ? resolveAulaInicial(filtroGrado, s) : s}</option>)}
         </select>
 
         {hayFiltros && (
@@ -753,7 +753,7 @@ export default function Estudiantes() {
                       >
                         <option value="">Seleccionar...</option>
                         {getSecciones(formNuevo.nivel, formNuevo.grado).map(s => (
-                          <option key={s} value={s}>{s}</option>
+                          <option key={s} value={s}>{formNuevo.nivel === 'inicial' ? resolveAulaInicial(formNuevo.grado, s) : s}</option>
                         ))}
                       </select>
                     </div>
@@ -1063,7 +1063,7 @@ export default function Estudiantes() {
                       <select className="input" value={formEditar.seccion || ''} onChange={(e) => setFormEditar({ ...formEditar, seccion: e.target.value })} disabled={!formEditar.grado}>
                         <option value="">Seleccionar...</option>
                         {getSecciones(formEditar.nivel, formEditar.grado).map(s => (
-                          <option key={s} value={s}>{s}</option>
+                          <option key={s} value={s}>{formEditar.nivel === 'inicial' ? resolveAulaInicial(formEditar.grado, s) : s}</option>
                         ))}
                       </select>
                     </div>
@@ -1259,7 +1259,7 @@ export default function Estudiantes() {
                 >
                   <option value="">Seleccionar...</option>
                   {getSecciones(formReactivar.nivel, formReactivar.grado).map(s => (
-                    <option key={s} value={s}>{s}</option>
+                    <option key={s} value={s}>{formReactivar.nivel === 'inicial' ? resolveAulaInicial(formReactivar.grado, s) : s}</option>
                   ))}
                 </select>
               </div>

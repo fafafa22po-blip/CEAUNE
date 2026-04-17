@@ -20,7 +20,7 @@ const TIPOS = [
 ]
 const tipoCfg = (v) => TIPOS.find((t) => t.v === v) || TIPOS[2]
 
-import { GRADOS_POR_NIVEL, getSecciones, formatGrado } from '../../lib/nivelAcademico'
+import { GRADOS_POR_NIVEL, getSecciones, formatGrado, resolveAulaInicial } from '../../lib/nivelAcademico'
 
 const NIVEL_BADGE = {
   todos:      { label: 'Todos los niveles', cls: 'bg-gray-100 text-gray-600' },
@@ -296,7 +296,7 @@ export default function Calendario() {
                 onChange={(e) => setSeccionNuevo(e.target.value)}
               >
                 <option value="">Todas</option>
-                {getSecciones(nivelNuevo, gradoNuevo).map((s) => <option key={s} value={s}>{s}</option>)}
+                {getSecciones(nivelNuevo, gradoNuevo).map((s) => <option key={s} value={s}>{nivelNuevo === 'inicial' ? resolveAulaInicial(gradoNuevo, s) : s}</option>)}
               </select>
             </div>
           )}

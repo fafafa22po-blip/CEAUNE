@@ -12,7 +12,7 @@ const ROLES = [
   { v: 'admin',      label: 'Administrador' },
 ]
 
-import { GRADOS_POR_NIVEL, getSecciones, formatGrado } from '../../lib/nivelAcademico'
+import { GRADOS_POR_NIVEL, getSecciones, formatGrado, resolveAulaInicial } from '../../lib/nivelAcademico'
 
 const NIVELES = [
   { v: 'inicial',    label: 'Inicial' },
@@ -522,7 +522,7 @@ export default function Usuarios() {
                 <Campo label={form.nivel === 'inicial' ? 'Aula' : 'Sección'}>
                   <select className="input" value={form.seccion} onChange={setField('seccion')} disabled={!form.grado}>
                     <option value="">Seleccionar...</option>
-                    {getSecciones(form.nivel, form.grado).map(s => <option key={s} value={s}>{s}</option>)}
+                    {getSecciones(form.nivel, form.grado).map(s => <option key={s} value={s}>{form.nivel === 'inicial' ? resolveAulaInicial(form.grado, s) : s}</option>)}
                   </select>
                 </Campo>
               </div>
@@ -598,7 +598,7 @@ export default function Usuarios() {
                 <Campo label={formEditar.nivel === 'inicial' ? 'Aula' : 'Sección'}>
                   <select className="input" value={formEditar.seccion} onChange={setFieldEditar('seccion')} disabled={!formEditar.grado}>
                     <option value="">Seleccionar...</option>
-                    {getSecciones(formEditar.nivel, formEditar.grado).map(s => <option key={s} value={s}>{s}</option>)}
+                    {getSecciones(formEditar.nivel, formEditar.grado).map(s => <option key={s} value={s}>{formEditar.nivel === 'inicial' ? resolveAulaInicial(formEditar.grado, s) : s}</option>)}
                   </select>
                 </Campo>
               </div>

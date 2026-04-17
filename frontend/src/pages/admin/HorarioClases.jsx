@@ -7,7 +7,7 @@ import { es } from 'date-fns/locale'
 
 const NIVEL_LABEL = { inicial: 'Inicial', primaria: 'Primaria', secundaria: 'Secundaria' }
 
-import { GRADOS_POR_NIVEL, getSecciones, formatGrado } from '../../lib/nivelAcademico'
+import { GRADOS_POR_NIVEL, getSecciones, formatGrado, resolveAulaInicial } from '../../lib/nivelAcademico'
 
 const TIPOS_ACEPTADOS = ['application/pdf', 'image/png', 'image/jpeg', 'image/jpg', 'image/webp']
 const MAX_MB = 8
@@ -156,7 +156,7 @@ export default function HorarioClases() {
               value={seccion}
               onChange={e => { setSeccion(e.target.value); setCargado(false); setArchivo(null) }}
             >
-              {getSecciones(nivel, grado).map(s => <option key={s} value={s}>{s}</option>)}
+              {getSecciones(nivel, grado).map(s => <option key={s} value={s}>{nivel === 'inicial' ? resolveAulaInicial(grado, s) : s}</option>)}
             </select>
           </div>
 

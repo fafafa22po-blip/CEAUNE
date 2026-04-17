@@ -4,7 +4,7 @@ import api from '../../lib/api'
 import toast from 'react-hot-toast'
 import CarnetRecojo from '../../components/CarnetRecojo'
 import { imprimirFotochecks } from '../../utils/imprimirFotochecks'
-import { GRADOS_POR_NIVEL, getSecciones, formatGradoSeccion } from '../../lib/nivelAcademico'
+import { GRADOS_POR_NIVEL, getSecciones, formatGradoSeccion, resolveAulaInicial } from '../../lib/nivelAcademico'
 
 async function fetchQrSolo(personaId) {
   const { data } = await api.get(`/recojo/admin/${personaId}/qr-solo`)
@@ -175,7 +175,7 @@ export default function ModalImprimirFotochecks({ onClose, personaInicial = null
                   >
                     <option value="">Seleccionar...</option>
                     {secciones.map(s => (
-                      <option key={s} value={s}>{s}</option>
+                      <option key={s} value={s}>{filtro.nivel === 'inicial' ? resolveAulaInicial(filtro.grado, s) : s}</option>
                     ))}
                   </select>
                 </div>

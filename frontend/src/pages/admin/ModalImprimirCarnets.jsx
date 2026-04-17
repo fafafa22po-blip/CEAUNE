@@ -7,7 +7,7 @@ import CarnetEstudianteVertical from '../../components/CarnetEstudianteVertical'
 import { imprimirCarnets } from '../../utils/imprimirCarnets'
 import { imprimirCarnetesVertical } from '../../utils/imprimirCarnetesVertical'
 
-import { GRADOS_POR_NIVEL, getSecciones, formatGrado } from '../../lib/nivelAcademico'
+import { GRADOS_POR_NIVEL, getSecciones, formatGrado, resolveAulaInicial } from '../../lib/nivelAcademico'
 
 // Obtiene el QR limpio (solo código, sin decoraciones) de un estudiante
 async function fetchQrSolo(id) {
@@ -222,7 +222,7 @@ export default function ModalImprimirCarnets({ onClose, estudianteInicial = null
                       disabled={!filtro.grado}
                     >
                       <option value="">Seleccionar...</option>
-                      {getSecciones(filtro.nivel, filtro.grado).map(s => <option key={s} value={s}>{s}</option>)}
+                      {getSecciones(filtro.nivel, filtro.grado).map(s => <option key={s} value={s}>{filtro.nivel === 'inicial' ? resolveAulaInicial(filtro.grado, s) : s}</option>)}
                     </select>
                   </div>
                 )}
