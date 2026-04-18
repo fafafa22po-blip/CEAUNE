@@ -273,7 +273,7 @@ export default function Layout() {
   const [colapsado,  setColapsado]  = useState(false)
   const [masAbierto, setMasAbierto] = useState(false)
   const [pullUI,     setPullUI]     = useState({ progress: 0, refreshing: false })
-  const { iniciarTour } = useTour()
+  const { iniciarTour, activo: tourActivo } = useTour()
 
   // Modo sesión reactivo (para usuarios con doble perfil: personal + apoderado)
   const [modoSesion, setModoSesion] = useState(() => localStorage.getItem('modo_sesion') || '')
@@ -869,7 +869,7 @@ export default function Layout() {
 
           {/* Barra de tabs */}
           <nav
-            className="fixed bottom-0 inset-x-0 lg:hidden bg-white shadow-bottom z-40 flex items-stretch"
+            className={`fixed bottom-0 inset-x-0 lg:hidden bg-white shadow-bottom z-40 flex items-stretch${tourActivo ? ' pointer-events-none' : ''}`}
             style={{
               paddingBottom: 'env(safe-area-inset-bottom)',
               minHeight: 'var(--nav-h)',

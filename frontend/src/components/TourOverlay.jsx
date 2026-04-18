@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { X, ChevronRight, ChevronLeft } from 'lucide-react'
 import { useTour } from '../context/TourContext'
@@ -23,11 +23,11 @@ function useTargetRect(selector, activo, paso) {
     function find() {
       const el = document.querySelector(selector)
       if (el) {
-        el.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' })
         setTimeout(() => {
           const r = el.getBoundingClientRect()
           setRect({ top: r.top, left: r.left, width: r.width, height: r.height })
-        }, 380)
+        }, 500)
         return
       }
       tries++
@@ -173,18 +173,14 @@ function SpinnerOverlay() {
 }
 
 // ── Tooltip del spotlight ─────────────────────────────────────────────────────
-function Tooltip({ step, paso, total, siguiente, anterior, cerrar, arriba, left, width, top, bottom }) {
-  const esUltimoSpotlight = paso === total - 2
-  const mostrarAutoClick  = !!step.autoClick
+function Tooltip({ step, paso, total, siguiente, anterior, cerrar, top, left, width }) {
+  const esUltimoSpotlight  = paso === total - 2
+  const esperandoUsuario   = !!step.waitForInteraction
 
   return (
     <div
       className="absolute pointer-events-auto"
-      style={{
-        left,
-        width,
-        ...(arriba ? { bottom } : { top }),
-      }}
+      style={{ top, left, width }}
     >
       <div className="rounded-2xl shadow-2xl overflow-hidden" style={{ background: '#fff' }}>
 
@@ -217,33 +213,15 @@ function Tooltip({ step, paso, total, siguiente, anterior, cerrar, arriba, left,
             {step.descripcion}
           </p>
 
-          {/* Indicador auto-click */}
-          {mostrarAutoClick && (
-            <div className="flex items-center gap-2 mt-2.5 px-3 py-2 rounded-xl" style={{ background: 'rgba(201,162,39,0.10)' }}>
-              <div className="flex gap-0.5">
-                {[0, 150, 300].map(delay => (
-                  <div
-                    key={delay}
-                    className="w-1.5 h-1.5 rounded-full animate-bounce"
-                    style={{ background: DORADO, animationDelay: `${delay}ms` }}
-                  />
-                ))}
-              </div>
-              <p className="text-[10px] font-medium" style={{ color: '#92660a' }}>
-                Demostración en curso...
-              </p>
-            </div>
-          )}
-
-          {/* Hint */}
-          {step.hint && !mostrarAutoClick && (
+          {/* Hint interactivo o informativo */}
+          {(esperandoUsuario || step.hint) && (
             <div
               className="flex items-start gap-2 mt-2.5 px-3 py-2 rounded-xl"
               style={{ background: 'rgba(201,162,39,0.10)', border: '1px solid rgba(201,162,39,0.25)' }}
             >
               <span className="text-sm animate-bounce flex-shrink-0">👆</span>
               <p className="text-[10px] font-medium leading-snug" style={{ color: '#92660a' }}>
-                {step.hint}
+                {esperandoUsuario ? step.hint : step.hint}
               </p>
             </div>
           )}
@@ -261,14 +239,16 @@ function Tooltip({ step, paso, total, siguiente, anterior, cerrar, arriba, left,
                   <ChevronLeft size={14} />
                 </button>
               )}
-              <button
-                onClick={siguiente}
-                className="flex items-center gap-1 px-3.5 py-2 rounded-xl text-white text-xs font-bold active:brightness-90 transition-all"
-                style={{ background: MARINO, boxShadow: `0 2px 8px rgba(10,31,61,0.3)` }}
-              >
-                {esUltimoSpotlight ? 'Finalizar' : 'Siguiente'}
-                <ChevronRight size={13} />
-              </button>
+              {!esperandoUsuario && (
+                <button
+                  onClick={siguiente}
+                  className="flex items-center gap-1 px-3.5 py-2 rounded-xl text-white text-xs font-bold active:brightness-90 transition-all"
+                  style={{ background: MARINO, boxShadow: `0 2px 8px rgba(10,31,61,0.3)` }}
+                >
+                  {esUltimoSpotlight ? 'Finalizar' : 'Siguiente'}
+                  <ChevronRight size={13} />
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -284,36 +264,22 @@ export default function TourOverlay() {
   const navigate = useNavigate()
   const step     = pasos[paso]
 
-  const autoClickFiredRef = useRef(false)
-
   // Navegar al cambiar de paso
   useEffect(() => {
     if (!activo) return
     if (step?.route) navigate(step.route)
   }, [activo, paso]) // eslint-disable-line
 
-  // Reset guard auto-click al cambiar de paso
-  useEffect(() => {
-    autoClickFiredRef.current = false
-  }, [paso])
-
   const rect = useTargetRect(step?.selector, activo, paso)
 
-  // Auto-click: simula tap en un elemento real de la página
+  // waitForInteraction: avanza cuando el apoderado toca el elemento indicado
   useEffect(() => {
-    if (!activo || !step?.autoClick || !rect) return
-    if (autoClickFiredRef.current) return
-
-    const t = setTimeout(() => {
-      const target = document.querySelector(`[data-tour="${step.autoClick}"]`)
-      if (target && !autoClickFiredRef.current) {
-        autoClickFiredRef.current = true
-        target.click()
-        setTimeout(() => siguiente(), step.autoClickAdvance || 750)
-      }
-    }, step.autoClickDelay || 2200)
-
-    return () => clearTimeout(t)
+    if (!activo || !step?.waitForInteraction || !rect) return
+    const target = document.querySelector(`[data-tour="${step.waitForInteraction}"]`)
+    if (!target) return
+    const onTap = () => setTimeout(() => siguiente(), 500)
+    target.addEventListener('click', onTap, { once: true })
+    return () => target.removeEventListener('click', onTap)
   }, [rect, activo, paso]) // eslint-disable-line
 
   if (!activo) return null
@@ -347,10 +313,30 @@ export default function TourOverlay() {
   const sH      = rect.height + PAD * 2
   const sBottom = sTop + sH
 
-  const TOOLTIP_H   = 220
-  const arriba      = VH - sBottom < TOOLTIP_H + 16
-  const tooltipW    = Math.min(312, VW - 24)
-  const tooltipLeft = Math.max(12, Math.min(sLeft, VW - tooltipW - 12))
+  const TOOLTIP_H = 260   // alto real estimado (descripcion + hint + footer)
+  const GAP       = 12
+  const MARGIN    = 8
+  const tooltipW  = Math.min(312, VW - 24)
+
+  // Centro el tooltip sobre el spotlight; clampo a los bordes
+  const tooltipLeft = Math.max(MARGIN, Math.min(
+    sLeft + (sW - tooltipW) / 2,
+    VW - tooltipW - MARGIN
+  ))
+
+  // Posición vertical: abajo si hay espacio, arriba si no, siempre dentro del viewport
+  const roomBelow = VH - sBottom - GAP
+  const roomAbove = sTop - GAP
+  let tooltipTop
+  if (roomBelow >= TOOLTIP_H) {
+    tooltipTop = sBottom + GAP
+  } else if (roomAbove >= TOOLTIP_H) {
+    tooltipTop = sTop - GAP - TOOLTIP_H
+  } else {
+    // No hay espacio ideal — elegir el lado con más espacio y clampear
+    tooltipTop = roomBelow >= roomAbove ? sBottom + GAP : sTop - GAP - TOOLTIP_H
+  }
+  tooltipTop = Math.max(MARGIN, Math.min(tooltipTop, VH - TOOLTIP_H - MARGIN))
 
   return (
     <div className="fixed inset-0 z-[9999] pointer-events-none">
@@ -373,6 +359,14 @@ export default function TourOverlay() {
         onClick={cerrar}
       />
 
+      {/* ── Bloqueo permanente de la barra de navegación ─────────────────── */}
+      <div
+        className="fixed bottom-0 inset-x-0 pointer-events-auto"
+        style={{ height: 'calc(var(--nav-h, 64px) + env(safe-area-inset-bottom, 0px))', background: 'transparent', zIndex: 1 }}
+        onClick={e => e.stopPropagation()}
+        onTouchStart={e => e.stopPropagation()}
+      />
+
       {/* ── Anillo dorado pulsante ─────────────────────────────────────────── */}
       <div
         className="absolute rounded-2xl pointer-events-none"
@@ -391,11 +385,9 @@ export default function TourOverlay() {
         siguiente={siguiente}
         anterior={anterior}
         cerrar={cerrar}
-        arriba={arriba}
+        top={tooltipTop}
         left={tooltipLeft}
         width={tooltipW}
-        top={sBottom + 12}
-        bottom={VH - sTop + 12}
       />
 
     </div>

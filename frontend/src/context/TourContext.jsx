@@ -44,17 +44,16 @@ export const TOUR_STEPS = [
     icono: '📊',
   },
 
-  // ── 4. Asistencias: calendario (auto-click primer día) ────────────────────
+  // ── 4. Asistencias: calendario (interacción manual) ──────────────────────
   {
     id: 'asistencias-calendario',
     route: '/apoderado/asistencias',
     selector: '[data-tour="asistencias-calendario"]',
     titulo: 'Calendario de asistencias',
-    descripcion: '✓ puntual  ·  ! tardanza  ·  ✗ falta  ·  — sin registro. Mira lo que pasa al tocar un día...',
+    descripcion: '✓ puntual  ·  ! tardanza  ·  ✗ falta  ·  — sin registro.',
     icono: '📅',
-    autoClick: 'asistencias-primer-dia',
-    autoClickDelay: 2400,
-    autoClickAdvance: 750,
+    waitForInteraction: 'asistencias-primer-dia',
+    hint: 'Toca un día del calendario para ver el detalle',
   },
 
   // ── 5. Asistencias: panel detalle (sin navegar) ───────────────────────────
@@ -147,8 +146,11 @@ export function TourProvider({ children }) {
   const [paso,   setPaso]   = useState(0)
 
   const iniciarTour = useCallback(() => {
-    setPaso(0)
-    setActivo(true)
+    setActivo(prev => {
+      if (prev) return prev   // ya activo, no reiniciar
+      setPaso(0)
+      return true
+    })
   }, [])
 
   const siguiente = useCallback(() => {
