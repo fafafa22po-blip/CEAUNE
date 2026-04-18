@@ -225,7 +225,7 @@ export default function Asistencias() {
     <div className="space-y-5 max-w-2xl mx-auto">
 
       {/* ── HERO ── */}
-      <div className={`card border-l-4 ${colores.border}`}>
+      <div className={`card border-l-4 ${colores.border}`} data-tour="asistencias-hero">
         <div className="flex items-start justify-between mb-4">
           <div>
             <p className="text-xs text-gray-400 uppercase tracking-wide mb-0.5">Asistencia mensual</p>

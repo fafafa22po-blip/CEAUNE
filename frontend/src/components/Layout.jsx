@@ -9,6 +9,7 @@ import api from '../lib/api'
 import { QK } from '../lib/queryKeys'
 import { HijoProvider, useHijo } from '../context/HijoContext'
 import { hapticMedium, hapticLight } from '../lib/haptics'
+import { useTour } from '../context/TourContext'
 import {
   QrCode, LayoutDashboard, Users, Calendar, Settings,
   MessageSquare, Inbox, FileCheck,
@@ -272,6 +273,7 @@ export default function Layout() {
   const [colapsado,  setColapsado]  = useState(false)
   const [masAbierto, setMasAbierto] = useState(false)
   const [pullUI,     setPullUI]     = useState({ progress: 0, refreshing: false })
+  const { iniciarTour } = useTour()
 
   // Modo sesión reactivo (para usuarios con doble perfil: personal + apoderado)
   const [modoSesion, setModoSesion] = useState(() => localStorage.getItem('modo_sesion') || '')
@@ -812,6 +814,25 @@ export default function Layout() {
                   </NavLink>
                 ))}
               </div>
+
+              {/* Tutorial — solo apoderado */}
+              {esApoderado && (
+                <div className="mb-3">
+                  <button
+                    onClick={() => { setMasAbierto(false); iniciarTour() }}
+                    className="flex items-center gap-3 w-full px-3 py-3 rounded-2xl transition-colors active:bg-marino/5 text-left"
+                  >
+                    <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 text-base select-none"
+                      style={{ background: '#c9a227' }}>
+                      🎓
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold leading-tight text-marino">Ver tutorial</p>
+                      <p className="text-xs text-gray-400 mt-0.5">Aprende a usar la app</p>
+                    </div>
+                  </button>
+                </div>
+              )}
 
               {/* Descargar app — solo si no es nativo */}
               {!window.Capacitor?.isNativePlatform?.() && (

@@ -188,7 +188,7 @@ export default function Horario() {
   return (
     <div className="max-w-2xl mx-auto space-y-4">
 
-      <div>
+      <div data-tour="horario-header">
         <h1 className="text-lg font-bold text-marino">Horario de clases</h1>
         {hijoActivo && (
           <p className="text-sm text-gray-400 mt-0.5">

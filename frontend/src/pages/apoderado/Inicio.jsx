@@ -15,6 +15,7 @@ import api from '../../lib/api'
 import toast from 'react-hot-toast'
 import { onPushRecibido, abrirAjustesNotificaciones } from '../../lib/pushNotifications'
 import { obtenerUsuario } from '../../lib/auth'
+import { useTour, tourFueVisto } from '../../context/TourContext'
 import { abrirWhatsApp } from '../../lib/externo'
 import { QK } from '../../lib/queryKeys'
 import { SkeletonTarjetaHijo, SkeletonSaludo } from '../../components/Skeleton'
@@ -348,6 +349,14 @@ export default function Inicio() {
   const nav         = useNavigate()
   const queryClient = useQueryClient()
   const usuario     = obtenerUsuario()
+  const { iniciarTour } = useTour()
+
+  // Lanzar tour automáticamente la primera vez que el apoderado llega a Inicio
+  useEffect(() => {
+    if (tourFueVisto()) return
+    const t = setTimeout(() => iniciarTour(), 900)
+    return () => clearTimeout(t)
+  }, []) // eslint-disable-line
 
   const hora   = new Date().getHours()
   const saludo = hora < 12 ? 'Buenos días' : hora < 18 ? 'Buenas tardes' : 'Buenas noches'

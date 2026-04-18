@@ -33,6 +33,8 @@ import { obtenerUsuario, obtenerRutaPorRol, estaAutenticado } from './lib/auth'
 import { iniciarPush, setPushNavigate } from './lib/pushNotifications'
 import SinConexion from './components/SinConexion'
 import OnboardingPermisos from './components/OnboardingPermisos'
+import { TourProvider } from './context/TourContext'
+import TourOverlay from './components/TourOverlay'
 
 // Registra el navigate de React Router en el módulo push para que el tap
 // de notificaciones use navegación SPA en vez de window.location.href
@@ -160,11 +162,13 @@ export default function App() {
     <SinConexion>
     <QueryClientProvider client={queryClient}>
       <ActualizadorApp />
+      <TourProvider>
       <BrowserRouter>
         <PushNavigateSync />
         <StatusBarManager />
         <Toast />
         <OnboardingPermisos />
+        <TourOverlay />
         <ErrorBoundary>
         <Routes>
           <Route path="/login"    element={<Login />} />
@@ -246,6 +250,7 @@ export default function App() {
         </Routes>
         </ErrorBoundary>
       </BrowserRouter>
+      </TourProvider>
     </QueryClientProvider>
     </SinConexion>
   )

@@ -512,7 +512,7 @@ export default function Justificar() {
     <div className="space-y-5 max-w-2xl mx-auto">
 
       {/* Título */}
-      <div>
+      <div data-tour="justificar-header">
         <h1 className="text-xl font-bold text-marino">Justificaciones</h1>
         <p className="text-sm text-gray-400 mt-0.5 capitalize">
           {format(new Date(), "MMMM yyyy", { locale: es })}

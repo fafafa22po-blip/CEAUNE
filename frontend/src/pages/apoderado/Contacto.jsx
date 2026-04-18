@@ -119,7 +119,7 @@ export default function Contacto() {
     <div className="max-w-lg mx-auto space-y-5">
 
       {/* Encabezado */}
-      <div>
+      <div data-tour="contacto-header">
         <h1 className="text-xl font-bold text-marino">Contacto</h1>
         <div className="flex items-center gap-1.5 text-xs text-gray-400 mt-0.5">
           <GraduationCap size={13} />
