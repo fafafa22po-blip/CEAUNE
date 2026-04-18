@@ -272,14 +272,19 @@ export default function TourOverlay() {
 
   const rect = useTargetRect(step?.selector, activo, paso)
 
-  // waitForInteraction: avanza cuando el apoderado toca el elemento indicado
+  // waitForInteraction: avanza cuando el elemento objetivo APARECE en el DOM
   useEffect(() => {
     if (!activo || !step?.waitForInteraction || !rect) return
-    const target = document.querySelector(`[data-tour="${step.waitForInteraction}"]`)
-    if (!target) return
-    const onTap = () => setTimeout(() => siguiente(), 500)
-    target.addEventListener('click', onTap, { once: true })
-    return () => target.removeEventListener('click', onTap)
+    const watchSelector = `[data-tour="${step.waitForInteraction}"]`
+    if (document.querySelector(watchSelector)) return  // ya existe, esperar que desaparezca primero
+    const observer = new MutationObserver(() => {
+      if (document.querySelector(watchSelector)) {
+        observer.disconnect()
+        setTimeout(() => siguiente(), 400)
+      }
+    })
+    observer.observe(document.body, { childList: true, subtree: true })
+    return () => observer.disconnect()
   }, [rect, activo, paso]) // eslint-disable-line
 
   if (!activo) return null
@@ -357,14 +362,6 @@ export default function TourOverlay() {
       <div className="absolute pointer-events-auto"
         style={{ top: sBottom, left: 0, right: 0, bottom: 0, background: OVERLAY }}
         onClick={cerrar}
-      />
-
-      {/* ── Bloqueo permanente de la barra de navegación ─────────────────── */}
-      <div
-        className="fixed bottom-0 inset-x-0 pointer-events-auto"
-        style={{ height: 'calc(var(--nav-h, 64px) + env(safe-area-inset-bottom, 0px))', background: 'transparent', zIndex: 1 }}
-        onClick={e => e.stopPropagation()}
-        onTouchStart={e => e.stopPropagation()}
       />
 
       {/* ── Anillo dorado pulsante ─────────────────────────────────────────── */}

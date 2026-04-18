@@ -52,8 +52,8 @@ export const TOUR_STEPS = [
     titulo: 'Calendario de asistencias',
     descripcion: '✓ puntual  ·  ! tardanza  ·  ✗ falta  ·  — sin registro.',
     icono: '📅',
-    waitForInteraction: 'asistencias-primer-dia',
-    hint: 'Toca un día del calendario para ver el detalle',
+    waitForInteraction: 'asistencias-detalle',
+    hint: 'Toca cualquier día del calendario para continuar',
   },
 
   // ── 5. Asistencias: panel detalle (sin navegar) ───────────────────────────
