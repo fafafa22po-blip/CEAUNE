@@ -308,7 +308,7 @@ function TarjetaHijo({ hijo, comunicadosSinLeer, nav, onAlertChange }) {
 
       {/* ── Contacto rápido WhatsApp ── */}
       {contactos && (contactos.tutor || contactos.auxiliar) && (
-        <div className="pt-3 border-t border-gray-100">
+        <div className="pt-3 border-t border-gray-100" data-tour="inicio-contacto">
           <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-2">
             Contacto rápido
           </p>
@@ -453,7 +453,7 @@ export default function Inicio() {
     <div className="space-y-5 max-w-2xl mx-auto">
 
       {/* ── Banner de bienvenida ── */}
-      <div className="relative overflow-hidden rounded-2xl bg-marino px-6 py-5">
+      <div className="relative overflow-hidden rounded-2xl bg-marino px-6 py-5" data-tour="inicio-banner">
         <div className="absolute -top-16 -right-16 w-72 h-72 rounded-full bg-white/[0.04] pointer-events-none" />
         <div className="absolute top-6 right-52    w-14 h-14 rounded-full bg-dorado/20  pointer-events-none" />
         <div className="absolute -bottom-20 right-32 w-56 h-56 rounded-full bg-dorado/10  pointer-events-none" />

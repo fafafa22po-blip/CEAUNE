@@ -144,7 +144,7 @@ export default function ComunicadosApoderado() {
     <div className="flex flex-col" style={{ height: 'calc(100vh - 7rem)' }}>
 
       {/* Título */}
-      <div className="flex items-center gap-3 mb-4 flex-shrink-0" data-tour="comunicados-header">
+      <div className="flex items-center gap-3 mb-4 flex-shrink-0">
         <h1 className="text-xl font-bold text-marino">Comunicados</h1>
         {noLeidos > 0 && (
           <span className="bg-red-500 text-white text-xs font-bold min-w-[20px] h-5 px-1.5 rounded-full flex items-center justify-center">
@@ -154,7 +154,7 @@ export default function ComunicadosApoderado() {
       </div>
 
       {/* Layout split */}
-      <div className="flex-1 grid grid-cols-1 lg:grid-cols-5 gap-4 min-h-0">
+      <div className="flex-1 grid grid-cols-1 lg:grid-cols-5 gap-4 min-h-0" data-tour="comunicados-lista">
 
         {/* ══ LISTA ══ */}
         <div className={`lg:col-span-2 min-h-0 flex flex-col ${viendoDetalle ? 'hidden lg:flex' : 'flex'}`}>

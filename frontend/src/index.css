@@ -15,6 +15,12 @@
   --tap-min: clamp(44px, 10.5vw, 52px);
 }
 
+/* ── TOUR INTERACTIVO ───────────────────────────────────────────────── */
+@keyframes tourPulse {
+  0%, 100% { box-shadow: 0 0 0 3px #c9a227, 0 0 24px rgba(201,162,39,0.35); }
+  50%       { box-shadow: 0 0 0 4px #c9a227, 0 0 40px rgba(201,162,39,0.60); }
+}
+
 /* ── KEYFRAMES LEGACY (mantener compatibilidad) ─────────────────────── */
 @keyframes animate-in {
   from { opacity: 0; transform: scale(0.95) translateY(8px); }

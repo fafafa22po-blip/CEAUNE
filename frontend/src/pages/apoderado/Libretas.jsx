@@ -54,7 +54,7 @@ export default function Libretas() {
       </div>
 
       {/* Bimestre tabs con indicador de disponibilidad */}
-      <div className="flex gap-2">
+      <div className="flex gap-2" data-tour="libretas-bimestres">
         {BIMESTRES.map(b => {
           const tiene = libretas.some(l => l.bimestre === b)
           return (

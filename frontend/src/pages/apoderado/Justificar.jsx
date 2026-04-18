@@ -521,7 +521,7 @@ export default function Justificar() {
 
       {/* Métricas de resumen */}
       {!cargando && (
-        <div className="grid grid-cols-4 gap-3">
+        <div className="grid grid-cols-4 gap-3" data-tour="justificar-metricas">
           {[
             { valor: totalFaltas,                    label: 'Total',       color: 'text-gray-700'  },
             { valor: faltasSinJustificar.length,     label: 'Pendientes',  color: 'text-red-500'   },
@@ -540,7 +540,7 @@ export default function Justificar() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
         {/* ── Faltas y tardanzas sin justificar ── */}
-        <div className="space-y-3">
+        <div className="space-y-3" data-tour="justificar-lista">
           <div className="flex items-center gap-2">
             <h2 className="font-semibold text-marino">Por justificar</h2>
             {!cargando && faltasSinJustificar.length > 0 && (

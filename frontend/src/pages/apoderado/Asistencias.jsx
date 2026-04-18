@@ -221,6 +221,9 @@ export default function Asistencias() {
     )
   }
 
+  // Primer día clickeable del calendario (para demo del tour)
+  let _primerDiaTourMarcado = false
+
   return (
     <div className="space-y-5 max-w-2xl mx-auto">
 
@@ -282,7 +285,7 @@ export default function Asistencias() {
       </div>
 
       {/* ── CALENDARIO L–V ── */}
-      <div className="card">
+      <div className="card" data-tour="asistencias-calendario">
         <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">
           Días de clase
         </p>
@@ -310,9 +313,12 @@ export default function Asistencias() {
                   const dStr   = format(d, 'yyyy-MM-dd')
                   const esHoy  = isToday(d)
                   const futuro = dStr > hoyStr
+                  const esPrimerDiaTour = !_primerDiaTourMarcado && !futuro
+                  if (esPrimerDiaTour) _primerDiaTourMarcado = true
                   return (
                     <div
                       key={di}
+                      data-tour={esPrimerDiaTour ? 'asistencias-primer-dia' : undefined}
                       onClick={!futuro ? () => setDiaSeleccionado(dStr) : undefined}
                       className={`rounded-xl flex flex-col items-center justify-center py-3 gap-0.5 select-none ${cfg.bg} ${
                         esHoy ? 'ring-2 ring-marino ring-offset-1' : ''
@@ -407,6 +413,7 @@ export default function Asistencias() {
 
           {/* Panel */}
           <div
+            data-tour="asistencias-detalle"
             className="relative w-full max-w-md bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl animate-slide-up sm:mx-4 flex flex-col"
             style={{ maxHeight: 'calc(90vh - var(--nav-h) - env(safe-area-inset-bottom, 0px))' }}
             onClick={e => e.stopPropagation()}

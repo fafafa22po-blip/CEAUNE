@@ -137,7 +137,7 @@ export default function Contacto() {
           <SkeletonContacto />
         </>
       ) : (
-        <>
+        <div data-tour="contacto-cards" className="space-y-5">
           {/* Auxiliar primero — es el contacto principal con el apoderado */}
           {contactos?.auxiliar ? (
             <TarjetaContacto
@@ -167,7 +167,7 @@ export default function Contacto() {
               Tutor no asignado
             </div>
           )}
-        </>
+        </div>
       )}
 
       <p className="text-xs text-gray-400 text-center pb-2">
