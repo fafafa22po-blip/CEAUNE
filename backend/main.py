@@ -38,6 +38,7 @@ async def lifespan(app: FastAPI):
     import models.libreta         # noqa: F401
     import models.recojo          # noqa: F401
     import models.refresh_token   # noqa: F401
+    import models.audit_log       # noqa: F401
     Base.metadata.create_all(bind=engine)
 
     # Migración incremental: agrega columnas si no existen

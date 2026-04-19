@@ -268,6 +268,40 @@ def _notificar_reportes(semana_inicio: date, semana_fin: date, db):
 
 
 # ---------------------------------------------------------------------------
+# JOB 3 — Limpieza de refresh tokens expirados o revocados (medianoche)
+# ---------------------------------------------------------------------------
+
+def limpiar_refresh_tokens():
+    """Elimina refresh tokens vencidos o revocados con más de 7 días."""
+    db = _get_db()
+    try:
+        from datetime import timezone
+        from models.refresh_token import RefreshToken
+        from sqlalchemy import or_
+
+        ahora = datetime.now(timezone.utc)
+        limite_revocados = ahora - timedelta(days=7)
+
+        eliminados = (
+            db.query(RefreshToken)
+            .filter(
+                or_(
+                    RefreshToken.expires_at < ahora,
+                    (RefreshToken.revocado == True) & (RefreshToken.created_at < limite_revocados),
+                )
+            )
+            .delete(synchronize_session=False)
+        )
+        db.commit()
+        logger.info("[Limpieza] %d refresh tokens eliminados", eliminados)
+    except Exception as exc:
+        logger.error("[Limpieza] Error: %s", exc, exc_info=True)
+        db.rollback()
+    finally:
+        db.close()
+
+
+# ---------------------------------------------------------------------------
 # Reagendar job de un nivel específico (cuando el admin cambia el horario)
 # ---------------------------------------------------------------------------
 
@@ -333,9 +367,19 @@ def init_scheduler():
         trigger=CronTrigger(day_of_week="fri", hour=18, minute=0, timezone=TIMEZONE),
         id="reporte_semanal",
         replace_existing=True,
-        misfire_grace_time=1800,   # 30 min de tolerancia
+        misfire_grace_time=1800,
     )
     logger.info("[Scheduler] reporte_semanal → viernes 18:00 %s", TIMEZONE)
+
+    # Limpieza de refresh tokens: diario a medianoche
+    scheduler.add_job(
+        limpiar_refresh_tokens,
+        trigger=CronTrigger(hour=0, minute=0, timezone=TIMEZONE),
+        id="limpiar_refresh_tokens",
+        replace_existing=True,
+        misfire_grace_time=3600,
+    )
+    logger.info("[Scheduler] limpiar_refresh_tokens → diario 00:00 %s", TIMEZONE)
 
     scheduler.start()
     logger.info("[Scheduler] Iniciado. Jobs activos: %d", len(scheduler.get_jobs()))

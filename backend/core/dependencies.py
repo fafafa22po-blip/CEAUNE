@@ -33,6 +33,7 @@ def get_current_user(
     try:
         payload = decode_token(token)
         user_id: str = payload.get("sub")
+        rol_en_token: str = payload.get("rol")
         if not user_id:
             raise exc
     except JWTError:
@@ -41,6 +42,15 @@ def get_current_user(
     user = db.query(Usuario).filter(Usuario.id == user_id, Usuario.activo == True).first()
     if not user:
         raise exc
+
+    # Verificación dinámica: si el rol cambió en BD desde que se emitió el token, rechazar
+    if user.rol != rol_en_token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Permisos revocados, inicia sesión de nuevo",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
     return user
 
 

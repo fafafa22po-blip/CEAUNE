@@ -10,12 +10,13 @@ from typing import List, Optional
 
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Request, UploadFile, status
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from core.dependencies import get_current_user, get_db
+from models.audit_log import AuditLog
 from models.asistencia import Asistencia
 from models.comunicado import (
     Comunicado, ComunicadoDestinatario, ComunicadoRespuesta, ObservacionTutor,
@@ -933,6 +934,7 @@ def seguimiento_estudiante(
 @router.get("/estudiante/{estudiante_id}/ficha")
 def ficha_estudiante(
     estudiante_id: str,
+    request: Request,
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_user),
 ):
@@ -944,6 +946,15 @@ def ficha_estudiante(
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Estudiante no encontrado")
     if est.nivel != vinculo.nivel or est.grado != vinculo.grado or est.seccion != vinculo.seccion:
         raise HTTPException(status.HTTP_403_FORBIDDEN, "El estudiante no es de tu aula")
+
+    db.add(AuditLog(
+        usuario_id=current_user.id,
+        usuario_rol=current_user.rol,
+        accion="ver_ficha_medica",
+        recurso_id=estudiante_id,
+        ip=request.client.host if request.client else None,
+    ))
+    db.commit()
 
     hoy = date.today()
     inicio_mes = date(hoy.year, hoy.month, 1)
