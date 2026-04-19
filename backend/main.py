@@ -1,11 +1,16 @@
 import logging
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
 
 from core.config import settings
 from routers import auth, asistencia, estudiantes, admin, comunicados, justificaciones, apoderado, tutor, notificaciones, reportes, recojo
+
+limiter = Limiter(key_func=get_remote_address)
 
 logging.basicConfig(
     level=logging.INFO,
@@ -82,13 +87,19 @@ async def lifespan(app: FastAPI):
         logger.info("[Scheduler] Detenido.")
 
 
+_is_prod = settings.ENVIRONMENT == "production"
+
 app = FastAPI(
     title="CEAUNE Asistencia API",
     version="1.0.0",
-    docs_url="/docs",
-    redoc_url="/redoc",
+    docs_url=None if _is_prod else "/docs",
+    redoc_url=None if _is_prod else "/redoc",
+    openapi_url=None if _is_prod else "/openapi.json",
     lifespan=lifespan,
 )
+
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 app.add_middleware(
     CORSMiddleware,
@@ -137,9 +148,11 @@ def health():
     return {"status": "ok", "env": settings.ENVIRONMENT, "scheduler_jobs": jobs}
 
 
-@app.get("/health/google")
+@app.get("/health/google", include_in_schema=False)
 def health_google():
-    """Verifica si las credenciales Gmail/Drive están configuradas y funcionan."""
+    if _is_prod:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=404)
     resultado = {
         "GMAIL_CLIENT_ID": "OK" if settings.GMAIL_CLIENT_ID else "VACIO",
         "GMAIL_CLIENT_SECRET": "OK" if settings.GMAIL_CLIENT_SECRET else "VACIO",
