@@ -1067,6 +1067,12 @@ def confirmar_entrega(
         Estudiante.id == log.estudiante_id
     ).first()
 
+    # Verificar que el auxiliar solo confirma recojos de su nivel
+    _ROL_NIVEL = {"i-auxiliar": "inicial", "p-auxiliar": "primaria", "s-auxiliar": "secundaria"}
+    nivel_auxiliar = _ROL_NIVEL.get(current_user.rol)
+    if nivel_auxiliar and estudiante and estudiante.nivel != nivel_auxiliar:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "No tienes permiso para confirmar recojos de este nivel")
+
     ahora = datetime.now()
 
     # ── Marcar log como confirmado (capa 6: foto inmutable del momento) ──────

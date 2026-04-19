@@ -30,7 +30,6 @@ MIME_PERMITIDOS = {
     "image/webp",
     "application/msword",
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-    "application/octet-stream",  # Tipo genérico para archivos de cualquier formato
 }
 
 MAX_SIZE_MB = 10

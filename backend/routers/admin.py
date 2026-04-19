@@ -272,9 +272,9 @@ def cambiar_password_usuario(
     if not u:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Usuario no encontrado")
     nueva = data.get("nueva_password", "")
-    if len(nueva) < 6:
+    if len(nueva) < 8:
         raise HTTPException(
-            status.HTTP_422_UNPROCESSABLE_ENTITY, "La contraseña debe tener al menos 6 caracteres"
+            status.HTTP_422_UNPROCESSABLE_ENTITY, "La contraseña debe tener al menos 8 caracteres"
         )
     u.password_hash = get_password_hash(nueva)
     db.commit()

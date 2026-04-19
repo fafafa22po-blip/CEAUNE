@@ -90,11 +90,25 @@ def refresh(request: Request, data: RefreshRequest, db: Session = Depends(get_db
     if not user:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Usuario inactivo")
 
-    # Rotar: revocar el anterior y emitir uno nuevo
+    # Rotar: revocar el anterior y emitir uno nuevo en la misma transacción
     registro.revocado = True
+    raw_refresh = generar_refresh_token()
+    db.add(RefreshToken(
+        user_id=user.id,
+        token_hash=hash_refresh_token(raw_refresh),
+        expires_at=refresh_token_expiry(),
+    ))
     db.commit()
 
-    return _crear_tokens(user, db)
+    access_token = create_access_token(
+        data={"sub": user.id, "rol": user.rol, "es_apoderado": bool(user.es_apoderado)},
+    )
+    return Token(
+        access_token=access_token,
+        refresh_token=raw_refresh,
+        token_type="bearer",
+        expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+    )
 
 
 @router.post("/logout", status_code=204)

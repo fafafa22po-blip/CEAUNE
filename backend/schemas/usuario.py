@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Optional
 
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, field_validator
 
 from core.sanitize import TextoLimpio, TextoLimpioOpcional
 
@@ -68,3 +68,10 @@ class PerfilUpdate(BaseModel):
 class PasswordChange(BaseModel):
     password_actual: str
     password_nuevo: str
+
+    @field_validator("password_nuevo")
+    @classmethod
+    def validar_longitud(cls, v):
+        if len(v) < 8:
+            raise ValueError("La contraseña debe tener al menos 8 caracteres")
+        return v
