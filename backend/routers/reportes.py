@@ -8,8 +8,10 @@ from datetime import date
 from io import BytesIO
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import StreamingResponse
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 from sqlalchemy.orm import Session
 
 from core.dependencies import get_db, require_roles
@@ -18,6 +20,7 @@ from models.estudiante import Estudiante
 from models.usuario import Usuario
 
 router = APIRouter()
+limiter = Limiter(key_func=get_remote_address)
 
 _MESES_ES = [
     "Enero","Febrero","Marzo","Abril","Mayo","Junio",
@@ -687,7 +690,9 @@ def reporte_aula(
 # ─── Endpoints PDF ─────────────────────────────────────────────────────────────
 
 @router.get("/mensual/pdf")
+@limiter.limit("10/minute")
 def reporte_mensual_pdf(
+    request: Request,
     fecha_inicio: date = Query(...),
     fecha_fin:    date = Query(...),
     nivel:        Optional[str] = Query(None),
@@ -721,7 +726,9 @@ def reporte_mensual_pdf(
 
 
 @router.get("/aula/pdf")
+@limiter.limit("10/minute")
 def reporte_aula_pdf(
+    request: Request,
     grado:        str = Query(...),
     seccion:      str = Query(...),
     fecha_inicio: date = Query(...),
@@ -761,7 +768,9 @@ def reporte_aula_pdf(
 
 
 @router.get("/alumno/{estudiante_id}/pdf")
+@limiter.limit("10/minute")
 def reporte_alumno_pdf(
+    request: Request,
     estudiante_id: str,
     fecha_inicio:  date = Query(...),
     fecha_fin:     date = Query(...),

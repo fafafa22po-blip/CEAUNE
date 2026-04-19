@@ -159,6 +159,8 @@ def solicitar_autorizado(
     # Procesar foto (base64 JPEG recortada a 600px/q82 — nítida en pantallas 2x-3x DPI)
     foto_url = None
     foto_raw = body.get("foto_url") or body.get("foto")
+    if foto_raw and len(foto_raw) > 10_000_000:  # ~7.5MB imagen original → rechazar
+        raise HTTPException(status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, "Foto demasiado grande (máx 7MB)")
     if foto_raw:
         try:
             # Puede llegar como "data:image/...;base64,XXXX" o solo el base64

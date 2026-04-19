@@ -31,12 +31,13 @@ async def lifespan(app: FastAPI):
     logger.info("[Config] FIREBASE_JSON=%s", "OK" if settings.FIREBASE_CREDENTIALS_JSON else "VACIO")
     # Auto-crear tablas nuevas (dispositivos_usuario, etc.)
     from database import Base, engine
-    import models.dispositivo    # noqa: F401
-    import models.reunion        # noqa: F401
+    import models.dispositivo     # noqa: F401
+    import models.reunion         # noqa: F401
     import models.horario_curso   # noqa: F401
     import models.horario_archivo # noqa: F401
     import models.libreta         # noqa: F401
     import models.recojo          # noqa: F401
+    import models.refresh_token   # noqa: F401
     Base.metadata.create_all(bind=engine)
 
     # Migración incremental: agrega columnas si no existen
@@ -105,8 +106,8 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[settings.FRONTEND_URL, "http://localhost:5173", "https://ceaune.vercel.app"],
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type", "Accept"],
 )
 
 app.include_router(auth.router,       prefix="/auth",       tags=["Auth"])

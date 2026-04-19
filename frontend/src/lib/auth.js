@@ -7,9 +7,10 @@ export const obtenerUsuario = () => {
   }
 }
 
-export const guardarSesion = (token, usuario) => {
-  localStorage.setItem('token', token)
+export const guardarSesion = (accessToken, usuario, refreshToken = null) => {
+  localStorage.setItem('token', accessToken)
   localStorage.setItem('usuario', JSON.stringify(usuario))
+  if (refreshToken) localStorage.setItem('refresh_token', refreshToken)
 }
 
 export const guardarModoSesion = (modo) => {
@@ -18,6 +19,7 @@ export const guardarModoSesion = (modo) => {
 
 export const cerrarSesion = () => {
   localStorage.removeItem('token')
+  localStorage.removeItem('refresh_token')
   localStorage.removeItem('usuario')
   localStorage.removeItem('modo_sesion')
 }

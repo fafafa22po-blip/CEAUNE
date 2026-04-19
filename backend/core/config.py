@@ -4,7 +4,9 @@ from pydantic_settings import BaseSettings
 class Settings(BaseSettings):
     DATABASE_URL: str = "mysql+pymysql://ceaune_user:ceaune_pass_2025@mysql:3306/ceaune_asistencia"
     SECRET_KEY: str = "changeme"
-    JWT_EXPIRE_HOURS: int = 720  # 30 días
+    JWT_EXPIRE_HOURS: int = 720  # legacy — no usado directamente
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 15
+    REFRESH_TOKEN_EXPIRE_DAYS: int = 30
     GMAIL_CLIENT_ID: str = ""
     GMAIL_CLIENT_SECRET: str = ""
     GMAIL_REFRESH_TOKEN: str = ""

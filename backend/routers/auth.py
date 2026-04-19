@@ -1,5 +1,5 @@
 import logging
-from datetime import timedelta
+from datetime import datetime, timezone, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from slowapi import Limiter
@@ -10,24 +10,50 @@ limiter = Limiter(key_func=get_remote_address)
 
 from core.config import settings
 from core.dependencies import get_current_user, get_db
-from core.security import create_access_token, get_password_hash, verify_password
+from core.security import (
+    create_access_token,
+    get_password_hash,
+    verify_password,
+    generar_refresh_token,
+    hash_refresh_token,
+    refresh_token_expiry,
+)
+from models.refresh_token import RefreshToken
 from models.usuario import Usuario, TutorAula
-from schemas.usuario import LoginRequest, PasswordChange, PerfilUpdate, Token, UsuarioResponse
+from schemas.usuario import LoginRequest, PasswordChange, PerfilUpdate, RefreshRequest, Token, UsuarioResponse
 
 router = APIRouter()
 log = logging.getLogger(__name__)
 
 
+def _crear_tokens(user: Usuario, db: Session) -> Token:
+    """Crea access + refresh token para un usuario y persiste el refresh en BD."""
+    access_token = create_access_token(
+        data={"sub": user.id, "rol": user.rol, "es_apoderado": bool(user.es_apoderado)},
+    )
+    raw_refresh = generar_refresh_token()
+    db.add(RefreshToken(
+        user_id=user.id,
+        token_hash=hash_refresh_token(raw_refresh),
+        expires_at=refresh_token_expiry(),
+    ))
+    db.commit()
+    return Token(
+        access_token=access_token,
+        refresh_token=raw_refresh,
+        token_type="bearer",
+        expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+    )
+
+
 @router.post("/login", response_model=Token)
 @limiter.limit("5/minute")
 def login(request: Request, data: LoginRequest, db: Session = Depends(get_db)):
-    # Buscar por DNI exacto primero, luego con prefijo CE (personal institucional)
     user = db.query(Usuario).filter(
         Usuario.dni == data.dni,
         Usuario.activo == True,
     ).first()
 
-    # Si no encontró y el DNI no empieza con CE, probar CE+DNI (auxiliares/tutores/admin)
     if not user and not data.dni.upper().startswith("CE"):
         user = db.query(Usuario).filter(
             Usuario.dni == f"CE{data.dni}",
@@ -35,30 +61,54 @@ def login(request: Request, data: LoginRequest, db: Session = Depends(get_db)):
         ).first()
 
     if not user:
-        log.warning("Login fallido: DNI '%s' no encontrado o inactivo", data.dni)
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Credenciales incorrectas",
-        )
+        log.warning("Login fallido: DNI no encontrado o inactivo")
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Credenciales incorrectas")
 
     if not verify_password(data.password, user.password_hash):
-        log.warning("Login fallido: contraseña incorrecta para DNI '%s'", data.dni)
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Credenciales incorrectas",
-        )
+        log.warning("Login fallido: contraseña incorrecta")
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Credenciales incorrectas")
 
-    expire_seconds = settings.JWT_EXPIRE_HOURS * 3600
-    token = create_access_token(
-        data={"sub": user.id, "rol": user.rol, "es_apoderado": bool(user.es_apoderado)},
-        expires_delta=timedelta(seconds=expire_seconds),
-    )
-    return Token(access_token=token, token_type="bearer", expires_in=expire_seconds)
+    return _crear_tokens(user, db)
+
+
+@router.post("/refresh", response_model=Token)
+@limiter.limit("10/minute")
+def refresh(request: Request, data: RefreshRequest, db: Session = Depends(get_db)):
+    """Emite un nuevo access token usando el refresh token."""
+    token_hash = hash_refresh_token(data.refresh_token)
+    ahora = datetime.now(timezone.utc)
+
+    registro = db.query(RefreshToken).filter(
+        RefreshToken.token_hash == token_hash,
+        RefreshToken.revocado == False,
+    ).first()
+
+    if not registro or registro.expires_at.replace(tzinfo=timezone.utc) < ahora:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Sesión expirada, inicia sesión de nuevo")
+
+    user = db.query(Usuario).filter(Usuario.id == registro.user_id, Usuario.activo == True).first()
+    if not user:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Usuario inactivo")
+
+    # Rotar: revocar el anterior y emitir uno nuevo
+    registro.revocado = True
+    db.commit()
+
+    return _crear_tokens(user, db)
+
+
+@router.post("/logout", status_code=204)
+def logout(data: RefreshRequest, db: Session = Depends(get_db)):
+    """Revoca el refresh token (logout real)."""
+    token_hash = hash_refresh_token(data.refresh_token)
+    registro = db.query(RefreshToken).filter(RefreshToken.token_hash == token_hash).first()
+    if registro:
+        registro.revocado = True
+        db.commit()
 
 
 @router.get("/me", response_model=UsuarioResponse)
 def me(current_user: Usuario = Depends(get_current_user), db: Session = Depends(get_db)):
-    # Para tutores, poblar nivel desde tutores_aulas si no está en usuarios
     if current_user.rol == "tutor" and not current_user.nivel:
         aula = db.query(TutorAula).filter(TutorAula.tutor_id == current_user.id).first()
         if aula:
@@ -83,10 +133,7 @@ def actualizar_perfil(
             Usuario.id != current_user.id,
         ).first()
         if existente:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="El email ya está registrado por otro usuario",
-            )
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="El email ya está registrado por otro usuario")
         current_user.email = data.email
     db.commit()
     db.refresh(current_user)
@@ -100,9 +147,11 @@ def cambiar_password(
     db: Session = Depends(get_db),
 ):
     if not verify_password(data.password_actual, current_user.password_hash):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="La contraseña actual es incorrecta",
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="La contraseña actual es incorrecta")
     current_user.password_hash = get_password_hash(data.password_nuevo)
+    # Revocar todos los refresh tokens del usuario al cambiar contraseña
+    db.query(RefreshToken).filter(
+        RefreshToken.user_id == current_user.id,
+        RefreshToken.revocado == False,
+    ).update({"revocado": True})
     db.commit()

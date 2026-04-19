@@ -41,7 +41,7 @@ export default function LoginPersonal() {
       const { data: tokenData } = await api.post('/auth/login', { dni, password })
       localStorage.setItem('token', tokenData.access_token)
       const { data: usuario } = await api.get('/auth/me')
-      guardarSesion(tokenData.access_token, usuario)
+      guardarSesion(tokenData.access_token, usuario, tokenData.refresh_token)
 
       if (usuario.es_apoderado && usuario.rol !== 'apoderado') {
         // Tiene doble rol — preguntar con qué perfil desea ingresar

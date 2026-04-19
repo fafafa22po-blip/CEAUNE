@@ -460,7 +460,11 @@ export default function Layout() {
     }
   }, [queryClient])
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    const refreshToken = localStorage.getItem('refresh_token')
+    if (refreshToken) {
+      api.post('/auth/logout', { refresh_token: refreshToken }).catch(() => {})
+    }
     cerrarSesion()
     nav('/login')
   }
