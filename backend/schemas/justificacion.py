@@ -3,14 +3,15 @@ from typing import Optional
 
 from pydantic import BaseModel
 
+from core.sanitize import TextoLimpio, TextoLimpioOpcional
 from schemas.asistencia import AsistenciaResponse
 from schemas.estudiante import EstudianteBasico
 
 
 class JustificacionCreate(BaseModel):
     asistencia_id: str
-    motivo: str
-    adjunto_nombre: Optional[str] = None
+    motivo: TextoLimpio
+    adjunto_nombre: TextoLimpioOpcional = None
     adjunto_drive_url: Optional[str] = None
 
 
@@ -34,4 +35,4 @@ class JustificacionResponse(BaseModel):
 
 
 class RevisionRequest(BaseModel):
-    observacion: Optional[str] = None      # obligatorio al rechazar
+    observacion: TextoLimpioOpcional = None

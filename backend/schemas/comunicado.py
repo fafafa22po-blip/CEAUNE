@@ -3,6 +3,7 @@ from typing import List, Optional
 
 from pydantic import BaseModel
 
+from core.sanitize import TextoLimpio, TextoLimpioOpcional
 from schemas.estudiante import EstudianteBasico
 
 
@@ -46,24 +47,21 @@ class ComunicadoResponse(BaseModel):
 
 
 class ComunicarRequest(BaseModel):
-    tipo_envio: str                        # individual | aula | masivo
-    # individual → lista de IDs de estudiantes
+    tipo_envio: str
     estudiantes_ids: List[str] = []
-    # aula → nivel + grado + sección
     nivel: Optional[str] = None
     grado: Optional[str] = None
     seccion: Optional[str] = None
-    # masivo → lista de niveles (o vacío = todos)
     niveles: Optional[List[str]] = None
-    asunto: str
-    mensaje: str
-    adjunto_nombre: Optional[str] = None
+    asunto: TextoLimpio
+    mensaje: TextoLimpio
+    adjunto_nombre: TextoLimpioOpcional = None
     adjunto_drive_url: Optional[str] = None
 
 
 class ResponderRequest(BaseModel):
-    mensaje: str
-    adjunto_nombre: Optional[str] = None
+    mensaje: TextoLimpio
+    adjunto_nombre: TextoLimpioOpcional = None
     adjunto_drive_url: Optional[str] = None
 
 

@@ -3,6 +3,8 @@ from typing import Optional
 
 from pydantic import BaseModel, EmailStr
 
+from core.sanitize import TextoLimpio, TextoLimpioOpcional
+
 
 class LoginRequest(BaseModel):
     dni: str
@@ -39,8 +41,8 @@ class UsuarioResponse(BaseModel):
 
 class UsuarioCreate(BaseModel):
     dni: str
-    nombre: str
-    apellido: str
+    nombre: TextoLimpio
+    apellido: TextoLimpio
     email: EmailStr
     password: str
     rol: str
@@ -49,8 +51,8 @@ class UsuarioCreate(BaseModel):
 
 
 class UsuarioUpdate(BaseModel):
-    nombre: Optional[str] = None
-    apellido: Optional[str] = None
+    nombre: TextoLimpioOpcional = None
+    apellido: TextoLimpioOpcional = None
     email: Optional[EmailStr] = None
     nivel: Optional[str] = None
     foto_url: Optional[str] = None
@@ -58,8 +60,8 @@ class UsuarioUpdate(BaseModel):
 
 
 class PerfilUpdate(BaseModel):
-    nombre: Optional[str] = None
-    apellido: Optional[str] = None
+    nombre: TextoLimpioOpcional = None
+    apellido: TextoLimpioOpcional = None
     email: Optional[EmailStr] = None
 
 
