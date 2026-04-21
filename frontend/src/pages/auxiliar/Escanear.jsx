@@ -1,10 +1,13 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
-import { Hash, Camera, Mail, Clock, MessageCircle, X, Phone, Copy, AlertTriangle, Check, ShieldCheck, UserX } from 'lucide-react'
+import ReactDOM from 'react-dom'
+import { Hash, Camera, Mail, Clock, MessageCircle, X, Phone, Copy, AlertTriangle, Check, ShieldCheck, UserX, CheckCircle2 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import QRScanner from '../../components/QRScanner'
 import api from '../../lib/api'
 import { formatGradoSeccion } from '../../lib/nivelAcademico'
 import { abrirWhatsApp } from '../../lib/externo'
+import { obtenerUsuario } from '../../lib/auth'
+import { hapticMedium, hapticLight } from '../../lib/haptics'
 
 // ─── Motivos para salida anticipada ──────────────────────────────────────────
 const MOTIVOS_SALIDA = [
@@ -60,6 +63,345 @@ function FotoEstudiante({ foto_url, nombre, ring = 'ring-gray-200', size = 'md' 
 const AUTO_CONFIRM_SEG = 3
 const AUTO_CIERRE_SEG  = 5
 
+// ─── Flujo APO- (solo i-auxiliar / inicial) ───────────────────────────────────
+const PREVIEW_HDR_INI = {
+  ingreso:          { bg: 'bg-green-500',  label: 'INGRESO PUNTUAL'   },
+  tardanza:         { bg: 'bg-amber-500',  label: 'TARDANZA'          },
+  salida:           { bg: 'bg-blue-500',   label: 'SALIDA'            },
+  salida_especial:  { bg: 'bg-orange-500', label: 'SALIDA ANTICIPADA' },
+  ingreso_especial: { bg: 'bg-violet-600', label: 'REGRESO'           },
+  solo_recojo:      { bg: 'bg-[#0a1f3d]', label: 'RECOJO'            },
+}
+
+const MOTIVOS_SALIDA_INI = [
+  { v: 'marcha',            label: 'Marcha / Movilización' },
+  { v: 'juegos_deportivos', label: 'Juegos deportivos'     },
+  { v: 'enfermedad',        label: 'Enfermedad / Malestar' },
+  { v: 'permiso_apoderado', label: 'Permiso del apoderado' },
+  { v: 'otro',              label: 'Otro motivo'           },
+]
+
+function AvatarIni({ foto_url, nombre, className = '', textClass = '' }) {
+  if (foto_url) return <img src={foto_url} alt={nombre} className={`object-cover ${className}`} />
+  return (
+    <div className={`flex items-center justify-center font-black text-white/70 ${textClass} ${className}`}>
+      {nombre?.charAt(0)?.toUpperCase() || '?'}
+    </div>
+  )
+}
+
+function ModalSeleccionIni({ datoApo, qrToken, onConfirmar, onCancelar, cargando }) {
+  const { apoderado, hijos } = datoApo
+  const [hijoId,      setHijoId]      = useState(hijos.length === 1 ? hijos[0].id : '')
+  const [preview,     setPreview]     = useState(null)
+  const [loadingPrev, setLoadingPrev] = useState(false)
+  const [observacion, setObservacion] = useState('')
+  const [motivo,      setMotivo]      = useState('')
+  const [conRecojo,   setConRecojo]   = useState(false)
+  const [autoConfirm, setAutoConfirm] = useState(0)
+  const acRef     = useRef(null)
+  const confirmRef = useRef(null)
+
+  useEffect(() => {
+    if (!hijoId) return
+    setPreview(null); setObservacion(''); setMotivo(''); setConRecojo(false)
+    setLoadingPrev(true)
+    api.post('/inicial/previsualizar', { qr_token: qrToken, estudiante_id: hijoId })
+      .then(r => {
+        setPreview(r.data)
+        if (!r.data.tiene_asistencia && r.data.puede_recojo) setConRecojo(true)
+      })
+      .catch(err => { toast.error(err.response?.data?.detail || 'Error al previsualizar'); onCancelar() })
+      .finally(() => setLoadingPrev(false))
+  }, [hijoId]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const puedeAutoConfirmar = preview && !preview.requiere_observacion &&
+    !preview.requiere_motivo && preview.tiene_asistencia && !preview.puede_recojo
+
+  useEffect(() => {
+    clearTimeout(acRef.current); setAutoConfirm(0)
+    if (!puedeAutoConfirmar) return
+    setAutoConfirm(AUTO_CONFIRM_SEG)
+  }, [puedeAutoConfirmar, preview?.tipo_asistencia])
+
+  useEffect(() => {
+    clearTimeout(acRef.current)
+    if (autoConfirm <= 0) return
+    acRef.current = setTimeout(() => {
+      setAutoConfirm(c => { if (c <= 1) { confirmRef.current?.(); return 0 } return c - 1 })
+    }, 1000)
+    return () => clearTimeout(acRef.current)
+  }, [autoConfirm])
+
+  const handleConfirmar = () => {
+    clearTimeout(acRef.current)
+    if (!preview || !hijoId) return
+    const accion = preview.tiene_asistencia && conRecojo ? 'ambos'
+      : preview.tiene_asistencia ? 'asistencia' : 'recojo'
+    const extras = {}
+    if (preview.tipo_asistencia)  extras.tipo_asistencia = preview.tipo_asistencia
+    if (observacion.trim())       extras.observacion     = observacion.trim()
+    if (motivo)                   extras.motivo_especial = motivo
+    else if (preview.motivo_auto) extras.motivo_especial = preview.motivo_auto
+    onConfirmar(hijoId, accion, qrToken, extras)
+  }
+  confirmRef.current = handleConfirmar
+
+  const puedeConfirmar = preview && hijoId &&
+    (!preview.requiere_observacion || observacion.trim()) &&
+    (!preview.requiere_motivo || motivo) &&
+    (preview.tiene_asistencia || conRecojo)
+
+  const hdrKey = preview
+    ? (!preview.tiene_asistencia ? 'solo_recojo'
+       : preview.estado_previsto === 'tardanza' ? 'tardanza'
+       : preview.tipo_asistencia || 'ingreso')
+    : null
+  const hdr = hdrKey ? PREVIEW_HDR_INI[hdrKey] : null
+
+  return ReactDOM.createPortal(
+    <div className="fixed inset-0 z-[9999] bg-black/70 flex items-end sm:items-center justify-center"
+      onClick={e => { if (e.target === e.currentTarget) { clearTimeout(acRef.current); onCancelar() } }}>
+      <div className="bg-white w-full sm:max-w-sm sm:rounded-2xl overflow-hidden shadow-2xl"
+        onClick={e => e.stopPropagation()}>
+
+        {hdr && (
+          <div className={`h-1 ${hdr.bg} opacity-30`}>
+            {autoConfirm > 0 && (
+              <div className={`h-1 ${hdr.bg} transition-all duration-1000 ease-linear`}
+                style={{ width: `${(autoConfirm / AUTO_CONFIRM_SEG) * 100}%` }} />
+            )}
+          </div>
+        )}
+
+        {hdr ? (
+          <div className={`${hdr.bg} px-5 py-3 flex items-center justify-between`}>
+            <div className="flex items-center gap-2">
+              <p className="text-white font-black text-xl tracking-widest">{hdr.label}</p>
+              {autoConfirm > 0 && (
+                <span className="bg-white/25 text-white text-xs font-bold px-2 py-0.5 rounded-full">{autoConfirm}s</span>
+              )}
+            </div>
+            <button onClick={() => { clearTimeout(acRef.current); onCancelar() }}
+              className="text-white/80 hover:text-white w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/20">
+              <X size={18} />
+            </button>
+          </div>
+        ) : (
+          <div className="bg-[#0a1f3d] px-5 py-4 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <AvatarIni foto_url={apoderado.foto_url} nombre={apoderado.nombre}
+                className="w-10 h-10 rounded-xl flex-shrink-0" textClass="text-base bg-white/20 w-10 h-10 rounded-xl" />
+              <div>
+                <p className="text-white font-bold leading-tight">{apoderado.nombre} {apoderado.apellido}</p>
+                <p className="text-white/50 text-xs mt-0.5">Apoderado · Nivel Inicial</p>
+              </div>
+            </div>
+            <button onClick={onCancelar} className="w-8 h-8 rounded-full bg-white/15 flex items-center justify-center flex-shrink-0">
+              <X size={16} className="text-white" />
+            </button>
+          </div>
+        )}
+
+        <div className="px-5 pt-5 pb-4 space-y-4">
+          {hijos.length > 1 && (
+            <div className="space-y-2">
+              <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Selecciona al alumno</p>
+              {hijos.map(h => (
+                <button key={h.id} onClick={() => setHijoId(h.id)}
+                  className={`w-full flex items-center gap-3 p-3 rounded-xl border-2 transition-all ${
+                    hijoId === h.id ? 'border-[#0a1f3d] bg-[#0a1f3d]/5' : 'border-gray-200 hover:border-gray-300'}`}>
+                  <AvatarIni foto_url={h.foto_url} nombre={h.nombre}
+                    className="w-10 h-10 rounded-xl flex-shrink-0" textClass="text-base bg-gray-200 w-10 h-10 rounded-xl" />
+                  <div className="flex-1 text-left">
+                    <p className="font-bold text-gray-900 text-sm">{h.nombre} {h.apellido}</p>
+                    <p className="text-xs text-gray-500">{h.grado} años · Aula {h.seccion}</p>
+                  </div>
+                  {h.estado_hoy?.tiene_ingreso
+                    ? <span className="text-[10px] font-bold text-green-600 bg-green-50 px-2 py-0.5 rounded-full">Presente</span>
+                    : <span className="text-[10px] font-bold text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">Ausente</span>}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {loadingPrev && (
+            <div className="flex items-center justify-center gap-2 py-6 text-sm text-gray-400">
+              <span className="w-4 h-4 border-2 border-[#0a1f3d] border-t-transparent rounded-full animate-spin" />
+              Detectando acción...
+            </div>
+          )}
+
+          {preview && (
+            <>
+              <div className="flex flex-col items-center text-center gap-3">
+                <div className="flex items-center gap-1.5 text-[11px] font-bold text-gray-400 uppercase tracking-widest">
+                  <ShieldCheck size={13} className="text-gray-300" /> Verificar identidad
+                </div>
+                <FotoEstudiante foto_url={preview.estudiante?.foto_url} nombre={preview.estudiante?.nombre} size="lg" />
+                <div>
+                  <p className="font-black text-[#0a1f3d] text-xl leading-tight">
+                    {preview.estudiante?.nombre} {preview.estudiante?.apellido}
+                  </p>
+                  <p className="text-gray-500 text-sm mt-0.5">
+                    {preview.estudiante?.grado} años · Aula {preview.estudiante?.seccion}
+                  </p>
+                  {preview.sublabel && <p className="text-xs text-gray-400 italic mt-1">{preview.sublabel}</p>}
+                </div>
+              </div>
+
+              {preview.tipo_asistencia === 'ingreso_especial' && preview.motivo_auto && (
+                <div className="flex items-center gap-2 bg-violet-50 border border-violet-100 rounded-xl px-3.5 py-2.5">
+                  <div className="w-2 h-2 rounded-full bg-violet-400 flex-shrink-0" />
+                  <p className="text-sm text-violet-700">
+                    Retorna de: <span className="font-semibold">{preview.motivo_auto.replace(/_/g, ' ')}</span>
+                  </p>
+                </div>
+              )}
+
+              {preview.requiere_observacion && (
+                <div className="space-y-1.5">
+                  <p className="text-xs font-semibold text-amber-600 uppercase tracking-wide text-center">¿Por qué llegó tarde?</p>
+                  <textarea
+                    className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400 resize-none"
+                    rows={2} value={observacion} onChange={e => setObservacion(e.target.value)}
+                    placeholder="Motivo de la tardanza (obligatorio)..." autoFocus />
+                </div>
+              )}
+
+              {preview.requiere_motivo && (
+                <div className="space-y-2">
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide text-center">¿Por qué sale antes?</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    {MOTIVOS_SALIDA_INI.map(m => (
+                      <button key={m.v} type="button" onClick={() => setMotivo(m.v)}
+                        className={`py-2.5 px-3 rounded-xl border-2 text-xs font-semibold text-left transition-all ${
+                          motivo === m.v ? 'border-orange-400 bg-orange-50 text-orange-700' : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'}`}>
+                        {m.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {preview.puede_recojo && preview.tiene_asistencia && (
+                <button onClick={() => setConRecojo(v => !v)}
+                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl border-2 transition-all ${
+                    conRecojo ? 'border-[#0a1f3d] bg-[#0a1f3d]/5' : 'border-gray-200 hover:border-gray-300'}`}>
+                  <div className={`w-5 h-5 rounded flex items-center justify-center flex-shrink-0 transition-colors ${
+                    conRecojo ? 'bg-[#0a1f3d]' : 'border-2 border-gray-300'}`}>
+                    {conRecojo && <CheckCircle2 size={12} className="text-white" />}
+                  </div>
+                  <div className="text-left">
+                    <p className="text-sm font-bold text-gray-800">También autorizar recojo</p>
+                    <p className="text-xs text-gray-400">Registra salida + recojo en un solo escaneo</p>
+                  </div>
+                  <ShieldCheck size={16} className={`flex-shrink-0 ${conRecojo ? 'text-[#0a1f3d]' : 'text-gray-300'}`} />
+                </button>
+              )}
+
+              {!preview.tiene_asistencia && preview.puede_recojo && (
+                <div className="bg-[#0a1f3d]/5 border border-[#0a1f3d]/20 rounded-xl px-4 py-3 text-center">
+                  <p className="text-sm font-bold text-[#0a1f3d]">Ingreso y salida ya registrados</p>
+                  <p className="text-xs text-gray-500 mt-0.5">Se registrará solo el recojo seguro</p>
+                </div>
+              )}
+
+              <div className="space-y-2.5">
+                <button onClick={handleConfirmar} disabled={cargando || !puedeConfirmar}
+                  className={`w-full py-3.5 rounded-xl font-bold text-white flex items-center justify-center gap-2 disabled:opacity-40 active:scale-[0.98] ${hdr ? hdr.bg : 'bg-[#0a1f3d]'}`}>
+                  {cargando
+                    ? <><span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Registrando...</>
+                    : <><Check size={16} /> {autoConfirm > 0 ? `Confirmar (${autoConfirm}s)` : 'Confirmar registro'}</>}
+                </button>
+                <button onClick={() => { clearTimeout(acRef.current); onCancelar() }}
+                  className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border-2 border-red-200 text-red-500 hover:bg-red-50 text-sm font-semibold">
+                  <UserX size={15} /> Cancelar
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    </div>,
+    document.body
+  )
+}
+
+function PantallaResultadoIni({ resultado, alumno, onCerrar }) {
+  const [cuenta, setCuenta] = useState(8)
+  const timerRef = useRef(null)
+
+  useEffect(() => {
+    hapticMedium()
+    timerRef.current = setInterval(() => setCuenta(c => {
+      if (c <= 1) { clearInterval(timerRef.current); onCerrar(); return 0 }
+      return c - 1
+    }), 1000)
+    return () => clearInterval(timerRef.current)
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const tieneAsist  = !!resultado.asistencia
+  const tieneRecojo = !!resultado.recojo
+  const bg = tieneRecojo ? '#15803d' : tieneAsist ? '#0a1f3d' : '#6b7280'
+  const titulo = tieneRecojo && tieneAsist ? 'ENTRADA Y RECOJO'
+    : tieneRecojo ? 'RECOJO AUTORIZADO'
+    : tieneAsist  ? 'ENTRADA REGISTRADA'
+    : resultado.mensaje || 'REGISTRADO'
+
+  return ReactDOM.createPortal(
+    <div className="fixed inset-0 z-[9999] flex flex-col" style={{ background: bg }}
+      onClick={() => { clearInterval(timerRef.current); onCerrar() }}>
+      <div className="flex-shrink-0 px-5 pt-[calc(env(safe-area-inset-top)+16px)] pb-4 flex items-start justify-between">
+        <div>
+          <p className="text-white font-black text-3xl leading-tight">{titulo}</p>
+          <p className="text-white/70 text-sm mt-1">{alumno.nombre} {alumno.apellido}</p>
+          <p className="text-white/50 text-xs">{alumno.grado} años · Aula {alumno.seccion}</p>
+        </div>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
+            <span className="text-white font-bold tabular-nums">{cuenta}</span>
+          </div>
+          <button onClick={() => { clearInterval(timerRef.current); onCerrar() }}
+            className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
+            <X size={20} className="text-white" />
+          </button>
+        </div>
+      </div>
+      <div className="flex-1 flex items-center justify-center px-8">
+        <div className="flex flex-col items-center gap-5">
+          <FotoEstudiante foto_url={alumno.foto_url} nombre={alumno.nombre}
+            ring="ring-white/30" size="lg" />
+          <div className="flex flex-wrap gap-2 justify-center">
+            {tieneAsist && (
+              <div className="flex items-center gap-1.5 bg-white/20 px-3 py-1.5 rounded-full">
+                <Check size={14} className="text-white" />
+                <span className="text-white text-sm font-bold">
+                  {resultado.asistencia.tipo === 'ingreso' ? 'Entrada' : 'Salida'}
+                  {resultado.asistencia.hora && ` · ${resultado.asistencia.hora}`}
+                </span>
+              </div>
+            )}
+            {tieneRecojo && (
+              <div className="flex items-center gap-1.5 bg-white/20 px-3 py-1.5 rounded-full">
+                <ShieldCheck size={14} className="text-white" />
+                <span className="text-white text-sm font-bold">Recojo</span>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+      <div className="flex-shrink-0 px-5 pb-[calc(env(safe-area-inset-bottom)+20px)]">
+        <button onClick={() => { clearInterval(timerRef.current); onCerrar() }}
+          className="w-full py-4 rounded-2xl bg-white/20 border border-white/30 text-white font-black text-base flex items-center justify-center gap-2">
+          Siguiente ({cuenta})
+        </button>
+      </div>
+    </div>,
+    document.body
+  )
+}
+
 function StatBadge({ valor, label, color }) {
   return (
     <div className={`flex-1 rounded-xl p-3 text-center ${color}`}>
@@ -70,6 +412,7 @@ function StatBadge({ valor, label, color }) {
 }
 
 export default function Escanear() {
+  const _usuario = obtenerUsuario()
   const [modo, setModo]                 = useState('camara')
   const [dniManual, setDniManual]       = useState('')
   const [cargando, setCargando]         = useState(false)
@@ -92,6 +435,12 @@ export default function Escanear() {
   const [cuentaRegresiva, setCuentaRegresiva] = useState(AUTO_CIERRE_SEG)
   const [autoActivo, setAutoActivo]         = useState(false)
   const closeTimerRef = useRef(null)
+
+  // ── Flujo APO- (solo i-auxiliar) ─────────────────────────────────────────
+  const [datoApo,          setDatoApo]          = useState(null)
+  const [qrTokenApo,       setQrTokenApo]       = useState('')
+  const [resultadoInicial, setResultadoInicial] = useState(null)
+  const [alumnoInicial,    setAlumnoInicial]    = useState(null)
 
   // Clave visual del header del preview
   const headerKey    = preview
@@ -170,6 +519,25 @@ export default function Escanear() {
   // ── Fase 1: escanear → previsualizar ────────────────────────────────────
   const escanear = useCallback(async (token) => {
     if (cargando) return
+
+    // QR de apoderado de inicial → flujo APO- inline (solo i-auxiliar)
+    if (token.startsWith('APO-') && _usuario?.rol === 'i-auxiliar') {
+      setCargando(true)
+      setCamaraActiva(false)
+      try {
+        const { data } = await api.post('/inicial/resolver-qr', { qr_token: token })
+        hapticLight()
+        setQrTokenApo(token)
+        setDatoApo(data)
+      } catch (err) {
+        toast.error(err.response?.data?.detail || 'QR de apoderado no reconocido')
+        setCamaraActiva(true)
+      } finally {
+        setCargando(false)
+      }
+      return
+    }
+
     setCargando(true)
     setCamaraActiva(false)
     try {
@@ -237,6 +605,31 @@ export default function Escanear() {
   // Mantener ref sincronizado para el auto-confirm
   confirmarRef.current = confirmarRegistro
 
+  const confirmarInicial = useCallback(async (hijoId, accion, qrToken, extras = {}) => {
+    if (cargando) return
+    setCargando(true)
+    const hijo = datoApo?.hijos?.find(h => h.id === hijoId)
+    try {
+      const { data } = await api.post('/inicial/escanear', {
+        qr_token: qrToken, estudiante_id: hijoId, accion, ...extras,
+      })
+      hapticMedium()
+      setDatoApo(null)
+      setAlumnoInicial(hijo)
+      setResultadoInicial(data)
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Error al registrar')
+    } finally {
+      setCargando(false)
+    }
+  }, [cargando, datoApo])
+
+  const cerrarResultadoInicial = useCallback(() => {
+    setResultadoInicial(null)
+    setAlumnoInicial(null)
+    setCamaraActiva(true)
+  }, [])
+
   const handleQR     = useCallback(token => { setCamaraActiva(false); escanear(token) }, [escanear])
   const handleManual = e => { e.preventDefault(); if (dniManual.trim()) escanear(dniManual.trim()) }
 
@@ -260,6 +653,24 @@ export default function Escanear() {
 
   return (
     <>
+      {/* ── Modales del flujo APO- (i-auxiliar / inicial) ─────────────────── */}
+      {datoApo && (
+        <ModalSeleccionIni
+          datoApo={datoApo}
+          qrToken={qrTokenApo}
+          cargando={cargando}
+          onConfirmar={confirmarInicial}
+          onCancelar={() => { setDatoApo(null); setCamaraActiva(true) }}
+        />
+      )}
+      {resultadoInicial && alumnoInicial && (
+        <PantallaResultadoIni
+          resultado={resultadoInicial}
+          alumno={alumnoInicial}
+          onCerrar={cerrarResultadoInicial}
+        />
+      )}
+
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         <div className="xl:col-span-2 space-y-5">
           <h1 className="text-xl font-bold text-marino">Registrar Asistencia</h1>

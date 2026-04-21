@@ -193,7 +193,6 @@ export default function ModalImprimirCarnets({ onClose, estudianteInicial = null
                     onChange={e => setFiltro({ nivel: e.target.value, grado: '', seccion: '' })}
                   >
                     <option value="">Seleccionar...</option>
-                    <option value="inicial">Inicial</option>
                     <option value="primaria">Primaria</option>
                     <option value="secundaria">Secundaria</option>
                   </select>

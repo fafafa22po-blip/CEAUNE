@@ -16,6 +16,11 @@ def generar_qr_token() -> str:
     return f"CEAUNE-{uuid.uuid4().hex[:16].upper()}"
 
 
+def generar_qr_token_apoderado() -> str:
+    """Genera un token único para el QR del apoderado de inicial."""
+    return f"APO-{uuid.uuid4().hex[:20].upper()}"
+
+
 def generar_qr_solo_png(qr_token: str) -> bytes:
     """
     Genera solo el código QR limpio sin decoraciones (para carnets).

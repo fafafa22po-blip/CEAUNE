@@ -9,7 +9,7 @@ from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 
 from core.config import settings
-from routers import auth, asistencia, estudiantes, admin, comunicados, justificaciones, apoderado, tutor, notificaciones, reportes, recojo
+from routers import auth, asistencia, estudiantes, admin, comunicados, justificaciones, apoderado, tutor, notificaciones, reportes, recojo, inicial
 
 limiter = Limiter(key_func=get_remote_address)
 
@@ -72,6 +72,7 @@ async def lifespan(app: FastAPI):
         "ALTER TABLE estudiantes ADD COLUMN medicacion_escolar TEXT NULL",
         "ALTER TABLE estudiantes ADD COLUMN protocolo_emergencia TEXT NULL",
         "ALTER TABLE usuarios ADD COLUMN es_apoderado TINYINT(1) NOT NULL DEFAULT 0",
+        "ALTER TABLE usuarios ADD COLUMN qr_token_inicial VARCHAR(100) UNIQUE NULL",
         # Recojo seguro — confirmación explícita + snapshot foto (capa 1 y 6)
         "ALTER TABLE recojo_logs ADD COLUMN confirmado TINYINT(1) NOT NULL DEFAULT 0",
         "ALTER TABLE recojo_logs ADD COLUMN confirmado_at TIMESTAMP NULL",
@@ -137,6 +138,7 @@ app.include_router(apoderado.router,      prefix="/apoderado",      tags=["Apode
 app.include_router(tutor.router,          prefix="/tutor",          tags=["Tutor"])
 app.include_router(notificaciones.router, prefix="/notificaciones", tags=["Notificaciones"])
 app.include_router(recojo.router,         prefix="/recojo",         tags=["Recojo"])
+app.include_router(inicial.router,        prefix="/inicial",        tags=["Inicial"])
 
 
 # ── Versión APK ──────────────────────────────────────────────────────────────

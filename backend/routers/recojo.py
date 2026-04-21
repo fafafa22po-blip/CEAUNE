@@ -733,12 +733,13 @@ def admin_panel_apoderados(
             )
 
             apoderados_data.append({
-                "usuario_id": apo.id,
-                "nombre":     apo.nombre,
-                "apellido":   apo.apellido,
-                "dni":        apo.dni,
-                "telefono":   apo.telefono,
-                "foto_url":   apo.foto_url,
+                "usuario_id":       apo.id,
+                "nombre":           apo.nombre,
+                "apellido":         apo.apellido,
+                "dni":              apo.dni,
+                "telefono":         apo.telefono,
+                "foto_url":         apo.foto_url,
+                "qr_token_inicial": apo.qr_token_inicial,
                 "fotocheck":  {
                     "id":                   pa.id,
                     "estado":               pa.estado,
@@ -1233,6 +1234,80 @@ def resumen_hoy(
         "total_pendientes": len(ids_pendientes),
         "recogidos":        lista_recogidos,
         "pendientes":       lista_pendientes,
+    }
+
+
+@router.get("/resumen-periodo")
+def resumen_periodo(
+    periodo: str = Query("semana"),
+    nivel: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_user),
+):
+    """Recojos confirmados de la semana o mes actual, agrupados por fecha."""
+    if current_user.rol not in ROLES_ESCANEO:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Sin permiso")
+    if periodo not in ("semana", "mes"):
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "periodo debe ser 'semana' o 'mes'")
+
+    nivel_filtro = nivel or NIVEL_POR_ROL.get(current_user.rol)
+    hoy = date.today()
+    inicio = hoy - timedelta(days=hoy.weekday()) if periodo == "semana" else hoy.replace(day=1)
+    inicio_dt = datetime(inicio.year, inicio.month, inicio.day)
+
+    logs = (
+        db.query(RecojoLog)
+        .filter(
+            RecojoLog.confirmado == True,  # noqa: E712
+            RecojoLog.created_at >= inicio_dt,
+        )
+        .order_by(RecojoLog.confirmado_at.desc())
+        .all()
+    )
+
+    recojos = []
+    for log in logs:
+        est = db.query(Estudiante).filter(Estudiante.id == log.estudiante_id).first()
+        if not est:
+            continue
+        if nivel_filtro and est.nivel != nivel_filtro:
+            continue
+        persona = db.query(PersonaAutorizada).filter(
+            PersonaAutorizada.id == log.persona_autorizada_id
+        ).first()
+        recojos.append({
+            "fecha":    log.confirmado_at.strftime("%Y-%m-%d") if log.confirmado_at else "",
+            "hora":     log.confirmado_at.strftime("%H:%M")    if log.confirmado_at else "",
+            "estudiante": {
+                "nombre":   est.nombre,
+                "apellido": est.apellido,
+                "grado":    est.grado,
+                "seccion":  est.seccion,
+                "nivel":    est.nivel,
+                "foto_url": est.foto_url,
+            },
+            "responsable": {
+                "nombre":        persona.nombre        if persona else "",
+                "apellido":      persona.apellido      if persona else "",
+                "parentesco":    persona.parentesco    if persona else "",
+                "foto_snapshot": log.foto_snapshot,
+            },
+        })
+
+    # Agrupar por fecha descendente
+    por_fecha: dict = {}
+    for r in recojos:
+        por_fecha.setdefault(r["fecha"], []).append(r)
+
+    return {
+        "periodo": periodo,
+        "desde":   inicio.isoformat(),
+        "hasta":   hoy.isoformat(),
+        "total":   len(recojos),
+        "por_fecha": [
+            {"fecha": f, "items": items}
+            for f, items in sorted(por_fecha.items(), reverse=True)
+        ],
     }
 
 

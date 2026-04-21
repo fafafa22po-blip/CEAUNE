@@ -500,7 +500,7 @@ export default function Estudiantes() {
           </button>
         )}
 
-        {filtroCompleto && !mostrarInactivos && (
+        {filtroCompleto && !mostrarInactivos && filtroNivel !== 'inicial' && (
           <button
             onClick={() => setModalImprimir({
               estudianteInicial: null,
@@ -604,13 +604,15 @@ export default function Estudiantes() {
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-1">
-                      <button
-                        onClick={() => setModalImprimir({ estudianteInicial: est, filtroInicial: null })}
-                        title="Imprimir carnet"
-                        className="p-1.5 rounded-lg text-marino hover:bg-blue-50 transition-colors"
-                      >
-                        <Printer size={14} />
-                      </button>
+                      {est.nivel !== 'inicial' && (
+                        <button
+                          onClick={() => setModalImprimir({ estudianteInicial: est, filtroInicial: null })}
+                          title="Imprimir carnet"
+                          className="p-1.5 rounded-lg text-marino hover:bg-blue-50 transition-colors"
+                        >
+                          <Printer size={14} />
+                        </button>
+                      )}
                       <button
                         onClick={() => abrirEditar(est)}
                         title="Editar"

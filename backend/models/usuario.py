@@ -27,6 +27,7 @@ class Usuario(Base):
     foto_url = Column(Text, nullable=True)
     activo = Column(Boolean, default=True)
     es_apoderado = Column(Boolean, default=False)
+    qr_token_inicial = Column(String(100), unique=True, nullable=True)
     created_at = Column(TIMESTAMP, server_default=func.now())
 
 
