@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useHijo } from '../../context/HijoContext'
@@ -344,6 +344,117 @@ function TarjetaHijo({ hijo, comunicadosSinLeer, nav, onAlertChange }) {
   )
 }
 
+// ── Banners del tablón de anuncios ────────────────────────────────────────────
+const DURACION_SLIDE = 5000
+
+function BannersAnuncios({ nivel }) {
+  const [activo,  setActivo]  = useState(0)
+  const [pausado, setPausado] = useState(false)
+  const touchX = useRef(null)
+
+  const { data: anuncios = [] } = useQuery({
+    queryKey: ['anuncios-activos', nivel],
+    queryFn:  () => api.get('/anuncios/activos', { params: nivel ? { nivel } : {} })
+                       .then(r => r.data),
+    staleTime: 5 * 60_000,
+  })
+
+  // Reinicia al primer slide si cambia la lista
+  useEffect(() => { setActivo(0) }, [anuncios.length])
+
+  // Auto-avance; se reinicia con cada cambio de slide (manual o automático)
+  useEffect(() => {
+    if (anuncios.length <= 1 || pausado) return
+    const id = setInterval(
+      () => setActivo(p => (p + 1) % anuncios.length),
+      DURACION_SLIDE
+    )
+    return () => clearInterval(id)
+  }, [anuncios.length, pausado, activo])
+
+  if (anuncios.length === 0) return null
+
+  const onTouchStart = (e) => {
+    touchX.current = e.touches[0].clientX
+    setPausado(true)
+  }
+
+  const onTouchEnd = (e) => {
+    const delta = e.changedTouches[0].clientX - (touchX.current ?? 0)
+    if (Math.abs(delta) > 40)
+      setActivo(p => delta < 0
+        ? (p + 1) % anuncios.length
+        : (p - 1 + anuncios.length) % anuncios.length)
+    touchX.current = null
+    setTimeout(() => setPausado(false), 800)
+  }
+
+  const soloUno = anuncios.length === 1
+
+  return (
+    <>
+      <style>{`@keyframes fillBar { to { width: 100% } }`}</style>
+      <div
+        className="relative rounded-2xl overflow-hidden bg-gray-100 shadow-sm aspect-video select-none"
+        onTouchStart={soloUno ? undefined : onTouchStart}
+        onTouchEnd={soloUno ? undefined : onTouchEnd}
+      >
+        {/* Slides con transición fade */}
+        {anuncios.map((a, i) => (
+          <div
+            key={a.id}
+            className={`absolute inset-0 transition-opacity duration-500 ${
+              i === activo ? 'opacity-100 z-10' : 'opacity-0 z-0'
+            }`}
+          >
+            <img
+              src={`${api.defaults.baseURL}/anuncios/imagen/${a.id}`}
+              alt={a.titulo || 'Anuncio'}
+              className="w-full h-full object-cover"
+              loading="lazy"
+            />
+            {a.titulo && (
+              <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent px-4 pt-10 pb-3 z-10">
+                <p className="text-white text-sm font-bold leading-tight drop-shadow-lg">
+                  {a.titulo}
+                </p>
+              </div>
+            )}
+          </div>
+        ))}
+
+        {/* Barras de progreso estilo Stories — solo si hay más de un banner */}
+        {!soloUno && (
+          <div className="absolute top-3 left-3 right-3 flex gap-1.5 z-30">
+            {anuncios.map((_, i) => (
+              <div key={i} className="h-[3px] flex-1 rounded-full bg-white/30 overflow-hidden">
+                <div
+                  key={i < activo ? `d-${i}` : i === activo ? `a-${activo}` : `p-${i}`}
+                  className="h-full bg-white rounded-full"
+                  style={{
+                    width:              i !== activo ? (i < activo ? '100%' : '0%') : undefined,
+                    animation:          i === activo ? `fillBar ${DURACION_SLIDE}ms linear forwards` : undefined,
+                    animationPlayState: i === activo ? (pausado ? 'paused' : 'running') : undefined,
+                  }}
+                />
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Contador numérico — esquina inferior derecha */}
+        {!soloUno && (
+          <div className="absolute bottom-3 right-3 z-30 bg-black/40 backdrop-blur-sm rounded-full px-2.5 py-1">
+            <span className="text-white text-[10px] font-bold tabular-nums">
+              {activo + 1} / {anuncios.length}
+            </span>
+          </div>
+        )}
+      </div>
+    </>
+  )
+}
+
 // ── página principal ──────────────────────────────────────────────────────────
 export default function Inicio() {
   const nav         = useNavigate()
@@ -505,6 +616,9 @@ export default function Inicio() {
           </div>
         </div>
       </div>
+
+      {/* ── Anuncios del colegio ── */}
+      <BannersAnuncios nivel={hijos[0]?.nivel} />
 
       {/* ── Banner: notificaciones desactivadas ── */}
       {notifDesactivadas && (

@@ -9,7 +9,7 @@ from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 
 from core.config import settings
-from routers import auth, asistencia, estudiantes, admin, comunicados, justificaciones, apoderado, tutor, notificaciones, reportes, recojo, inicial
+from routers import auth, asistencia, estudiantes, admin, comunicados, justificaciones, apoderado, tutor, notificaciones, reportes, recojo, inicial, anuncios, login_fotos
 
 limiter = Limiter(key_func=get_remote_address)
 
@@ -53,6 +53,8 @@ async def lifespan(app: FastAPI):
     import models.recojo          # noqa: F401
     import models.refresh_token   # noqa: F401
     import models.audit_log       # noqa: F401
+    import models.anuncio         # noqa: F401
+    import models.login_foto      # noqa: F401
     Base.metadata.create_all(bind=engine)
 
     # Migración incremental: agrega columnas si no existen
@@ -139,6 +141,8 @@ app.include_router(tutor.router,          prefix="/tutor",          tags=["Tutor
 app.include_router(notificaciones.router, prefix="/notificaciones", tags=["Notificaciones"])
 app.include_router(recojo.router,         prefix="/recojo",         tags=["Recojo"])
 app.include_router(inicial.router,        prefix="/inicial",        tags=["Inicial"])
+app.include_router(anuncios.router,       prefix="/anuncios",       tags=["Anuncios"])
+app.include_router(login_fotos.router,    prefix="/login-fotos",    tags=["LoginFotos"])
 
 
 # ── Versión APK ──────────────────────────────────────────────────────────────

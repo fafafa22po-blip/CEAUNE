@@ -1,17 +1,142 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Eye, EyeOff, QrCode, Mail, BarChart2, Lock, User } from 'lucide-react'
+import { Eye, EyeOff, Lock, User } from 'lucide-react'
 import toast from 'react-hot-toast'
 import api from '../lib/api'
 import { guardarSesion, obtenerRutaPorRol } from '../lib/auth'
 import { iniciarPush, resetPush } from '../lib/pushNotifications'
 import logoImg from '../assets/logo.png'
 
-const FEATURES = [
-  { icon: QrCode,    text: 'Escaneo QR en tiempo real' },
-  { icon: Mail,      text: 'Notificaciones automáticas a apoderados' },
-  { icon: BarChart2, text: 'Reportes y estadísticas detalladas' },
-]
+// ── Panel izquierdo con carrusel y Ken Burns (solo desktop) ──────────────────
+
+const DURACION_LOGIN = 8000
+
+function PanelIzquierdo() {
+  const [fotos,  setFotos]  = useState([])
+  const [activo, setActivo] = useState(0)
+
+  useEffect(() => {
+    api.get('/login-fotos/')
+      .then(r => setFotos(Array.isArray(r.data) ? r.data : []))
+      .catch(() => setFotos([]))
+  }, [])
+
+  useEffect(() => {
+    if (fotos.length <= 1) return
+    const id = setInterval(
+      () => setActivo(p => (p + 1) % fotos.length),
+      DURACION_LOGIN
+    )
+    return () => clearInterval(id)
+  }, [fotos.length, activo])
+
+  return (
+    <div
+      className="hidden lg:block relative flex-shrink-0 overflow-hidden"
+      style={{ width: '52%' }}
+    >
+      {/* Fondo azul de respaldo */}
+      <div className="absolute inset-0" style={{ background: '#0a1f3d' }} />
+
+      {/* Slides con Ken Burns y crossfade */}
+      {fotos.map((foto, i) => (
+        <div
+          key={foto.id}
+          className={`absolute inset-0 transition-opacity duration-1000 ${
+            i === activo ? 'opacity-100' : 'opacity-0'
+          }`}
+        >
+          <img
+            key={i === activo ? `${foto.id}-on` : `${foto.id}-off`}
+            src={`${api.defaults.baseURL}/login-fotos/imagen/${foto.id}`}
+            alt=""
+            className="w-full h-full object-cover"
+            style={i === activo ? {
+              animation: `kb${(i % 3) + 1} 10s ease-in-out forwards`,
+            } : undefined}
+          />
+        </div>
+      ))}
+
+      {/* Degradado: sutil arriba, fuerte abajo */}
+      <div
+        className="absolute inset-0 z-10"
+        style={{
+          background: 'linear-gradient(to top, rgba(0,0,0,0.90) 0%, rgba(0,0,0,0.40) 45%, rgba(0,0,0,0.22) 100%)',
+        }}
+      />
+
+      {/* Contenido sobre el overlay */}
+      <div className="absolute inset-0 z-20 flex flex-col justify-between px-16 py-16">
+
+        {/* Arriba: limpio — la foto habla sola */}
+        <div />
+
+        {/* Abajo: tipografía escalonada de impacto */}
+        <div className="space-y-5">
+
+          {/* Línea separadora dorada */}
+          <div className="w-10 h-[2px]" style={{ background: '#c9a227' }} />
+
+          {/* 3 niveles: pequeño → grande → más grande en dorado */}
+          <div>
+            <p
+              className="uppercase font-semibold mb-2"
+              style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', letterSpacing: '0.28em' }}
+            >
+              Sistema de
+            </p>
+            <p className="font-black text-white leading-none" style={{ fontSize: '3rem' }}>
+              Asistencia
+            </p>
+            <p className="font-black leading-none" style={{ fontSize: '3.6rem', color: '#c9a227' }}>
+              Inteligente
+            </p>
+          </div>
+
+          {/* Dots — solo si hay más de 1 foto */}
+          {fotos.length > 1 && (
+            <div className="flex gap-1.5 items-center">
+              {fotos.map((_, i) => (
+                <div
+                  key={i}
+                  className="rounded-full transition-all duration-300"
+                  style={{
+                    width:      i === activo ? '1.25rem' : '0.375rem',
+                    height:     '0.375rem',
+                    background: i === activo ? '#c9a227' : 'rgba(255,255,255,0.25)',
+                  }}
+                />
+              ))}
+            </div>
+          )}
+
+          <p className="text-white/20 text-xs">
+            Acceso exclusivo para personal autorizado
+          </p>
+        </div>
+      </div>
+
+      {/* Ken Burns keyframes */}
+      <style>{`
+        @keyframes kb1 {
+          0%   { transform: scale(1)    translate(0%,   0%);  }
+          100% { transform: scale(1.10) translate(-2%, -1%);  }
+        }
+        @keyframes kb2 {
+          0%   { transform: scale(1.08) translate(2%,   0%);  }
+          100% { transform: scale(1)    translate(-1%,  2%);  }
+        }
+        @keyframes kb3 {
+          0%   { transform: scale(1)    translate(-1%,  1%);  }
+          100% { transform: scale(1.10) translate(1%,  -2%);  }
+        }
+      `}</style>
+    </div>
+  )
+}
+
+// ── Login principal ───────────────────────────────────────────────────────────
 
 export default function Login() {
   const [dni,         setDni]         = useState('')
@@ -117,42 +242,8 @@ export default function Login() {
   return (
     <div className="min-h-screen flex" style={{ backgroundColor: '#0a1f3d' }}>
 
-      {/* ── Panel izquierdo (solo desktop) ─────────────────────────────── */}
-      <div
-        className="hidden lg:flex flex-col justify-between px-16 py-16 text-white flex-shrink-0"
-        style={{ width: '52%', background: '#0a1f3d' }}
-      >
-        <div>
-          <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-8">
-            <img src={logoImg} alt="CEAUNE" className="w-14 h-14 object-contain drop-shadow-lg" />
-          </div>
-          <p className="text-dorado text-[11px] font-bold uppercase tracking-widest mb-1">
-            Universidad Nacional de Educación Enrique Guzmán y Valle
-          </p>
-          <h1 className="text-2xl font-black leading-tight mb-1">
-            Colegio Experimental de Aplicación
-          </h1>
-          <p className="text-white/50 text-[11px] mb-0.5">I.E. por Convenio UNE-MED, según R.M. N° 045-2001-ED</p>
-          <p className="text-white/50 text-[11px] mb-6">Modelo Educativo: Jornada Escolar Completa con Formación Técnica</p>
-          <h2 className="text-4xl font-black leading-[1.1] mb-4">
-            Control de<br />asistencia<br />
-            <span className="text-dorado">inteligente</span>
-          </h2>
-          <p className="text-white/40 text-sm leading-relaxed max-w-xs mt-4">
-            Sistema unificado para el seguimiento y control de asistencia escolar en tiempo real.
-          </p>
-        </div>
-        <div className="space-y-4">
-          {FEATURES.map(({ icon: Icon, text }) => (
-            <div key={text} className="flex items-center gap-4">
-              <div className="w-9 h-9 rounded-xl bg-white/8 flex items-center justify-center flex-shrink-0">
-                <Icon size={16} className="text-dorado" />
-              </div>
-              <span className="text-white/55 text-sm">{text}</span>
-            </div>
-          ))}
-        </div>
-      </div>
+      {/* ── Panel izquierdo — fotos con Ken Burns (solo desktop) ────────── */}
+      <PanelIzquierdo />
 
       {/* ── Panel derecho / pantalla completa en móvil ─────────────────── */}
       <div className="flex flex-col w-full lg:w-[48%] min-h-screen" style={{ background: '#f8f7f4' }}>
@@ -199,13 +290,35 @@ export default function Login() {
         </div>
 
         {/* ── Formulario ── */}
-        <div className="flex-1 flex flex-col justify-start px-7 sm:px-12 pt-8 pb-4">
+        <div className="flex-1 flex flex-col justify-center px-7 sm:px-12 py-8">
           <div className="max-w-sm w-full mx-auto">
 
-            {/* Logo desktop — encima del formulario */}
-            <div className="hidden lg:flex justify-center mb-6">
+            {/* Bloque institucional desktop — arriba del logo */}
+            <div className="hidden lg:block text-center mb-5">
+              <p
+                className="font-bold uppercase leading-snug mb-2"
+                style={{ fontSize: '11px', color: '#c9a227', letterSpacing: '0.12em' }}
+              >
+                Universidad Nacional de Educación<br />Enrique Guzmán y Valle
+              </p>
+              <p className="font-black text-marino leading-tight mb-2" style={{ fontSize: '20px' }}>
+                Colegio Experimental de Aplicación
+              </p>
+              <p className="text-gray-500 font-medium" style={{ fontSize: '11.5px' }}>
+                I.E. por Convenio UNE-MED · R.M. N° 045-2001-ED
+              </p>
+              <p className="text-gray-500 font-medium" style={{ fontSize: '11.5px' }}>
+                Jornada Escolar Completa con Formación Técnica
+              </p>
+            </div>
+
+            {/* Logo desktop */}
+            <div className="hidden lg:flex justify-center mb-5">
               <img src={logoImg} alt="CEAUNE" className="w-20 h-20 object-contain drop-shadow-sm" />
             </div>
+
+            {/* Separador desktop */}
+            <div className="hidden lg:block h-px bg-gray-200 mb-7" />
 
             <div className="mb-7">
               <h2 className="text-[22px] font-black text-marino">Iniciar sesión</h2>

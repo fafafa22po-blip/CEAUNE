@@ -1,8 +1,7 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  Eye, EyeOff, QrCode,
-  BarChart2, Mail,
+  Eye, EyeOff,
   Briefcase, Users, Download,
 } from 'lucide-react'
 import mascotaImg from '../assets/mascota.png'
@@ -21,6 +20,134 @@ const ROL_LABEL = {
   'p-auxiliar': 'Auxiliar Primaria',
   's-auxiliar': 'Auxiliar Secundaria',
 }
+
+// ── Panel izquierdo con carrusel y Ken Burns (solo desktop) ──────────────────
+
+const DURACION_LOGIN = 8000
+
+function PanelIzquierdo() {
+  const [fotos,   setFotos]   = useState([])
+  const [activo,  setActivo]  = useState(0)
+
+  useEffect(() => {
+    api.get('/login-fotos/')
+      .then(r => setFotos(Array.isArray(r.data) ? r.data : []))
+      .catch(() => setFotos([]))
+  }, [])
+
+  useEffect(() => {
+    if (fotos.length <= 1) return
+    const id = setInterval(
+      () => setActivo(p => (p + 1) % fotos.length),
+      DURACION_LOGIN
+    )
+    return () => clearInterval(id)
+  }, [fotos.length, activo])
+
+  return (
+    <div
+      className="hidden lg:block relative flex-shrink-0 overflow-hidden"
+      style={{ width: '48%' }}
+    >
+      {/* Fondo azul de respaldo (cuando no hay fotos cargadas aún) */}
+      <div className="absolute inset-0" style={{ background: '#0a1f3d' }} />
+
+      {/* Slides con Ken Burns y crossfade */}
+      {fotos.map((foto, i) => (
+        <div
+          key={foto.id}
+          className={`absolute inset-0 transition-opacity duration-1000 ${
+            i === activo ? 'opacity-100' : 'opacity-0'
+          }`}
+        >
+          <img
+            key={i === activo ? `${foto.id}-on` : `${foto.id}-off`}
+            src={`${api.defaults.baseURL}/login-fotos/imagen/${foto.id}`}
+            alt=""
+            className="w-full h-full object-cover"
+            style={i === activo ? {
+              animation: `kb${(i % 3) + 1} 10s ease-in-out forwards`,
+            } : undefined}
+          />
+        </div>
+      ))}
+
+      {/* Degradado: sutil arriba, fuerte abajo */}
+      <div
+        className="absolute inset-0 z-10"
+        style={{
+          background: 'linear-gradient(to top, rgba(0,0,0,0.88) 0%, rgba(0,0,0,0.35) 45%, rgba(0,0,0,0.18) 100%)',
+        }}
+      />
+
+      {/* Contenido sobre el overlay */}
+      <div className="absolute inset-0 z-20 flex flex-col justify-between px-14 py-12">
+
+        {/* Arriba: solo nombre institucional, sin logo */}
+        <div>
+          <p className="font-black text-white text-base leading-tight tracking-wide">CEAUNE</p>
+          <p className="text-white/50 text-xs mt-0.5">Centro de Aplicación UNE</p>
+        </div>
+
+        {/* Abajo: titular + subtítulo + dots */}
+        <div className="space-y-5">
+          <div>
+            <p className="text-white/45 text-[11px] uppercase tracking-widest font-medium mb-3">
+              Portal del Personal
+            </p>
+            <h2 className="text-[2.6rem] font-black leading-[1.1] text-white mb-3">
+              Sistema de<br />
+              Asistencia<br />
+              <span className="text-dorado">Inteligente</span>
+            </h2>
+            <p className="text-white/45 text-sm leading-relaxed max-w-xs">
+              Plataforma institucional para el registro, seguimiento
+              y comunicación de asistencia estudiantil.
+            </p>
+          </div>
+
+          {/* Dots — solo si hay más de 1 foto */}
+          {fotos.length > 1 && (
+            <div className="flex gap-1.5 items-center">
+              {fotos.map((_, i) => (
+                <div
+                  key={i}
+                  className={`rounded-full transition-all duration-300 ${
+                    i === activo
+                      ? 'w-5 h-1.5 bg-dorado'
+                      : 'w-1.5 h-1.5 bg-white/25'
+                  }`}
+                />
+              ))}
+            </div>
+          )}
+
+          <p className="text-white/20 text-xs">
+            Acceso exclusivo para personal autorizado
+          </p>
+        </div>
+      </div>
+
+      {/* Ken Burns keyframes */}
+      <style>{`
+        @keyframes kb1 {
+          0%   { transform: scale(1)    translate(0%,   0%);  }
+          100% { transform: scale(1.10) translate(-2%, -1%);  }
+        }
+        @keyframes kb2 {
+          0%   { transform: scale(1.08) translate(2%,   0%);  }
+          100% { transform: scale(1)    translate(-1%,  2%);  }
+        }
+        @keyframes kb3 {
+          0%   { transform: scale(1)    translate(-1%,  1%);  }
+          100% { transform: scale(1.10) translate(1%,  -2%);  }
+        }
+      `}</style>
+    </div>
+  )
+}
+
+// ── Login principal ───────────────────────────────────────────────────────────
 
 export default function LoginPersonal() {
   const [codigo,      setCodigo]      = useState('')
@@ -121,56 +248,8 @@ export default function LoginPersonal() {
   return (
     <div className="min-h-screen flex">
 
-      {/* ── Panel izquierdo — Branding ───────────────────────────────────── */}
-      <div
-        className="hidden lg:flex flex-col justify-between px-14 py-12 text-white flex-shrink-0"
-        style={{ width: '48%', background: '#0a1f3d' }}
-      >
-        {/* Logo */}
-        <div className="flex items-center gap-3">
-          <img src={logoImg} alt="CEAUNE" className="w-12 h-12 object-contain drop-shadow-sm" />
-          <div>
-            <p className="font-bold text-sm leading-tight">CEAUNE</p>
-            <p className="text-white/40 text-xs">Centro de Aplicación UNE</p>
-          </div>
-        </div>
-
-        {/* Titular */}
-        <div>
-          <p className="text-white/40 text-xs uppercase tracking-widest mb-4 font-medium">
-            Portal del Personal
-          </p>
-          <h2 className="text-4xl font-black leading-tight mb-4">
-            Sistema de control<br />
-            de <span className="text-dorado">asistencia</span>
-          </h2>
-          <p className="text-white/50 text-sm leading-relaxed max-w-xs">
-            Plataforma institucional para el registro, seguimiento y
-            comunicación de asistencia estudiantil.
-          </p>
-        </div>
-
-        {/* Features */}
-        <div className="space-y-4">
-          {[
-            { Icon: QrCode,    text: 'Escaneo QR en tiempo real'          },
-            { Icon: Mail,      text: 'Notificaciones automáticas'          },
-            { Icon: BarChart2, text: 'Reportes y estadísticas detalladas'  },
-          ].map(({ Icon, text }) => (
-            <div key={text} className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-lg bg-white/10 flex items-center justify-center flex-shrink-0">
-                <Icon size={17} className="text-dorado" />
-              </div>
-              <span className="text-white/70 text-sm">{text}</span>
-            </div>
-          ))}
-        </div>
-
-        {/* Pie */}
-        <p className="text-white/20 text-xs">
-          Acceso exclusivo para personal autorizado
-        </p>
-      </div>
+      {/* ── Panel izquierdo — Branding con fotos ────────────────────────── */}
+      <PanelIzquierdo />
 
       {/* ── Panel derecho — Formulario ───────────────────────────────────── */}
       <div
