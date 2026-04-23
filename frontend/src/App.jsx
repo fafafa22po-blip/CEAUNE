@@ -111,6 +111,7 @@ import Usuarios from './pages/admin/Usuarios'
 import AdminComunicar from './pages/admin/Comunicar'
 import AdminBandeja from './pages/admin/Bandeja'
 import AdminRecojo from './pages/admin/Recojo'
+import Anuncios from './pages/admin/Anuncios'
 import EscanearRecojo from './pages/auxiliar/EscanearRecojo'
 
 const ROLES_AUXILIAR = ['i-auxiliar', 'p-auxiliar', 's-auxiliar']
@@ -244,6 +245,7 @@ export default function App() {
               <Route path="comunicar"      element={<AdminComunicar />} />
               <Route path="bandeja"        element={<AdminBandeja />} />
               <Route path="recojo"         element={<AdminRecojo />} />
+              <Route path="anuncios"       element={<Anuncios />} />
               <Route path="descargar-app"  element={<DescargarApp />} />
             </Route>
           </Route>

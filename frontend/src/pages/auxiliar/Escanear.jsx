@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
 import ReactDOM from 'react-dom'
-import { Hash, Camera, Mail, Clock, MessageCircle, X, Phone, Copy, AlertTriangle, Check, ShieldCheck, UserX, CheckCircle2 } from 'lucide-react'
+import { Hash, Camera, Mail, Clock, MessageCircle, X, Phone, Copy, AlertTriangle, Check, ShieldCheck, UserX, CheckCircle2, QrCode } from 'lucide-react'
 import toast from 'react-hot-toast'
 import QRScanner from '../../components/QRScanner'
 import api from '../../lib/api'
@@ -427,7 +427,8 @@ export default function Escanear() {
   const [observacion, setObservacion]       = useState('')
   const [autoConfirm, setAutoConfirm]       = useState(0)
   const acTimerRef    = useRef(null)
-  const confirmarRef  = useRef(null)   // ref para evitar closure stale en auto-confirm
+  const confirmarRef  = useRef(null)
+  const lectorInputRef = useRef(null)
 
   // ── Fase 2: resultado ────────────────────────────────────────────────────
   const [resultado, setResultado]           = useState(null)
@@ -490,6 +491,13 @@ export default function Escanear() {
     closeTimerRef.current = setTimeout(() => setCuentaRegresiva(c => c - 1), 1000)
     return () => clearTimeout(closeTimerRef.current)
   }, [autoActivo, cuentaRegresiva])
+
+  // Re-enfocar el input del lector físico después de cada escaneo
+  useEffect(() => {
+    if (modo !== 'lector' || cargando || preview || resultado || datoApo) return
+    const t = setTimeout(() => lectorInputRef.current?.focus(), 150)
+    return () => clearTimeout(t)
+  }, [modo, cargando, preview, resultado, datoApo])
 
   const detenerAutoConfirm = () => {
     clearTimeout(acTimerRef.current)
@@ -633,6 +641,14 @@ export default function Escanear() {
   const handleQR     = useCallback(token => { setCamaraActiva(false); escanear(token) }, [escanear])
   const handleManual = e => { e.preventDefault(); if (dniManual.trim()) escanear(dniManual.trim()) }
 
+  const handleLector = useCallback(e => {
+    e.preventDefault()
+    const token = lectorInputRef.current?.value?.trim()
+    if (!token || cargando) return
+    lectorInputRef.current.value = ''
+    escanear(token)
+  }, [cargando, escanear])
+
   const copiarTelefono = apo => {
     navigator.clipboard.writeText(`+51${apo.telefono}`)
       .then(() => toast.success('Número copiado')).catch(() => {})
@@ -701,8 +717,9 @@ export default function Escanear() {
           {/* Selector modo */}
           <div className="flex gap-2">
             {[
-              { id: 'camara', icon: Camera, label: 'Cámara QR'  },
-              { id: 'manual', icon: Hash,   label: 'DNI Manual' },
+              { id: 'camara', icon: Camera,  label: 'Cámara QR'    },
+              { id: 'lector', icon: QrCode,  label: 'Lector físico' },
+              { id: 'manual', icon: Hash,    label: 'DNI Manual'   },
             ].map(({ id, icon: Icon, label }) => (
               <button
                 key={id}
@@ -716,8 +733,8 @@ export default function Escanear() {
             ))}
           </div>
 
-          {/* Scanner / DNI manual */}
-          {modo === 'camara' ? (
+          {/* Scanner cámara */}
+          {modo === 'camara' && (
             <div className="card">
               <p className="text-xs text-gray-400 text-center mb-3">
                 Apunta el QR del alumno — el sistema detecta el tipo de registro automáticamente
@@ -733,7 +750,44 @@ export default function Escanear() {
                 </div>
               )}
             </div>
-          ) : (
+          )}
+
+          {/* Lector físico USB */}
+          {modo === 'lector' && (
+            <form onSubmit={handleLector} className="card space-y-4">
+              <div className="flex flex-col items-center gap-3 py-4">
+                <div className={`w-20 h-20 rounded-2xl flex items-center justify-center transition-colors ${
+                  cargando ? 'bg-dorado/10 border-2 border-dorado/30' : 'bg-green-50 border-2 border-green-100'
+                }`}>
+                  {cargando
+                    ? <span className="w-8 h-8 border-[3px] border-dorado border-t-transparent rounded-full animate-spin" />
+                    : <QrCode size={40} className="text-green-500" />
+                  }
+                </div>
+                <div className="text-center">
+                  <p className={`text-sm font-semibold ${cargando ? 'text-dorado' : 'text-green-700'}`}>
+                    {cargando ? 'Identificando alumno...' : 'Lector listo'}
+                  </p>
+                  <p className="text-xs text-gray-400 mt-0.5">
+                    {cargando ? 'Espera un momento' : 'Pasa el carnet frente al escáner'}
+                  </p>
+                </div>
+              </div>
+              <input
+                ref={lectorInputRef}
+                className="input w-full text-center font-mono tracking-widest"
+                placeholder="Esperando escaneo..."
+                autoFocus
+                disabled={cargando}
+                autoComplete="off"
+                autoCorrect="off"
+                spellCheck={false}
+              />
+            </form>
+          )}
+
+          {/* DNI manual */}
+          {modo === 'manual' && (
             <form onSubmit={handleManual} className="card flex gap-3">
               <input
                 className="input flex-1"

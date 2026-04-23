@@ -173,7 +173,7 @@ export default function Reportes() {
   const buscarAlumno = async (q) => {
     if (q.length < 2) { setResultados([]); return }
     try {
-      const { data } = await api.get('/estudiantes/', { params: { busqueda: q, por_pagina: 10 } })
+      const { data } = await api.get('/estudiantes/', { params: { q, por_pagina: 10 } })
       setResultados(data.items || data)
     } catch { setResultados([]) }
   }

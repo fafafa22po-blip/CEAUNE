@@ -105,6 +105,17 @@ def subir_archivo(
     }
 
 
+def descargar_archivo(file_id: str) -> tuple:
+    """
+    Descarga contenido de un archivo de Drive.
+    Retorna (bytes, mime_type)
+    """
+    svc = _get_service()
+    meta    = svc.files().get(fileId=file_id, fields="mimeType").execute()
+    content = svc.files().get_media(fileId=file_id).execute()
+    return content, meta.get("mimeType", "image/jpeg")
+
+
 def eliminar_archivo(file_id: str) -> bool:
     """Elimina un archivo de Drive. Retorna True si fue exitoso."""
     try:

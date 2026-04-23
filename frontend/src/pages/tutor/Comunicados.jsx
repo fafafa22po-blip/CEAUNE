@@ -1,9 +1,11 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import {
   Send, Users, User, Eye, Paperclip, X, Search,
   ChevronLeft, Check, CheckCircle2, MessageSquare,
   Inbox, School, ChevronDown, Reply, FileText,
+  ScanLine, Camera,
 } from 'lucide-react'
+import { scanDocument, takePhoto, compressImage, esNativo } from '../../lib/documentScanner'
 import toast from 'react-hot-toast'
 import { format, isToday, isYesterday } from 'date-fns'
 import { es } from 'date-fns/locale'
@@ -865,10 +867,13 @@ function FormEnviar({ aula, onEnviado }) {
   const [asunto,          setAsunto]          = useState('')
   const [mensaje,         setMensaje]         = useState('')
   const [adjunto,         setAdjunto]         = useState(null)
+  const [escaneando,      setEscaneando]      = useState(false)
+  const [tomando,         setTomando]         = useState(false)
   const [verModal,        setVerModal]        = useState(false)
   const [sheetAlumnos,    setSheetAlumnos]    = useState(false)
   const [enviando,        setEnviando]        = useState(false)
   const [subiendoAdj,     setSubiendoAdj]     = useState(false)
+  const fileRef = useRef()
 
   // Cargar lista de estudiantes del aula
   useEffect(() => {
@@ -911,6 +916,26 @@ function FormEnviar({ aula, onEnviado }) {
       setEnviando(false)
       setSubiendoAdj(false)
     }
+  }
+
+  const handleEscanear = async () => {
+    setEscaneando(true)
+    try {
+      const { file } = await scanDocument()
+      setAdjunto(file)
+    } catch (err) {
+      if (err?.code !== 'CANCELLED') toast.error('No se pudo escanear el documento')
+    } finally { setEscaneando(false) }
+  }
+
+  const handleTomarFoto = async () => {
+    setTomando(true)
+    try {
+      const { file } = await takePhoto()
+      setAdjunto(file)
+    } catch (err) {
+      if (err?.code !== 'CANCELLED') toast.error('No se pudo acceder a la cámara')
+    } finally { setTomando(false) }
   }
 
   const labelBtn = subiendoAdj ? 'Subiendo adjunto...' : enviando ? 'Enviando...' : 'Enviar comunicado'
@@ -1041,18 +1066,67 @@ function FormEnviar({ aula, onEnviado }) {
             <label className="block text-xs font-medium text-gray-600 mb-1">
               Adjunto <span className="text-gray-400 font-normal">(opcional)</span>
             </label>
-            <div className="flex items-center gap-3">
-              <label className="btn-secondary cursor-pointer flex items-center gap-2 text-sm">
-                <Paperclip size={14} />
-                {adjunto ? adjunto.name : 'Seleccionar archivo'}
-                <input type="file" className="hidden" onChange={(e) => setAdjunto(e.target.files[0])} />
-              </label>
-              {adjunto && (
-                <button type="button" onClick={() => setAdjunto(null)} className="text-red-400 hover:text-red-600">
-                  <X size={16} />
+            {adjunto ? (
+              <div className="flex items-center gap-3 bg-blue-50 border border-blue-200 rounded-xl px-4 py-3">
+                <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <FileText size={14} className="text-white" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-semibold text-blue-800 truncate">{adjunto.name}</p>
+                  <p className="text-[10px] text-blue-500 mt-0.5">{(adjunto.size / 1024).toFixed(0)} KB</p>
+                </div>
+                <button type="button" onClick={() => setAdjunto(null)} className="text-blue-400 hover:text-blue-600">
+                  <X size={14} />
                 </button>
-              )}
-            </div>
+              </div>
+            ) : esNativo ? (
+              <div className="space-y-2">
+                <button type="button" onClick={handleEscanear} disabled={escaneando || tomando}
+                  className="w-full flex items-center gap-3 bg-marino/5 hover:bg-marino/10 border-2 border-marino/20 hover:border-marino/40 rounded-xl px-4 py-3.5 transition-colors">
+                  <div className="w-9 h-9 bg-marino rounded-xl flex items-center justify-center flex-shrink-0">
+                    {escaneando ? <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <ScanLine size={16} className="text-white" />}
+                  </div>
+                  <div className="text-left">
+                    <p className="text-xs font-bold text-marino">{escaneando ? 'Abriendo escáner...' : 'Escanear documento'}</p>
+                    <p className="text-[10px] text-marino/60">Foto con efecto escaneo · multi-página PDF</p>
+                  </div>
+                </button>
+                <button type="button" onClick={handleTomarFoto} disabled={escaneando || tomando}
+                  className="w-full flex items-center gap-3 bg-dorado/5 hover:bg-dorado/10 border-2 border-dorado/20 hover:border-dorado/40 rounded-xl px-4 py-3.5 transition-colors">
+                  <div className="w-9 h-9 bg-dorado rounded-xl flex items-center justify-center flex-shrink-0">
+                    {tomando ? <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <Camera size={16} className="text-white" />}
+                  </div>
+                  <div className="text-left">
+                    <p className="text-xs font-bold text-dorado">{tomando ? 'Abriendo cámara...' : 'Tomar foto'}</p>
+                    <p className="text-[10px] text-dorado/60">Captura directa con la cámara</p>
+                  </div>
+                </button>
+                <button type="button" onClick={() => fileRef.current?.click()} disabled={escaneando || tomando}
+                  className="w-full flex items-center gap-2 px-4 py-2 rounded-xl hover:bg-gray-50 transition-colors">
+                  <Paperclip size={13} className="text-gray-400" />
+                  <p className="text-[11px] text-gray-400">Elegir desde archivos o galería</p>
+                </button>
+              </div>
+            ) : (
+              <button type="button" onClick={() => fileRef.current?.click()}
+                className="w-full flex items-center gap-3 border-2 border-dashed border-gray-200 hover:border-dorado rounded-xl px-4 py-3 transition-colors group">
+                <div className="w-8 h-8 bg-gray-100 group-hover:bg-dorado/10 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors">
+                  <Paperclip size={14} className="text-gray-400 group-hover:text-dorado transition-colors" />
+                </div>
+                <div className="text-left">
+                  <p className="text-xs font-semibold text-gray-600">Adjuntar archivo</p>
+                  <p className="text-[10px] text-gray-400">PDF, imagen u otro documento</p>
+                </div>
+              </button>
+            )}
+            <input ref={fileRef} type="file" className="hidden" accept="image/*,application/pdf"
+              onChange={async (e) => {
+                const raw = e.target.files[0]
+                if (!raw) return setAdjunto(null)
+                const file = await compressImage(raw)
+                setAdjunto(file)
+              }}
+            />
           </div>
         </div>
 
