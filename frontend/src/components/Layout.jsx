@@ -16,7 +16,7 @@ import {
   BookOpen, Eye, BarChart2, Home, LogOut,
   ChevronLeft, ChevronRight, Clock, User, Phone, ScanSearch,
   CalendarCheck, GraduationCap, NotebookText, MoreHorizontal, UserCheck, Briefcase, ArrowLeftRight,
-  Download, ShieldCheck,
+  Download, ShieldCheck, ImagePlus,
 } from 'lucide-react'
 
 // ── BOTTOM NAV — config por rol ──────────────────────────────────────
@@ -81,6 +81,7 @@ const BOTTOM_NAV = {
       { a: '/apoderado/horario',     icon: GraduationCap, label: 'Horario'     },
       { a: '/apoderado/libretas',    icon: NotebookText,  label: 'Libretas'    },
       { a: '/apoderado/contacto',    icon: Phone,         label: 'Contacto'    },
+      { a: '/apoderado/perfil',      icon: User,          label: 'Mi Perfil'   },
     ],
   },
   'admin': {
@@ -94,6 +95,7 @@ const BOTTOM_NAV = {
       { a: '/admin/apoderados',     icon: UserCheck,     label: 'Apoderados'  },
       { a: '/admin/calendario',     icon: Calendar,      label: 'Calendario'  },
       { a: '/admin/recojo',         icon: ShieldCheck,   label: 'Recojo'      },
+      { a: '/admin/anuncios',       icon: ImagePlus,     label: 'Anuncios'    },
       { a: '/admin/horarios',       icon: Clock,         label: 'Horarios'    },
       { a: '/admin/horario-clases', icon: GraduationCap, label: 'Clases'      },
       { a: '/admin/bandeja',        icon: Inbox,         label: 'Bandeja'     },
@@ -162,6 +164,7 @@ const MENUS = {
     { a: '/apoderado/horario',     icon: GraduationCap, label: 'Horario'     },
     { a: '/apoderado/libretas',    icon: NotebookText,  label: 'Libretas'    },
     { a: '/apoderado/contacto',    icon: Phone,         label: 'Contacto'    },
+    { a: '/apoderado/perfil',      icon: User,          label: 'Mi Perfil'   },
   ],
   'admin': [
     { a: '/admin/dashboard',       icon: LayoutDashboard, label: 'Dashboard'    },
@@ -174,6 +177,7 @@ const MENUS = {
     { a: '/admin/reportes',        icon: BarChart2,       label: 'Reportes'     },
     { a: '/admin/comunicar',       icon: MessageSquare,   label: 'Comunicar'    },
     { a: '/admin/bandeja',         icon: Inbox,           label: 'Bandeja'      },
+    { a: '/admin/anuncios',        icon: ImagePlus,       label: 'Anuncios'     },
     { a: '/admin/usuarios',        icon: Settings,        label: 'Usuarios'     },
   ],
 }
