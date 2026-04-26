@@ -114,6 +114,14 @@ async def lifespan(app: FastAPI):
 
 _is_prod = settings.ENVIRONMENT == "production"
 
+# Orígenes permitidos: consolidar sin duplicados
+_ALLOWED_ORIGINS = list(dict.fromkeys([
+    "https://ceaune.vercel.app",
+    "http://localhost:5173",
+    "http://localhost:3000",
+    *([] if not settings.FRONTEND_URL or settings.FRONTEND_URL in ("http://localhost:5173",) else [settings.FRONTEND_URL]),
+]))
+
 app = FastAPI(
     title="CEAUNE Asistencia API",
     version="1.0.0",
@@ -126,13 +134,17 @@ app = FastAPI(
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
+# En Starlette el middleware agregado ÚLTIMO es el más externo (ejecuta primero).
+# SecurityHeadersMiddleware (interno) → CORSMiddleware (externo, primero en la cadena).
 app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[settings.FRONTEND_URL, "http://localhost:5173", "https://ceaune.vercel.app"],
+    allow_origins=_ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-    allow_headers=["Authorization", "Content-Type", "Accept"],
+    allow_headers=["Authorization", "Content-Type", "Accept", "X-Requested-With"],
+    expose_headers=["Content-Disposition"],
+    max_age=600,
 )
 
 app.include_router(auth.router,       prefix="/auth",       tags=["Auth"])

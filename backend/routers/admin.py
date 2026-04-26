@@ -116,11 +116,36 @@ def listar_usuarios(
     total = q.count()
     usuarios = q.order_by(Usuario.apellido, Usuario.nombre).offset(offset).limit(por_pagina).all()
 
+    # Batch load aulas para tutores (evita N+1)
+    tutor_ids = [u.id for u in usuarios if u.rol == "tutor"]
+    aulas_map: dict = {}
+    if tutor_ids:
+        for a in db.query(TutorAula).filter(TutorAula.tutor_id.in_(tutor_ids)).all():
+            aulas_map[a.tutor_id] = {"nivel": a.nivel, "grado": a.grado, "seccion": a.seccion, "anio": a.anio}
+
+    # Batch load hijos para apoderados (evita N+1)
+    apod_ids = [u.id for u in usuarios if u.es_apoderado or u.rol == "apoderado"]
+    hijos_map: dict = {}
+    if apod_ids:
+        vinculos = db.query(ApoderadoEstudiante).filter(
+            ApoderadoEstudiante.apoderado_id.in_(apod_ids)
+        ).all()
+        est_ids = list({v.estudiante_id for v in vinculos})
+        est_map = {e.id: e for e in db.query(Estudiante).filter(Estudiante.id.in_(est_ids)).all()} if est_ids else {}
+        for v in vinculos:
+            e = est_map.get(v.estudiante_id)
+            if e:
+                hijos_map.setdefault(v.apoderado_id, []).append({
+                    "id": e.id, "nombre": e.nombre, "apellido": e.apellido,
+                    "dni": e.dni, "nivel": e.nivel, "grado": e.grado,
+                    "seccion": e.seccion, "activo": e.activo,
+                })
+
     return {
         "total": total,
         "pagina": pagina,
         "por_pagina": por_pagina,
-        "items": [_usuario_dict(u, db) for u in usuarios],
+        "items": [_usuario_dict_fast(u, aulas_map, hijos_map) for u in usuarios],
     }
 
 
@@ -348,6 +373,26 @@ def _usuario_dict(u: Usuario, db: Session) -> dict:
     return d
 
 
+def _usuario_dict_fast(u: Usuario, aulas_map: dict, hijos_map: dict) -> dict:
+    """Versión sin queries adicionales — usa datos pre-cargados en batch."""
+    return {
+        "id": u.id,
+        "dni": u.dni,
+        "nombre": u.nombre,
+        "apellido": u.apellido,
+        "email": u.email,
+        "rol": u.rol,
+        "nivel": u.nivel,
+        "telefono": u.telefono,
+        "activo": u.activo,
+        "foto_url": u.foto_url,
+        "es_apoderado": bool(u.es_apoderado),
+        "created_at": u.created_at.isoformat() if u.created_at else None,
+        "aula": aulas_map.get(u.id),
+        "hijos": hijos_map.get(u.id, []),
+    }
+
+
 # ---------------------------------------------------------------------------
 # APODERADOS — gestión de vínculos apoderado-estudiante
 # ---------------------------------------------------------------------------
@@ -384,7 +429,25 @@ def listar_apoderados(
     total = query.count()
     apoderados = query.order_by(Usuario.apellido, Usuario.nombre).offset(offset).limit(por_pagina).all()
 
-    items = [{**_usuario_dict(u, db), "hijos": _get_hijos_apoderado(u.id, db)} for u in apoderados]
+    # Batch load hijos (evita N+1)
+    apod_ids = [u.id for u in apoderados]
+    hijos_map: dict = {}
+    if apod_ids:
+        vinculos = db.query(ApoderadoEstudiante).filter(
+            ApoderadoEstudiante.apoderado_id.in_(apod_ids)
+        ).all()
+        est_ids = list({v.estudiante_id for v in vinculos})
+        est_map = {e.id: e for e in db.query(Estudiante).filter(Estudiante.id.in_(est_ids)).all()} if est_ids else {}
+        for v in vinculos:
+            e = est_map.get(v.estudiante_id)
+            if e:
+                hijos_map.setdefault(v.apoderado_id, []).append({
+                    "id": e.id, "nombre": e.nombre, "apellido": e.apellido,
+                    "dni": e.dni, "nivel": e.nivel, "grado": e.grado,
+                    "seccion": e.seccion, "activo": e.activo,
+                })
+
+    items = [{**_usuario_dict_fast(u, {}, hijos_map), "hijos": hijos_map.get(u.id, [])} for u in apoderados]
 
     return {"total": total, "pagina": pagina, "por_pagina": por_pagina, "items": items}
 
