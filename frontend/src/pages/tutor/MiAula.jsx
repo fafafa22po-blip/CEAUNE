@@ -418,7 +418,7 @@ function TabHistorial() {
     queryFn:  () => api.get('/tutor/mi-aula/historial', { params: { dias: 10 } }).then(r => r.data),
   })
   const { data: statsData } = useQuery({
-    queryKey: QK.tutorEstadisticas(),
+    queryKey: ['tutor', 'estadisticas-full'],
     queryFn:  () => api.get('/tutor/mi-aula/estadisticas').then(r => r.data),
   })
 
@@ -726,7 +726,7 @@ export default function MiAula() {
   })
 
   const { data: estadisticasData } = useQuery({
-    queryKey: QK.tutorEstadisticas(),
+    queryKey: ['tutor', 'estadisticas-full'],
     queryFn:  () => api.get('/tutor/mi-aula/estadisticas').then(r => r.data),
   })
 

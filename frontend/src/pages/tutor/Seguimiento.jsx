@@ -213,7 +213,8 @@ export default function Seguimiento() {
 
   // ── Derivados ─────────────────────────────────────────────────────────────
   const statsMap = {}
-  estadisticas.forEach(e => { statsMap[e.id] = e })
+  const _estadArr = Array.isArray(estadisticas) ? estadisticas : []
+  _estadArr.forEach(e => { statsMap[e.id] = e })
 
   const filtrados = estudiantes.filter(e => {
     const q = busqueda.toLowerCase().trim()
@@ -221,17 +222,18 @@ export default function Seguimiento() {
   })
 
   const conteos = useMemo(() => {
-    if (!seguimiento?.eventos) return {}
-    return seguimiento.eventos.reduce((acc, e) => {
+    const evs = Array.isArray(seguimiento?.eventos) ? seguimiento.eventos : []
+    if (!evs.length) return {}
+    return evs.reduce((acc, e) => {
       acc[e.tipo] = (acc[e.tipo] || 0) + 1
       return acc
     }, {})
   }, [seguimiento])
 
   const eventosFiltrados = useMemo(() => {
-    if (!seguimiento?.eventos) return []
-    if (filtro === 'todos') return seguimiento.eventos
-    return seguimiento.eventos.filter(e => e.tipo === filtro)
+    const evs = Array.isArray(seguimiento?.eventos) ? seguimiento.eventos : []
+    if (filtro === 'todos') return evs
+    return evs.filter(e => e.tipo === filtro)
   }, [seguimiento, filtro])
 
   // ── Acciones ──────────────────────────────────────────────────────────────
