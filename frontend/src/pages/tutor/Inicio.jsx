@@ -105,20 +105,29 @@ export default function Inicio() {
     : ''
 
   // ── Delta badge helper ────────────────────────────────────────────────────
-  const DeltaBadge = ({ value, invertColor = false }) => {
+  const mesAnteriorNombre = (() => {
+    const d = new Date()
+    const nombre = format(new Date(d.getFullYear(), d.getMonth() - 1, 1), 'MMMM', { locale: es })
+    return nombre.charAt(0).toUpperCase() + nombre.slice(1)
+  })()
+
+  const DeltaBadge = ({ value, invertColor = false, label }) => {
     if (value == null || value === 0) return (
       <span className="inline-flex items-center gap-0.5 text-[10px] text-gray-400 font-medium">
-        <Minus size={10} /> sin cambio
+        <Minus size={10} /> Igual que en {mesAnteriorNombre}
       </span>
     )
-    const positive = invertColor ? value < 0 : value > 0
+    const isImprovement = invertColor ? value < 0 : value > 0
+    const absVal        = Math.abs(value)
+    const subio         = value > 0
+    const texto         = label ? label(absVal, subio) : `${absVal}`
     return (
-      <span className={`inline-flex items-center gap-0.5 text-[10px] font-bold ${
-        positive ? 'text-green-600' : 'text-red-500'
+      <span className={`inline-flex items-center gap-1 text-[10px] font-medium ${
+        isImprovement ? 'text-green-600' : 'text-red-500'
       }`}>
-        {positive ? <ArrowUpRight size={11} /> : <ArrowDownRight size={11} />}
-        {Math.abs(value)}{typeof value === 'number' && value % 1 !== 0 ? '' : ''}
-        <span className="font-normal text-gray-400 ml-0.5">vs mes ant.</span>
+        {isImprovement ? <ArrowUpRight size={11} /> : <ArrowDownRight size={11} />}
+        <span className="font-bold">{texto}</span>
+        <span className="font-normal text-gray-400">que en {mesAnteriorNombre}</span>
       </span>
     )
   }
@@ -342,7 +351,10 @@ export default function Inicio() {
               />
             </div>
             {comparativa
-              ? <DeltaBadge value={comparativa.delta_pct} />
+              ? <DeltaBadge
+                  value={comparativa.delta_pct}
+                  label={(n, up) => up ? `${n}% más` : `${n}% menos`}
+                />
               : <p className="text-[10px] text-gray-400 mt-1">Promedio del aula este mes</p>
             }
           </div>
@@ -366,7 +378,14 @@ export default function Inicio() {
             </div>
           </div>
           {comparativa
-            ? <DeltaBadge value={comparativa.delta_riesgo} invertColor />
+            ? <DeltaBadge
+                value={comparativa.delta_riesgo}
+                invertColor
+                label={(n, up) => up
+                  ? `${n} ${n === 1 ? 'alumno' : 'alumnos'} más en riesgo`
+                  : `${n} ${n === 1 ? 'alumno' : 'alumnos'} menos en riesgo`
+                }
+              />
             : <p className="text-[10px] text-gray-400">
                 {enRiesgo.length > 0 ? 'Con menos del 75% de asistencia' : 'Ningún alumno en situación crítica'}
               </p>
@@ -407,7 +426,14 @@ export default function Inicio() {
             </div>
           </div>
           {comparativa
-            ? <DeltaBadge value={comparativa.delta_faltas} invertColor />
+            ? <DeltaBadge
+                value={comparativa.delta_faltas}
+                invertColor
+                label={(n, up) => up
+                  ? `${n} ${n === 1 ? 'falta' : 'faltas'} más`
+                  : `${n} ${n === 1 ? 'falta' : 'faltas'} menos`
+                }
+              />
             : <p className="text-[10px] text-gray-400">Total de faltas del aula este mes</p>
           }
         </div>
