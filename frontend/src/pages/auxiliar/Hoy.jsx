@@ -380,7 +380,7 @@ function ModalPerfil({ estudiante, estadoDia, tarMes, faltMes, onClose, nav }) {
             {/* Footer paso 2 */}
             <div className="flex-shrink-0 px-6 py-4 border-t border-gray-100 bg-white">
               <button
-                onClick={() => { nav(`/auxiliar/comunicar?estudianteId=${estudiante.id}`); onClose() }}
+                onClick={() => { nav('/auxiliar/comunicados'); onClose() }}
                 className="w-full flex items-center justify-center gap-2 px-4 py-2.5 border-2 border-marino text-marino text-sm font-semibold rounded-xl hover:bg-marino hover:text-white transition-colors"
               >
                 <Mail size={15} /> Enviar comunicado formal

@@ -472,7 +472,7 @@ def obtener_qr(
     estudiante_id: str,
     formato: str = Query("png", description="png | base64"),
     db: Session = Depends(get_db),
-    current_user: Usuario = Depends(require_roles("i-auxiliar", "p-auxiliar", "s-auxiliar", "admin")),
+    current_user: Usuario = Depends(require_roles("i-auxiliar", "p-auxiliar", "s-auxiliar", "admin", "directivo")),
 ):
     est = db.query(Estudiante).filter(
         Estudiante.id == estudiante_id, Estudiante.activo == True
@@ -688,7 +688,7 @@ def vincular_apoderado(
 def listar_apoderados(
     estudiante_id: str,
     db: Session = Depends(get_db),
-    current_user: Usuario = Depends(require_roles("admin", "i-auxiliar", "p-auxiliar", "s-auxiliar", "tutor")),
+    current_user: Usuario = Depends(require_roles("admin", "i-auxiliar", "p-auxiliar", "s-auxiliar", "tutor", "directivo")),
 ):
     est = db.query(Estudiante).filter(Estudiante.id == estudiante_id).first()
     if not est:

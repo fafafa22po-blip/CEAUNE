@@ -30,7 +30,7 @@ const NIVEL_BADGE = {
 }
 
 function audienciaLabel(nivel, grado, seccion) {
-  const base = NIVEL_BADGE[nivel]?.label || nivel
+  const base = NIVEL_BADGE[nivel ?? 'todos']?.label || 'Todos los niveles'
   if (!grado) return base
   return `${base} · ${grado}°${seccion ? ` "${seccion}"` : ''}`
 }
@@ -99,6 +99,7 @@ export default function Calendario() {
   const [drawerOpen,   setDrawerOpen]     = useState(false)
   const [sheetOpen,    setSheetOpen]      = useState(false)
   const [filtroDrawer, setFiltroDrawer]   = useState('todos')
+  const [filtroNivel,  setFiltroNivel]    = useState('todos')
   const [confirmarId,  setConfirmarId]    = useState(null)
 
   const anio = mes.getFullYear()
@@ -199,9 +200,9 @@ export default function Calendario() {
   })()
 
   const grupos = agruparDias(diasMarcados)
-  const gruposFiltrados = filtroDrawer === 'todos'
-    ? grupos
-    : grupos.filter((g) => g.tipo === filtroDrawer)
+  const gruposFiltrados = grupos
+    .filter((g) => filtroDrawer === 'todos' || g.tipo === filtroDrawer)
+    .filter((g) => filtroNivel  === 'todos' || g.nivel === filtroNivel)
 
   // Agrupación por mes para el drawer
   const gruposPorMes = gruposFiltrados.reduce((acc, g) => {
@@ -363,7 +364,7 @@ export default function Calendario() {
       >
         {guardando
           ? <><span className="w-3.5 h-3.5 border-2 border-white/50 border-t-white rounded-full animate-spin" /> Guardando...</>
-          : <><Plus size={15} /> Marcar días</>
+          : <><Plus size={15} /> Excluir días académicos</>
         }
       </button>
     </form>
@@ -496,7 +497,7 @@ export default function Calendario() {
         <div className="hidden lg:block">
           <div className="card space-y-4 sticky top-4">
             <div>
-              <h2 className="font-bold text-marino">Marcar días</h2>
+              <h2 className="font-bold text-marino">Excluir días académicos</h2>
               <p className="text-xs text-gray-400 mt-1">
                 Haz clic en un día del calendario para pre-seleccionar la fecha.
               </p>
@@ -510,7 +511,7 @@ export default function Calendario() {
       <button
         onClick={() => { resetForm(); setSheetOpen(true) }}
         className="lg:hidden fixed bottom-6 right-6 z-30 w-14 h-14 bg-marino text-white rounded-full shadow-xl flex items-center justify-center active:scale-95 transition-transform"
-        aria-label="Marcar días"
+        aria-label="Excluir días académicos"
       >
         <Plus size={22} />
       </button>
@@ -539,7 +540,7 @@ export default function Calendario() {
         </div>
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100 flex-shrink-0">
-          <h2 className="font-bold text-marino">Marcar días</h2>
+          <h2 className="font-bold text-marino">Excluir días académicos</h2>
           <button
             onClick={() => setSheetOpen(false)}
             className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400"
@@ -599,8 +600,8 @@ export default function Calendario() {
           </button>
         </div>
 
-        {/* Tabs de filtro */}
-        <div className="flex gap-1 px-4 py-2.5 border-b border-gray-100 flex-shrink-0 overflow-x-auto">
+        {/* Filtro por tipo */}
+        <div className="flex gap-1 px-4 pt-2.5 pb-1.5 flex-shrink-0 overflow-x-auto">
           {[{ v: 'todos', label: 'Todos', light: 'bg-marino/10 text-marino' }, ...TIPOS].map(
             ({ v, label, light }) => (
               <button
@@ -621,6 +622,28 @@ export default function Calendario() {
               </button>
             )
           )}
+        </div>
+
+        {/* Filtro por nivel */}
+        <div className="flex gap-1 px-4 pb-2.5 border-b border-gray-100 flex-shrink-0 overflow-x-auto">
+          {Object.entries(NIVEL_BADGE).map(([v, { label, cls }]) => (
+            <button
+              key={v}
+              onClick={() => setFiltroNivel(v)}
+              className={`px-3 py-1.5 rounded-xl text-xs font-medium whitespace-nowrap transition-all ${
+                filtroNivel === v
+                  ? cls
+                  : 'text-gray-400 hover:text-gray-600 hover:bg-gray-50'
+              }`}
+            >
+              {label}
+              {v !== 'todos' && (
+                <span className="ml-1 opacity-50">
+                  ({grupos.filter((g) => (g.nivel ?? 'todos') === v).length})
+                </span>
+              )}
+            </button>
+          ))}
         </div>
 
         {/* Lista */}
@@ -661,7 +684,7 @@ export default function Calendario() {
                       : format(parseISO(g.fecha), "EEEE d", { locale: es })
                     const idsAEliminar = g._ids || [g.id]
                     const cfg = tipoCfg(g.tipo)
-                    const audBadge = NIVEL_BADGE[g.nivel] || NIVEL_BADGE.todos
+                    const audBadge = NIVEL_BADGE[g.nivel ?? 'todos'] || NIVEL_BADGE.todos
 
                     return (
                       <div

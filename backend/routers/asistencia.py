@@ -28,7 +28,7 @@ from schemas.estudiante import EstudianteBasico
 router = APIRouter()
 
 # Roles que pueden escanear
-ROLES_AUXILIAR = {"i-auxiliar", "p-auxiliar", "s-auxiliar", "admin"}
+ROLES_AUXILIAR = {"i-auxiliar", "p-auxiliar", "s-auxiliar", "admin", "directivo"}
 ROLES_INSPECCION = ROLES_AUXILIAR | {"tutor"}
 NIVEL_POR_ROL = {
     "i-auxiliar": "inicial",
@@ -160,9 +160,10 @@ def detectar_estado(hora_escaneo: time, horario: Horario, tipo_solicitado: str):
     """
     Devuelve (tipo_registro, estado) según hora, horario y tipo solicitado.
 
-    Especiales explícitos (el auxiliar lo elige manualmente):
-      ingreso_especial  → ('ingreso_especial', 'especial')   — permiso, actividad, etc.
-      salida_especial   → ('salida_especial',  'especial')   — marcha, deportes, salud, etc.
+    ingreso_especial explícito → siempre ingreso_especial (permiso, actividad, etc.)
+    salida_especial  explícito → salida_especial solo si la hora sigue siendo antes
+                                 de hora_salida_inicio; si ya pasó, reclasifica a salida
+                                 (evita bug cuando el preview se hizo antes y el confirm después)
 
     Automáticos (detección por hora):
       ingreso puntual:   hora <= hora_ingreso_fin   → ('ingreso',          'puntual')
@@ -170,26 +171,27 @@ def detectar_estado(hora_escaneo: time, horario: Horario, tipo_solicitado: str):
       salida normal:     hora >= hora_salida_inicio → ('salida',           'especial')
       salida anticipada: hora <  hora_salida_inicio → ('salida_especial',  'especial')
     """
-    # Especiales explícitos: el auxiliar ya decidió el tipo antes de escanear
-    if tipo_solicitado == "ingreso_especial":
-        return "ingreso_especial", "especial"
-    if tipo_solicitado == "salida_especial":
-        return "salida_especial", "especial"
-
-    # Modos normales: detección automática por hora
     h_ingreso_fin = _parse_time(horario.hora_ingreso_fin)
     h_salida_ini  = _parse_time(horario.hora_salida_inicio)
+
+    if tipo_solicitado == "ingreso_especial":
+        return "ingreso_especial", "especial"
+
+    if tipo_solicitado == "salida_especial":
+        # Si ya pasó la hora de salida regular, reclasificar como salida normal
+        if hora_escaneo >= h_salida_ini:
+            return "salida", "especial"
+        return "salida_especial", "especial"
 
     if tipo_solicitado == "ingreso":
         if hora_escaneo <= h_ingreso_fin:
             return "ingreso", "puntual"
-        else:
-            return "ingreso_especial", "tardanza"
-    else:  # salida
-        if hora_escaneo >= h_salida_ini:
-            return "salida", "especial"
-        else:
-            return "salida_especial", "especial"
+        return "ingreso_especial", "tardanza"
+
+    # salida (o cualquier otro valor no reconocido)
+    if hora_escaneo >= h_salida_ini:
+        return "salida", "especial"
+    return "salida_especial", "especial"
 
 
 def _nivel_del_usuario(usuario: Usuario) -> Optional[str]:
@@ -266,8 +268,8 @@ def previsualizar_escaneo(
             )
         return PreviewResult(
             estudiante=est, tipo_a_enviar="ingreso", estado_previsto="tardanza",
-            requiere_motivo=False, requiere_observacion=True, motivo_auto=None,
-            label="TARDANZA", sublabel="Llegó después de la hora límite — ingresa el motivo",
+            requiere_motivo=False, requiere_observacion=False, motivo_auto=None,
+            label="TARDANZA", sublabel="Llegó después de la hora límite",
         )
 
     # Caso 2: última salida fue especial → alumno regresa (ingreso_especial automático)
@@ -425,14 +427,6 @@ def escanear(
                 status.HTTP_422_UNPROCESSABLE_ENTITY,
                 f"Motivo inválido. Valores permitidos: {', '.join(MOTIVO_LABEL.keys())}",
             )
-    elif estado == "tardanza":
-        # Tardanza auto-detectada: requiere observación libre
-        if not data.observacion:
-            raise HTTPException(
-                status.HTTP_422_UNPROCESSABLE_ENTITY,
-                "La observación es obligatoria para tardanzas",
-            )
-
     fue_sobreescrito = False
     if registro_previo:
         db.delete(registro_previo)

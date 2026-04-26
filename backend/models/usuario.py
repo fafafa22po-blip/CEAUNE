@@ -16,11 +16,11 @@ class Usuario(Base):
     email = Column(String(150), unique=True, nullable=False)
     password_hash = Column(String(255), nullable=False)
     rol = Column(
-        Enum("apoderado", "tutor", "i-auxiliar", "p-auxiliar", "s-auxiliar", "admin"),
+        Enum("apoderado", "tutor", "i-auxiliar", "p-auxiliar", "s-auxiliar", "admin", "directivo"),
         nullable=False,
     )
     nivel = Column(
-        Enum("inicial", "primaria", "secundaria", "todos"),
+        Enum("inicial", "primaria", "secundaria", "todos", "formacion"),
         nullable=True,
     )
     telefono = Column(String(15), nullable=True)

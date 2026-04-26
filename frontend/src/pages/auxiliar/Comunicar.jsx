@@ -238,14 +238,23 @@ const toggleSet = (set, val) => {
   return next
 }
 
-export default function Comunicar() {
+const NIVELES_ESPECIFICOS = ['inicial', 'primaria', 'secundaria']
+
+export default function Comunicar({ onEnviado } = {}) {
   const location = useLocation()
   const usuario  = obtenerUsuario()
-  const nivel    = NIVEL_POR_ROL[usuario?.rol] || 'primaria'
-  const gradosDisponibles = GRADOS_POR_NIVEL[nivel] || []
-  // Para inicial: todas las aulas del nivel como pares {grado, seccion}
-  const aulasDelNivel = getAulasDeNivel(nivel)
-  // Para primaria/secundaria: secciones uniformes (iguales en todos los grados)
+
+  // Para directivo con nivel fijo (inicial/primaria/secundaria) → usar su nivel directamente.
+  // Para directivo general (todos/formacion) → picker de nivel.
+  // Para auxiliares → NIVEL_POR_ROL como siempre.
+  const nivelFijo = NIVEL_POR_ROL[usuario?.rol]
+    ?? (usuario?.rol === 'directivo' && NIVELES_ESPECIFICOS.includes(usuario?.nivel) ? usuario.nivel : null)
+  const esDirectivoGeneral = usuario?.rol === 'directivo' && !nivelFijo
+  const [nivelPickerDir, setNivelPickerDir] = useState('primaria')
+  const nivel = nivelFijo ?? nivelPickerDir
+
+  const gradosDisponibles  = GRADOS_POR_NIVEL[nivel] || []
+  const aulasDelNivel      = getAulasDeNivel(nivel)
   const seccionesUniformes = nivel !== 'inicial' ? getSecciones(nivel, gradosDisponibles[0] || '') : []
 
   const [paso, setPaso]           = useState(1)
@@ -276,6 +285,13 @@ export default function Comunicar() {
   const fileRef = useRef()
   const [contadorApoderados, setContadorApoderados] = useState(null)
   const [cargandoContador, setCargandoContador]     = useState(false)
+
+  // Resetear selección de aulas cuando el directivo general cambia de nivel
+  useEffect(() => {
+    if (esDirectivoGeneral) {
+      setGrado(''); setSeccion(''); setAulasMasivoSet(new Set()); setContadorApoderados(null)
+    }
+  }, [nivelPickerDir]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Pre-cargar alumno si viene desde Escanear / Inspección
   useEffect(() => {
@@ -456,6 +472,7 @@ export default function Comunicar() {
       setTipoComunicado('mensaje')
       setPermitirRespuestas(true)
       setVerModal(false); setPaso(1)
+      onEnviado?.()
     } catch (err) {
       toast.error(err.response?.data?.detail || 'Error al enviar')
     } finally {
@@ -499,6 +516,25 @@ export default function Comunicar() {
       {/* ═══════════════════════════════════════════════════ PASO 1 */}
       {paso === 1 && (
         <div className="space-y-5">
+
+          {/* Selector de nivel — solo para directivo general (todos/formacion) */}
+          {esDirectivoGeneral && (
+            <div className="card">
+              <p className="text-xs font-semibold text-gray-400 mb-3 uppercase tracking-wide">Nivel destino</p>
+              <div className="flex gap-2">
+                {NIVELES_ESPECIFICOS.map(n => (
+                  <button key={n} type="button" onClick={() => setNivelPickerDir(n)}
+                    className={`flex-1 py-2.5 rounded-xl border-2 text-sm font-bold capitalize transition-all ${
+                      nivel === n
+                        ? 'border-marino bg-marino text-white shadow-sm'
+                        : 'border-gray-200 text-gray-500 hover:border-marino/40'
+                    }`}>
+                    {n}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Tipo de envío */}
           <div className="card">

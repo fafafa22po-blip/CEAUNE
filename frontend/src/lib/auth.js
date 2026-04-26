@@ -37,6 +37,7 @@ export const obtenerRutaPorRol = (rol) => {
     's-auxiliar': '/auxiliar',
     'tutor':      '/tutor',
     'apoderado':  '/apoderado',
+    'directivo':  '/directivo',
   }
   return rutas[rol] || '/login'
 }

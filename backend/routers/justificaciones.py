@@ -15,7 +15,7 @@ from schemas.justificacion import JustificacionResponse, RevisionRequest
 
 router = APIRouter()
 
-ROLES_REVISOR = {"i-auxiliar", "p-auxiliar", "s-auxiliar", "admin"}
+ROLES_REVISOR = {"i-auxiliar", "p-auxiliar", "s-auxiliar", "admin", "directivo"}
 
 
 def _enrich(j: Justificacion, db: Session) -> JustificacionResponse:

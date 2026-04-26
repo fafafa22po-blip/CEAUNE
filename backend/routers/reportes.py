@@ -19,6 +19,16 @@ from models.asistencia import Asistencia
 from models.estudiante import Estudiante
 from models.usuario import Usuario
 
+_ROLES_REPORTE = ("admin", "i-auxiliar", "p-auxiliar", "s-auxiliar")
+_ROL_TO_NIVEL  = {"i-auxiliar": "inicial", "p-auxiliar": "primaria", "s-auxiliar": "secundaria"}
+
+
+def _nivel_efectivo(current_user: Usuario, nivel_param: Optional[str]) -> Optional[str]:
+    """Devuelve el nivel a filtrar: para auxiliares ignora el parámetro y usa su nivel fijo."""
+    if current_user.rol in _ROL_TO_NIVEL:
+        return _ROL_TO_NIVEL[current_user.rol]
+    return nivel_param or None
+
 router = APIRouter()
 limiter = Limiter(key_func=get_remote_address)
 
@@ -604,10 +614,11 @@ def reporte_mensual(
     fecha_fin:    date = Query(...),
     nivel:        Optional[str] = Query(None),
     db:           Session = Depends(get_db),
-    current_user: Usuario = Depends(require_roles("admin")),
+    current_user: Usuario = Depends(require_roles(*_ROLES_REPORTE)),
 ):
     if fecha_fin < fecha_inicio:
         raise HTTPException(400, "fecha_fin debe ser >= fecha_inicio")
+    nivel = _nivel_efectivo(current_user, nivel)
     q = db.query(Estudiante).filter(Estudiante.activo == True)
     if nivel:
         q = q.filter(Estudiante.nivel == nivel)
@@ -630,11 +641,14 @@ def reporte_alumno(
     fecha_inicio:  date = Query(...),
     fecha_fin:     date = Query(...),
     db:            Session = Depends(get_db),
-    current_user:  Usuario = Depends(require_roles("admin")),
+    current_user:  Usuario = Depends(require_roles(*_ROLES_REPORTE)),
 ):
     est = db.query(Estudiante).filter(Estudiante.id == estudiante_id).first()
     if not est:
         raise HTTPException(404, "Estudiante no encontrado")
+    nivel_fijo = _ROL_TO_NIVEL.get(current_user.rol)
+    if nivel_fijo and est.nivel != nivel_fijo:
+        raise HTTPException(403, "Solo puedes consultar alumnos de tu nivel")
     if fecha_fin < fecha_inicio:
         raise HTTPException(400, "fecha_fin debe ser >= fecha_inicio")
     res = _resumen_canonico(est.id, est.nivel, est.grado, est.seccion,
@@ -663,10 +677,11 @@ def reporte_aula(
     fecha_fin:    date = Query(...),
     nivel:        Optional[str] = Query(None),
     db:           Session = Depends(get_db),
-    current_user: Usuario = Depends(require_roles("admin")),
+    current_user: Usuario = Depends(require_roles(*_ROLES_REPORTE)),
 ):
     if fecha_fin < fecha_inicio:
         raise HTTPException(400, "fecha_fin debe ser >= fecha_inicio")
+    nivel = _nivel_efectivo(current_user, nivel)
     q = db.query(Estudiante).filter(
         Estudiante.activo  == True,
         Estudiante.grado   == grado,
@@ -697,10 +712,11 @@ def reporte_mensual_pdf(
     fecha_fin:    date = Query(...),
     nivel:        Optional[str] = Query(None),
     db:           Session = Depends(get_db),
-    current_user: Usuario = Depends(require_roles("admin")),
+    current_user: Usuario = Depends(require_roles(*_ROLES_REPORTE)),
 ):
     if fecha_fin < fecha_inicio:
         raise HTTPException(400, "fecha_fin debe ser >= fecha_inicio")
+    nivel = _nivel_efectivo(current_user, nivel)
     q = db.query(Estudiante).filter(Estudiante.activo == True)
     if nivel:
         q = q.filter(Estudiante.nivel == nivel)
@@ -735,10 +751,11 @@ def reporte_aula_pdf(
     fecha_fin:    date = Query(...),
     nivel:        Optional[str] = Query(None),
     db:           Session = Depends(get_db),
-    current_user: Usuario = Depends(require_roles("admin")),
+    current_user: Usuario = Depends(require_roles(*_ROLES_REPORTE)),
 ):
     if fecha_fin < fecha_inicio:
         raise HTTPException(400, "fecha_fin debe ser >= fecha_inicio")
+    nivel = _nivel_efectivo(current_user, nivel)
     q = db.query(Estudiante).filter(
         Estudiante.activo  == True,
         Estudiante.grado   == grado,
@@ -775,11 +792,14 @@ def reporte_alumno_pdf(
     fecha_inicio:  date = Query(...),
     fecha_fin:     date = Query(...),
     db:            Session = Depends(get_db),
-    current_user:  Usuario = Depends(require_roles("admin")),
+    current_user:  Usuario = Depends(require_roles(*_ROLES_REPORTE)),
 ):
     est = db.query(Estudiante).filter(Estudiante.id == estudiante_id).first()
     if not est:
         raise HTTPException(404, "Estudiante no encontrado")
+    nivel_fijo = _ROL_TO_NIVEL.get(current_user.rol)
+    if nivel_fijo and est.nivel != nivel_fijo:
+        raise HTTPException(403, "Solo puedes consultar alumnos de tu nivel")
     if fecha_fin < fecha_inicio:
         raise HTTPException(400, "fecha_fin debe ser >= fecha_inicio")
 

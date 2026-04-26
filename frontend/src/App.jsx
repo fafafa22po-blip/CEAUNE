@@ -65,12 +65,15 @@ function RootRedirect() {
   return <Navigate to="/login" replace />
 }
 
+// Directivo
+import DirectivoSupervision        from './pages/directivo/Supervision'
+import DirectivoSupervisionAuxiliar from './pages/directivo/SupervisionAuxiliar'
+import DirectivoSupervisionTutor    from './pages/directivo/SupervisionTutor'
+
 // Auxiliar
 import InicioAuxiliar from './pages/auxiliar/Inicio'
 import Escanear from './pages/auxiliar/Escanear'
 import Asistencia from './pages/auxiliar/Asistencia'
-import Comunicar from './pages/auxiliar/Comunicar'
-import Bandeja from './pages/auxiliar/Bandeja'
 import JustificacionesAux from './pages/auxiliar/Justificaciones'
 import Contactos from './pages/auxiliar/Contactos'
 import Inspeccion from './pages/auxiliar/Inspeccion'
@@ -95,6 +98,9 @@ import LibretasApoderado from './pages/apoderado/Libretas'
 import ContactoApoderado from './pages/apoderado/Contacto'
 import RecojoApoderado from './pages/apoderado/Recojo'
 
+// Bandeja avisos directivo (compartida por tutor y auxiliar)
+import AvisosPersonal from './pages/shared/AvisosPersonal'
+
 // Perfil compartido
 import Perfil from './pages/Perfil'
 import DescargarApp from './pages/DescargarApp'
@@ -108,13 +114,14 @@ import Horarios from './pages/admin/Horarios'
 import HorarioClases from './pages/admin/HorarioClases'
 import Reportes from './pages/admin/Reportes'
 import Usuarios from './pages/admin/Usuarios'
-import AdminComunicar from './pages/admin/Comunicar'
-import AdminBandeja from './pages/admin/Bandeja'
+import AdminComunicados from './pages/admin/Comunicados'
+import AuxiliarComunicados from './pages/auxiliar/Comunicados'
 import AdminRecojo from './pages/admin/Recojo'
 import Anuncios from './pages/admin/Anuncios'
 import EscanearRecojo from './pages/auxiliar/EscanearRecojo'
 
-const ROLES_AUXILIAR = ['i-auxiliar', 'p-auxiliar', 's-auxiliar']
+const ROLES_AUXILIAR  = ['i-auxiliar', 'p-auxiliar', 's-auxiliar']
+const ROLES_DIRECTIVO = ['directivo']
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -185,8 +192,35 @@ export default function App() {
               <Route path="recojo"          element={<EscanearRecojo />} />
               <Route path="inspeccion"      element={<Inspeccion />} />
               <Route path="asistencia"      element={<Asistencia />} />
-              <Route path="comunicar"       element={<Comunicar />} />
-              <Route path="bandeja"         element={<Bandeja />} />
+              <Route path="comunicados"     element={<AuxiliarComunicados />} />
+              <Route path="comunicar"       element={<Navigate to="../comunicados" replace />} />
+              <Route path="bandeja"         element={<Navigate to="../comunicados" replace />} />
+              <Route path="justificaciones" element={<JustificacionesAux />} />
+              <Route path="horarios"        element={<AuxiliarHorarios />} />
+              <Route path="horario-clases"  element={<AuxiliarHorarioClases />} />
+              <Route path="reportes"        element={<Reportes />} />
+              <Route path="contactos"       element={<Contactos />} />
+              <Route path="avisos"          element={<AvisosPersonal />} />
+              <Route path="perfil"          element={<Perfil />} />
+              <Route path="descargar-app"   element={<DescargarApp />} />
+            </Route>
+          </Route>
+
+          {/* DIRECTIVO */}
+          <Route element={<ProtectedRoute rolesPermitidos={ROLES_DIRECTIVO} />}>
+            <Route path="/directivo" element={<Layout />}>
+              <Route index element={<Navigate to="inicio" replace />} />
+              <Route path="inicio"          element={<InicioAuxiliar />} />
+              <Route path="supervision"                    element={<DirectivoSupervision />} />
+              <Route path="supervision/auxiliar/:id"   element={<DirectivoSupervisionAuxiliar />} />
+              <Route path="supervision/tutor/:id"      element={<DirectivoSupervisionTutor />} />
+              <Route path="circular"        element={<Navigate to="../comunicados" replace />} />
+              <Route path="recojo"          element={<EscanearRecojo />} />
+              <Route path="inspeccion"      element={<Inspeccion />} />
+              <Route path="asistencia"      element={<Asistencia />} />
+              <Route path="comunicados"     element={<AuxiliarComunicados />} />
+              <Route path="comunicar"       element={<Navigate to="../comunicados" replace />} />
+              <Route path="bandeja"         element={<Navigate to="../comunicados" replace />} />
               <Route path="justificaciones" element={<JustificacionesAux />} />
               <Route path="horarios"        element={<AuxiliarHorarios />} />
               <Route path="horario-clases"  element={<AuxiliarHorarioClases />} />
@@ -208,6 +242,7 @@ export default function App() {
               <Route path="comunicados"   element={<TutorComunicados />} />
               <Route path="recojo"        element={<EscanearRecojo />} />
               <Route path="inspeccion"    element={<Inspeccion />} />
+              <Route path="avisos"        element={<AvisosPersonal />} />
               <Route path="perfil"        element={<Perfil />} />
               <Route path="descargar-app" element={<DescargarApp />} />
             </Route>
@@ -242,8 +277,9 @@ export default function App() {
               <Route path="horario-clases" element={<HorarioClases />} />
               <Route path="reportes"       element={<Reportes />} />
               <Route path="usuarios"       element={<Usuarios />} />
-              <Route path="comunicar"      element={<AdminComunicar />} />
-              <Route path="bandeja"        element={<AdminBandeja />} />
+              <Route path="comunicados"    element={<AdminComunicados />} />
+              <Route path="comunicar"      element={<Navigate to="../comunicados" replace />} />
+              <Route path="bandeja"        element={<Navigate to="../comunicados" replace />} />
               <Route path="recojo"         element={<AdminRecojo />} />
               <Route path="anuncios"       element={<Anuncios />} />
               <Route path="descargar-app"  element={<DescargarApp />} />

@@ -18,6 +18,19 @@ const NIVEL_LABEL = {
   's-auxiliar': 'Secundaria',
 }
 
+const CARGO_DIRECTIVO = {
+  'inicial':    'Directora de Inicial',
+  'primaria':   'Subdirector de Primaria',
+  'secundaria': 'Subdirector de Secundaria',
+  'formacion':  'Subdir. Form. General',
+  'todos':      'Director del CEAUNE',
+}
+
+function getCargo(rol, nivel) {
+  if (rol === 'directivo') return CARGO_DIRECTIVO[nivel] || 'Directivo'
+  return `Auxiliar de ${NIVEL_LABEL[rol] ?? 'nivel'}`
+}
+
 const DIST_CFG = [
   { key: 'puntual',  label: 'Puntuales',  color: 'bg-green-500',  text: 'text-green-700',  bg: 'bg-green-50'  },
   { key: 'tardanza', label: 'Tardanzas',  color: 'bg-yellow-400', text: 'text-yellow-700', bg: 'bg-yellow-50' },
@@ -121,8 +134,8 @@ export default function InicioAuxiliar() {
               {(() => { const h = new Date().getHours(); return h < 12 ? 'Buenos días' : h < 18 ? 'Buenas tardes' : 'Buenas noches' })()},<br />
               <span className="text-dorado">{usuario?.nombre ? usuario.nombre.split(' ')[0] : 'Auxiliar'}</span>
             </h1>
-            <p className="mt-2 text-white/55 text-sm">
-              Auxiliar de <span className="font-semibold text-white/80">{NIVEL_LABEL[usuario?.rol] ?? 'nivel'}</span>
+            <p className="mt-2 text-sm font-semibold text-white/75">
+              {getCargo(usuario?.rol, usuario?.nivel)}
             </p>
             <button
               onClick={() => nav('/auxiliar/escanear')}
@@ -201,7 +214,7 @@ export default function InicioAuxiliar() {
           )}
         </div>
 
-        <div className="card cursor-pointer hover:shadow-md transition-shadow" onClick={() => nav('/auxiliar/bandeja')}>
+        <div className="card cursor-pointer hover:shadow-md transition-shadow" onClick={() => nav('/auxiliar/comunicados')}>
           <div className="flex items-start justify-between">
             <div>
               <p className="text-xs text-gray-400 font-medium uppercase tracking-wide">Respuestas</p>

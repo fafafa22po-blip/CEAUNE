@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
 import ReactDOM from 'react-dom'
-import { Hash, Camera, Mail, Clock, MessageCircle, X, Phone, Copy, AlertTriangle, Check, ShieldCheck, UserX, CheckCircle2, QrCode } from 'lucide-react'
+import { Camera, Mail, Clock, MessageCircle, X, Phone, Copy, AlertTriangle, Check, ShieldCheck, UserX, CheckCircle2, QrCode, Search, ChevronRight } from 'lucide-react'
 import toast from 'react-hot-toast'
 import QRScanner from '../../components/QRScanner'
 import api from '../../lib/api'
@@ -115,7 +115,7 @@ function ModalSeleccionIni({ datoApo, qrToken, onConfirmar, onCancelar, cargando
       .finally(() => setLoadingPrev(false))
   }, [hijoId]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const puedeAutoConfirmar = preview && !preview.requiere_observacion &&
+  const puedeAutoConfirmar = preview &&
     !preview.requiere_motivo && preview.tiene_asistencia && !preview.puede_recojo
 
   useEffect(() => {
@@ -140,7 +140,6 @@ function ModalSeleccionIni({ datoApo, qrToken, onConfirmar, onCancelar, cargando
       : preview.tiene_asistencia ? 'asistencia' : 'recojo'
     const extras = {}
     if (preview.tipo_asistencia)  extras.tipo_asistencia = preview.tipo_asistencia
-    if (observacion.trim())       extras.observacion     = observacion.trim()
     if (motivo)                   extras.motivo_especial = motivo
     else if (preview.motivo_auto) extras.motivo_especial = preview.motivo_auto
     onConfirmar(hijoId, accion, qrToken, extras)
@@ -148,7 +147,6 @@ function ModalSeleccionIni({ datoApo, qrToken, onConfirmar, onCancelar, cargando
   confirmRef.current = handleConfirmar
 
   const puedeConfirmar = preview && hijoId &&
-    (!preview.requiere_observacion || observacion.trim()) &&
     (!preview.requiere_motivo || motivo) &&
     (preview.tiene_asistencia || conRecojo)
 
@@ -162,7 +160,7 @@ function ModalSeleccionIni({ datoApo, qrToken, onConfirmar, onCancelar, cargando
   return ReactDOM.createPortal(
     <div className="fixed inset-0 z-[9999] bg-black/70 flex items-end sm:items-center justify-center"
       onClick={e => { if (e.target === e.currentTarget) { clearTimeout(acRef.current); onCancelar() } }}>
-      <div className="bg-white w-full sm:max-w-sm sm:rounded-2xl overflow-hidden shadow-2xl"
+      <div className="bg-white w-full sm:max-w-sm sm:rounded-2xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]"
         onClick={e => e.stopPropagation()}>
 
         {hdr && (
@@ -175,7 +173,7 @@ function ModalSeleccionIni({ datoApo, qrToken, onConfirmar, onCancelar, cargando
         )}
 
         {hdr ? (
-          <div className={`${hdr.bg} px-5 py-3 flex items-center justify-between`}>
+          <div className={`flex-shrink-0 ${hdr.bg} px-5 py-3 flex items-center justify-between`}>
             <div className="flex items-center gap-2">
               <p className="text-white font-black text-xl tracking-widest">{hdr.label}</p>
               {autoConfirm > 0 && (
@@ -188,7 +186,7 @@ function ModalSeleccionIni({ datoApo, qrToken, onConfirmar, onCancelar, cargando
             </button>
           </div>
         ) : (
-          <div className="bg-[#0a1f3d] px-5 py-4 flex items-center justify-between">
+          <div className="flex-shrink-0 bg-[#0a1f3d] px-5 py-4 flex items-center justify-between">
             <div className="flex items-center gap-3">
               <AvatarIni foto_url={apoderado.foto_url} nombre={apoderado.nombre}
                 className="w-10 h-10 rounded-xl flex-shrink-0" textClass="text-base bg-white/20 w-10 h-10 rounded-xl" />
@@ -203,7 +201,7 @@ function ModalSeleccionIni({ datoApo, qrToken, onConfirmar, onCancelar, cargando
           </div>
         )}
 
-        <div className="px-5 pt-5 pb-4 space-y-4">
+        <div className="px-5 pt-5 pb-4 space-y-4 overflow-y-auto flex-1">
           {hijos.length > 1 && (
             <div className="space-y-2">
               <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Selecciona al alumno</p>
@@ -256,16 +254,6 @@ function ModalSeleccionIni({ datoApo, qrToken, onConfirmar, onCancelar, cargando
                   <p className="text-sm text-violet-700">
                     Retorna de: <span className="font-semibold">{preview.motivo_auto.replace(/_/g, ' ')}</span>
                   </p>
-                </div>
-              )}
-
-              {preview.requiere_observacion && (
-                <div className="space-y-1.5">
-                  <p className="text-xs font-semibold text-amber-600 uppercase tracking-wide text-center">¿Por qué llegó tarde?</p>
-                  <textarea
-                    className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400 resize-none"
-                    rows={2} value={observacion} onChange={e => setObservacion(e.target.value)}
-                    placeholder="Motivo de la tardanza (obligatorio)..." autoFocus />
                 </div>
               )}
 
@@ -411,10 +399,16 @@ function StatBadge({ valor, label, color }) {
   )
 }
 
+const NIVEL_POR_ROL = { 'i-auxiliar': 'inicial', 'p-auxiliar': 'primaria', 's-auxiliar': 'secundaria' }
+
 export default function Escanear() {
-  const _usuario = obtenerUsuario()
+  const _usuario   = obtenerUsuario()
+  const nivelPropio = NIVEL_POR_ROL[_usuario?.rol] || null
+
   const [modo, setModo]                 = useState('camara')
   const [dniManual, setDniManual]       = useState('')
+  const [resultadosManual, setResultadosManual] = useState([])
+  const [buscandoManual, setBuscandoManual]     = useState(false)
   const [cargando, setCargando]         = useState(false)
   const [camaraActiva, setCamaraActiva] = useState(true)
   const [horarioHoy, setHorarioHoy]     = useState(null)
@@ -462,7 +456,7 @@ export default function Escanear() {
   useEffect(() => {
     clearTimeout(acTimerRef.current)
     setAutoConfirm(0)
-    if (!preview || preview.requiere_motivo || preview.requiere_observacion) return
+    if (!preview || preview.requiere_motivo) return
     setAutoConfirm(AUTO_CONFIRM_SEG)
   }, [preview])
 
@@ -573,22 +567,18 @@ export default function Escanear() {
       toast.error('Selecciona el motivo antes de confirmar')
       return
     }
-    if (preview.requiere_observacion && !observacion.trim()) {
-      toast.error('Ingresa el motivo de la tardanza')
-      return
-    }
 
     setCargando(true)
     try {
       const payload = { qr_token: pendingToken, tipo_solicitado: preview.tipo_a_enviar }
       if (preview.requiere_motivo)         payload.motivo_especial = motivoEspecial
       else if (preview.motivo_auto)        payload.motivo_especial = preview.motivo_auto
-      if (preview.requiere_observacion)    payload.observacion = observacion.trim()
 
       const { data } = await api.post('/asistencia/escanear', payload)
       setResultado(data)
       setFeed(prev => [data, ...prev].slice(0, 20))
       setDniManual('')
+      setResultadosManual([])
       setPreview(null)
       setPendingToken(null)
       setMotivoEspecial('')
@@ -638,8 +628,34 @@ export default function Escanear() {
     setCamaraActiva(true)
   }, [])
 
+  // Búsqueda debounced cuando el input manual no es un DNI puro (8 dígitos)
+  useEffect(() => {
+    const q = dniManual.trim()
+    if (!q || (q.length === 8 && /^\d+$/.test(q))) { setResultadosManual([]); return }
+    const t = setTimeout(async () => {
+      setBuscandoManual(true)
+      try {
+        const params = { q }
+        if (nivelPropio) params.nivel = nivelPropio
+        const { data } = await api.get('/estudiantes/', { params })
+        setResultadosManual(Array.isArray(data) ? data : (data.items || []))
+      } catch { setResultadosManual([]) }
+      finally { setBuscandoManual(false) }
+    }, 300)
+    return () => clearTimeout(t)
+  }, [dniManual, nivelPropio])
+
   const handleQR     = useCallback(token => { setCamaraActiva(false); escanear(token) }, [escanear])
-  const handleManual = e => { e.preventDefault(); if (dniManual.trim()) escanear(dniManual.trim()) }
+  const handleManual = e => {
+    e.preventDefault()
+    const q = dniManual.trim()
+    if (q) { setResultadosManual([]); escanear(q) }
+  }
+  const seleccionarAlumnoManual = (est) => {
+    setDniManual('')
+    setResultadosManual([])
+    escanear(est.dni)
+  }
 
   const handleLector = useCallback(e => {
     e.preventDefault()
@@ -719,7 +735,7 @@ export default function Escanear() {
             {[
               { id: 'camara', icon: Camera,  label: 'Cámara QR'    },
               { id: 'lector', icon: QrCode,  label: 'Lector físico' },
-              { id: 'manual', icon: Hash,    label: 'DNI Manual'   },
+              { id: 'manual', icon: Search,  label: 'Buscar'       },
             ].map(({ id, icon: Icon, label }) => (
               <button
                 key={id}
@@ -786,27 +802,75 @@ export default function Escanear() {
             </form>
           )}
 
-          {/* DNI manual */}
+          {/* Búsqueda manual — nombre, apellido o DNI */}
           {modo === 'manual' && (
-            <form onSubmit={handleManual} className="card flex gap-3">
-              <input
-                className="input flex-1"
-                value={dniManual}
-                onChange={e => setDniManual(e.target.value)}
-                placeholder="Ingrese DNI del alumno"
-                maxLength={8}
-                disabled={cargando}
-              />
-              <button
-                type="submit"
-                disabled={cargando || !dniManual.trim()}
-                className="btn-primary whitespace-nowrap"
-              >
-                {cargando
-                  ? <span className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full" />
-                  : 'Registrar'}
-              </button>
-            </form>
+            <div className="card space-y-3">
+              <form onSubmit={handleManual} className="flex gap-2">
+                <div className="relative flex-1">
+                  <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                  <input
+                    className="input pl-9 pr-8 w-full"
+                    value={dniManual}
+                    onChange={e => { setDniManual(e.target.value); setResultadosManual([]) }}
+                    placeholder="Nombre, apellido o DNI..."
+                    disabled={cargando}
+                    autoFocus
+                  />
+                  {buscandoManual && (
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2">
+                      <span className="animate-spin inline-block w-3.5 h-3.5 border-2 border-dorado border-t-transparent rounded-full" />
+                    </span>
+                  )}
+                  {dniManual && !buscandoManual && (
+                    <button type="button" onClick={() => { setDniManual(''); setResultadosManual([]) }}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                      <X size={13} />
+                    </button>
+                  )}
+                </div>
+                <button
+                  type="submit"
+                  disabled={cargando || !dniManual.trim() || resultadosManual.length > 0}
+                  className="btn-primary whitespace-nowrap"
+                >
+                  {cargando
+                    ? <span className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full" />
+                    : 'Registrar'}
+                </button>
+              </form>
+
+              {/* Dropdown de resultados */}
+              {resultadosManual.length > 0 && (
+                <div className="space-y-1.5">
+                  <p className="text-xs text-gray-400 px-1">{resultadosManual.length} resultado{resultadosManual.length !== 1 ? 's' : ''} — selecciona al alumno</p>
+                  {resultadosManual.map(est => (
+                    <button
+                      key={est.id}
+                      type="button"
+                      onClick={() => seleccionarAlumnoManual(est)}
+                      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl border border-gray-100 bg-white hover:border-dorado/40 hover:bg-amber-50/30 transition-all text-left group"
+                    >
+                      <div className="w-8 h-8 rounded-lg bg-marino flex items-center justify-center flex-shrink-0">
+                        <span className="text-white font-bold text-xs">
+                          {(est.nombre?.charAt(0) || '') + (est.apellido?.charAt(0) || '')}
+                        </span>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-gray-800 truncate group-hover:text-marino">
+                          {est.apellido}, {est.nombre}
+                        </p>
+                        <p className="text-xs text-gray-400">{est.grado} · Sec. {est.seccion} · DNI {est.dni}</p>
+                      </div>
+                      <ChevronRight size={13} className="text-dorado opacity-0 group-hover:opacity-100 flex-shrink-0" />
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {dniManual && !buscandoManual && resultadosManual.length === 0 && dniManual.trim().length >= 3 && !(dniManual.trim().length === 8 && /^\d+$/.test(dniManual.trim())) && (
+                <p className="text-xs text-gray-400 text-center py-2">Sin resultados para "{dniManual}"</p>
+              )}
+            </div>
           )}
         </div>
 
@@ -852,11 +916,11 @@ export default function Escanear() {
           onClick={detenerAutoConfirm}
         >
           <div
-            className="bg-white w-full sm:max-w-sm sm:rounded-2xl overflow-hidden shadow-2xl"
+            className="bg-white w-full sm:max-w-sm sm:rounded-2xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]"
             onClick={e => e.stopPropagation()}
           >
             {/* Barra auto-confirm */}
-            <div className={`h-1 ${previewHdr.bg} opacity-30`}>
+            <div className={`h-1 flex-shrink-0 ${previewHdr.bg} opacity-30`}>
               {autoConfirm > 0 && (
                 <div
                   className={`h-1 ${previewHdr.bg} transition-all duration-1000 ease-linear`}
@@ -866,7 +930,7 @@ export default function Escanear() {
             </div>
 
             {/* Header compacto */}
-            <div className={`${previewHdr.bg} px-5 py-3 flex items-center justify-between`}>
+            <div className={`flex-shrink-0 ${previewHdr.bg} px-5 py-3 flex items-center justify-between`}>
               <div className="flex items-center gap-2">
                 <p className="text-white font-black text-xl tracking-widest">{previewHdr.label}</p>
                 {autoConfirm > 0 && (
@@ -883,7 +947,7 @@ export default function Escanear() {
               </button>
             </div>
 
-            <div className="px-5 pt-5 pb-4 space-y-4">
+            <div className="px-5 pt-5 pb-4 space-y-4 overflow-y-auto flex-1">
 
               {/* ── Bloque central de identidad ── */}
               <div className="flex flex-col items-center text-center gap-3">
@@ -944,23 +1008,6 @@ export default function Escanear() {
                 </div>
               )}
 
-              {/* CASO: tardanza → campo de observación */}
-              {preview.requiere_observacion && (
-                <div className="space-y-2">
-                  <p className="text-xs font-semibold text-amber-600 uppercase tracking-wide text-center">
-                    ¿Por qué llegó tarde?
-                  </p>
-                  <textarea
-                    className="input resize-none text-sm"
-                    rows={2}
-                    value={observacion}
-                    onChange={e => setObservacion(e.target.value)}
-                    placeholder="Motivo de la tardanza (obligatorio)..."
-                    autoFocus
-                  />
-                </div>
-              )}
-
               {/* CASO: regreso tras salida especial */}
               {preview.tipo_a_enviar === 'ingreso_especial' && preview.motivo_auto && (
                 <div className="flex items-center gap-2 bg-violet-50 border border-violet-100 rounded-xl px-3.5 py-2.5">
@@ -977,8 +1024,7 @@ export default function Escanear() {
                   onClick={confirmarRegistro}
                   disabled={
                     cargando ||
-                    (preview.requiere_motivo && !motivoEspecial) ||
-                    (preview.requiere_observacion && !observacion.trim())
+                    (preview.requiere_motivo && !motivoEspecial)
                   }
                   className={`w-full py-3.5 rounded-xl font-bold text-white flex items-center justify-center gap-2 transition-all disabled:opacity-40 active:scale-[0.98] hover:opacity-90 ${cargando ? 'bg-gray-400' : previewHdr.bg}`}
                 >
@@ -1007,11 +1053,11 @@ export default function Escanear() {
       {resultado && resultCfg && (
         <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
           <div
-            className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden"
+            className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden flex flex-col max-h-[90vh]"
             onClick={cancelarAutoClose}
           >
             {/* Header con hora + cuenta regresiva */}
-            <div className={`${resultCfg.headerBg} px-5 py-4`}>
+            <div className={`flex-shrink-0 ${resultCfg.headerBg} px-5 py-4`}>
               {/* Barra de auto-cierre dentro del header */}
               <div className="h-0.5 bg-white/20 rounded-full mb-3 overflow-hidden">
                 <div
@@ -1055,6 +1101,9 @@ export default function Escanear() {
                 </div>
               </div>
             </div>
+
+            {/* Cuerpo scrollable */}
+            <div className="overflow-y-auto flex-1">
 
             {/* Estudiante — foto pequeña inline */}
             <div className="px-5 py-4 flex items-center gap-3 border-b border-gray-100">
@@ -1156,6 +1205,8 @@ export default function Escanear() {
                 Cerrar y continuar {autoActivo && `(${cuentaRegresiva}s)`}
               </button>
             </div>
+
+            </div>{/* fin cuerpo scrollable */}
           </div>
         </div>
       )}

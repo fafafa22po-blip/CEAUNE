@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { Paperclip, Send, ChevronLeft, MessageSquare, X, School } from 'lucide-react'
+import { Paperclip, Send, ChevronLeft, MessageSquare, X, School, Stamp } from 'lucide-react'
 import api from '../../lib/api'
 import toast from 'react-hot-toast'
 import { format, isToday, isYesterday } from 'date-fns'
@@ -230,6 +230,11 @@ export default function ComunicadosApoderado() {
                           </p>
 
                           <div className="flex items-center gap-1.5 mt-1">
+                            {com.tipo === 'circular' && (
+                              <span className="flex items-center gap-0.5 text-[10px] font-semibold text-marino bg-marino/10 px-1.5 py-0.5 rounded-full">
+                                <Stamp size={9} /> Circular
+                              </span>
+                            )}
                             {com.adjunto_nombre && (
                               <span className="flex items-center gap-0.5 text-[10px] text-gray-400">
                                 <Paperclip size={9} /> Adjunto

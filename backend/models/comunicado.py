@@ -17,6 +17,8 @@ class Comunicado(Base):
     adjunto_nombre = Column(String(200), nullable=True)
     adjunto_drive_url = Column(Text, nullable=True)
     tipo_envio = Column(Enum("individual", "aula", "masivo"), nullable=False)
+    tipo = Column(Enum("normal", "circular"), nullable=False, server_default="normal")
+    cargo_emisor = Column(String(100), nullable=True)
     created_at = Column(TIMESTAMP, server_default=func.now())
 
 

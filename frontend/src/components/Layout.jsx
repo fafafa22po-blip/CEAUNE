@@ -12,22 +12,39 @@ import { hapticMedium, hapticLight } from '../lib/haptics'
 import { useTour } from '../context/TourContext'
 import {
   QrCode, LayoutDashboard, Users, Calendar, Settings,
-  MessageSquare, Inbox, FileCheck,
+  MessageSquare, FileCheck, Bell,
   BookOpen, Eye, BarChart2, Home, LogOut,
-  ChevronLeft, ChevronRight, Clock, User, Phone, ScanSearch,
+  ChevronLeft, ChevronRight, Clock, User, Phone, ScanSearch, Activity,
   CalendarCheck, GraduationCap, NotebookText, MoreHorizontal, UserCheck, Briefcase, ArrowLeftRight,
   Download, ShieldCheck, ImagePlus,
 } from 'lucide-react'
 
 // ── BOTTOM NAV — config por rol ──────────────────────────────────────
 const AUXILIAR_OVERFLOW = [
-  { a: '/auxiliar/bandeja',         icon: Inbox,         label: 'Bandeja'         },
+  { a: '/auxiliar/avisos',          icon: Bell,          label: 'Avisos',         avisoBadge: true },
+  { a: '/auxiliar/comunicados',     icon: MessageSquare, label: 'Comunicados'     },
+  { a: '/auxiliar/reportes',        icon: BarChart2,     label: 'Reportes'        },
   { a: '/auxiliar/inspeccion',      icon: ScanSearch,    label: 'Inspección'      },
-  { a: '/auxiliar/comunicar',       icon: MessageSquare, label: 'Comunicar'       },
   { a: '/auxiliar/justificaciones', icon: FileCheck,     label: 'Justificaciones' },
   { a: '/auxiliar/contactos',       icon: Phone,         label: 'Contactos'       },
   { a: '/auxiliar/perfil',          icon: User,          label: 'Mi Perfil'       },
 ]
+
+const DIRECTIVO_OVERFLOW = [
+  { a: '/directivo/comunicados',     icon: MessageSquare, label: 'Comunicados'     },
+  { a: '/directivo/inspeccion',      icon: ScanSearch,    label: 'Inspección'      },
+  { a: '/directivo/contactos',       icon: Phone,         label: 'Contactos'       },
+  { a: '/directivo/perfil',          icon: User,          label: 'Mi Perfil'       },
+]
+
+const DIRECTIVO_NAV = {
+  main: [
+    { a: '/directivo/inicio',      icon: Home,          label: 'Inicio'       },
+    { a: '/directivo/supervision', icon: Activity,      label: 'Supervisión'  },
+    { a: '/directivo/asistencia',  icon: CalendarCheck, label: 'Asistencia'   },
+  ],
+  overflow: DIRECTIVO_OVERFLOW,
+}
 
 // Inicial: tiene Recojo en el main
 const AUXILIAR_INICIAL_NAV = {
@@ -62,6 +79,7 @@ const BOTTOM_NAV = {
       { a: '/tutor/seguimiento', icon: Eye,           label: 'Seguimiento' },
     ],
     overflow: [
+      { a: '/tutor/avisos',    icon: Bell,          label: 'Avisos',   avisoBadge: true },
       { a: '/tutor/libretas',  icon: NotebookText,  label: 'Libretas'  },
       { a: '/tutor/reuniones', icon: CalendarCheck, label: 'Reuniones' },
       { a: '/tutor/perfil',    icon: User,          label: 'Mi Perfil' },
@@ -82,21 +100,22 @@ const BOTTOM_NAV = {
       { a: '/apoderado/perfil',      icon: User,          label: 'Mi Perfil'   },
     ],
   },
+  'directivo': DIRECTIVO_NAV,
   'admin': {
     main: [
       { a: '/admin/dashboard',   icon: LayoutDashboard, label: 'Dashboard'   },
       { a: '/admin/estudiantes', icon: Users,           label: 'Estudiantes' },
-      { a: '/admin/comunicar',   icon: MessageSquare,   label: 'Comunicar'   },
+      { a: '/admin/comunicados', icon: MessageSquare,   label: 'Comunicados' },
       { a: '/admin/reportes',    icon: BarChart2,       label: 'Reportes'    },
     ],
     overflow: [
       { a: '/admin/apoderados',     icon: UserCheck,     label: 'Apoderados'  },
       { a: '/admin/calendario',     icon: Calendar,      label: 'Calendario'  },
       { a: '/admin/recojo',         icon: ShieldCheck,   label: 'Recojo'      },
+      { a: '/admin/comunicados',    icon: MessageSquare, label: 'Comunicados' },
       { a: '/admin/anuncios',       icon: ImagePlus,     label: 'Anuncios'    },
-      { a: '/admin/horarios',       icon: Clock,         label: 'Horarios'    },
-      { a: '/admin/horario-clases', icon: GraduationCap, label: 'Clases'      },
-      { a: '/admin/bandeja',        icon: Inbox,         label: 'Bandeja'     },
+      { a: '/admin/horarios',       icon: Clock,         label: 'Reloj'       },
+      { a: '/admin/horario-clases', icon: GraduationCap, label: 'Horarios'    },
       { a: '/admin/usuarios',       icon: Settings,      label: 'Usuarios'    },
     ],
   },
@@ -110,8 +129,9 @@ const MENUS = {
     { a: '/auxiliar/recojo',          icon: ShieldCheck,     label: 'Recojo Seguro'   },
     { a: '/auxiliar/inspeccion',      icon: ScanSearch,      label: 'Inspección'      },
     { a: '/auxiliar/asistencia',      icon: LayoutDashboard, label: 'Asistencia'      },
-    { a: '/auxiliar/comunicar',       icon: MessageSquare,   label: 'Comunicar'       },
-    { a: '/auxiliar/bandeja',         icon: Inbox,           label: 'Bandeja'         },
+    { a: '/auxiliar/reportes',        icon: BarChart2,       label: 'Reportes'        },
+    { a: '/auxiliar/comunicados',     icon: MessageSquare,   label: 'Comunicados'     },
+    { a: '/auxiliar/avisos',          icon: Bell,            label: 'Avisos',         avisoBadge: true },
     { a: '/auxiliar/justificaciones', icon: FileCheck,       label: 'Justificaciones' },
     { a: '/auxiliar/contactos',       icon: Phone,           label: 'Contactos'       },
     { a: '/auxiliar/perfil',          icon: User,            label: 'Mi Perfil'       },
@@ -121,8 +141,9 @@ const MENUS = {
     { a: '/auxiliar/escanear',        icon: QrCode,          label: 'Escanear'        },
     { a: '/auxiliar/inspeccion',      icon: ScanSearch,      label: 'Inspección'      },
     { a: '/auxiliar/asistencia',      icon: LayoutDashboard, label: 'Asistencia'      },
-    { a: '/auxiliar/comunicar',       icon: MessageSquare,   label: 'Comunicar'       },
-    { a: '/auxiliar/bandeja',         icon: Inbox,           label: 'Bandeja'         },
+    { a: '/auxiliar/reportes',        icon: BarChart2,       label: 'Reportes'        },
+    { a: '/auxiliar/comunicados',     icon: MessageSquare,   label: 'Comunicados'     },
+    { a: '/auxiliar/avisos',          icon: Bell,            label: 'Avisos',         avisoBadge: true },
     { a: '/auxiliar/justificaciones', icon: FileCheck,       label: 'Justificaciones' },
     { a: '/auxiliar/contactos',       icon: Phone,           label: 'Contactos'       },
     { a: '/auxiliar/perfil',          icon: User,            label: 'Mi Perfil'       },
@@ -132,8 +153,9 @@ const MENUS = {
     { a: '/auxiliar/escanear',        icon: QrCode,          label: 'Escanear'        },
     { a: '/auxiliar/inspeccion',      icon: ScanSearch,      label: 'Inspección'      },
     { a: '/auxiliar/asistencia',      icon: LayoutDashboard, label: 'Asistencia'      },
-    { a: '/auxiliar/comunicar',       icon: MessageSquare,   label: 'Comunicar'       },
-    { a: '/auxiliar/bandeja',         icon: Inbox,           label: 'Bandeja'         },
+    { a: '/auxiliar/reportes',        icon: BarChart2,       label: 'Reportes'        },
+    { a: '/auxiliar/comunicados',     icon: MessageSquare,   label: 'Comunicados'     },
+    { a: '/auxiliar/avisos',          icon: Bell,            label: 'Avisos',         avisoBadge: true },
     { a: '/auxiliar/justificaciones', icon: FileCheck,       label: 'Justificaciones' },
     { a: '/auxiliar/contactos',       icon: Phone,           label: 'Contactos'       },
     { a: '/auxiliar/perfil',          icon: User,            label: 'Mi Perfil'       },
@@ -143,6 +165,7 @@ const MENUS = {
     { a: '/tutor/mi-aula',       icon: BookOpen,       label: 'Mi Aula'       },
     { a: '/tutor/seguimiento',   icon: Eye,            label: 'Seguimiento'   },
     { a: '/tutor/comunicados',   icon: MessageSquare,  label: 'Comunicados'   },
+    { a: '/tutor/avisos',        icon: Bell,           label: 'Avisos',       avisoBadge: true },
     { a: '/tutor/libretas',      icon: NotebookText,   label: 'Libretas'      },
     { a: '/tutor/reuniones',     icon: CalendarCheck,  label: 'Reuniones'     },
     { a: '/tutor/perfil',        icon: User,           label: 'Mi Perfil'     },
@@ -158,17 +181,27 @@ const MENUS = {
     { a: '/apoderado/contacto',    icon: Phone,         label: 'Contacto'    },
     { a: '/apoderado/perfil',      icon: User,          label: 'Mi Perfil'   },
   ],
+  'directivo': [
+    { a: '/directivo/inicio',          icon: Home,            label: 'Inicio'          },
+    { a: '/directivo/supervision',     icon: Activity,        label: 'Supervisión'     },
+    { a: '/directivo/inspeccion',      icon: ScanSearch,      label: 'Inspección'      },
+    { a: '/directivo/asistencia',      icon: LayoutDashboard, label: 'Asistencia'      },
+    { a: '/directivo/comunicados',     icon: MessageSquare,   label: 'Comunicados'     },
+    { a: '/directivo/horarios',        icon: Clock,           label: 'Reloj'           },
+    { a: '/directivo/horario-clases',  icon: GraduationCap,   label: 'Horarios'        },
+    { a: '/directivo/contactos',       icon: Phone,           label: 'Contactos'       },
+    { a: '/directivo/perfil',          icon: User,            label: 'Mi Perfil'       },
+  ],
   'admin': [
     { a: '/admin/dashboard',       icon: LayoutDashboard, label: 'Dashboard'    },
     { a: '/admin/estudiantes',     icon: Users,           label: 'Estudiantes'  },
     { a: '/admin/apoderados',      icon: UserCheck,       label: 'Apoderados'   },
     { a: '/admin/recojo',          icon: ShieldCheck,     label: 'Recojo'       },
     { a: '/admin/calendario',      icon: Calendar,        label: 'Calendario'   },
-    { a: '/admin/horarios',        icon: Clock,           label: 'Horarios'     },
-    { a: '/admin/horario-clases',  icon: GraduationCap,   label: 'Clases'       },
+    { a: '/admin/horarios',        icon: Clock,           label: 'Reloj'        },
+    { a: '/admin/horario-clases',  icon: GraduationCap,   label: 'Horarios'     },
     { a: '/admin/reportes',        icon: BarChart2,       label: 'Reportes'     },
-    { a: '/admin/comunicar',       icon: MessageSquare,   label: 'Comunicar'    },
-    { a: '/admin/bandeja',         icon: Inbox,           label: 'Bandeja'      },
+    { a: '/admin/comunicados',     icon: MessageSquare,   label: 'Comunicados'  },
     { a: '/admin/anuncios',        icon: ImagePlus,       label: 'Anuncios'     },
     { a: '/admin/usuarios',        icon: Settings,        label: 'Usuarios'     },
   ],
@@ -183,6 +216,19 @@ const NIVEL_LABEL = {
   'admin':      'Administrador',
 }
 
+const CARGO_DIRECTIVO = {
+  'inicial':    'Directora de Inicial',
+  'primaria':   'Subdirector de Primaria',
+  'secundaria': 'Subdirector de Secundaria',
+  'formacion':  'Subdir. Form. General',
+  'todos':      'Director del CEAUNE',
+}
+
+function getLabelCargo(rol, nivel) {
+  if (rol === 'directivo') return CARGO_DIRECTIVO[nivel] || 'Directivo'
+  return NIVEL_LABEL[rol] || ''
+}
+
 const RUTAS_CON_SELECTOR = [
   '/apoderado/asistencias',
   '/apoderado/horario',
@@ -195,6 +241,7 @@ const NIVEL_AVATAR = {
   inicial:    'bg-emerald-100 text-emerald-700',
   primaria:   'bg-blue-100   text-blue-700',
   secundaria: 'bg-amber-100  text-amber-700',
+  formacion:  'bg-purple-100 text-purple-700',
 }
 
 // ── SELECTOR HIJO ────────────────────────────────────────────────────
@@ -322,8 +369,9 @@ export default function Layout() {
   const menuBase      = MENUS[rolEfectivo] || []
   const bottomNavBase = BOTTOM_NAV[rolEfectivo]
 
-  // Recojo Seguro dinámico para tutores de nivel inicial
-  const esTutorInicial = rolEfectivo === 'tutor' && usuario?.nivel === 'inicial'
+  // Recojo Seguro dinámico para tutores y directivos de nivel inicial
+  const esTutorInicial    = rolEfectivo === 'tutor'      && usuario?.nivel === 'inicial'
+  const esDirectivoInicial = rolEfectivo === 'directivo' && usuario?.nivel === 'inicial'
   const menu = esTutorInicial
     ? [
         menuBase[0],
@@ -332,9 +380,15 @@ export default function Layout() {
         { a: '/tutor/inspeccion',  icon: ScanSearch,  label: 'Inspección'    },
         ...menuBase.slice(2),
       ]
-    : esApoderado && !esHijoInicial
-      ? menuBase.filter(m => m.a !== '/apoderado/recojo')
-      : menuBase
+    : esDirectivoInicial
+      ? [
+          menuBase[0],
+          { a: '/directivo/recojo', icon: ShieldCheck, label: 'Recojo Seguro' },
+          ...menuBase.slice(1),
+        ]
+      : esApoderado && !esHijoInicial
+        ? menuBase.filter(m => m.a !== '/apoderado/recojo')
+        : menuBase
   const bottomNav = esTutorInicial && bottomNavBase
     ? {
         main: [
@@ -349,9 +403,18 @@ export default function Layout() {
           ...bottomNavBase.overflow,
         ],
       }
-    : esApoderado && !esHijoInicial && bottomNavBase
-      ? { ...bottomNavBase, main: bottomNavBase.main.filter(m => m.a !== '/apoderado/recojo') }
-      : bottomNavBase
+    : esDirectivoInicial && bottomNavBase
+      ? {
+          ...bottomNavBase,
+          main: [
+            bottomNavBase.main[0],
+            { a: '/directivo/recojo', icon: ShieldCheck, label: 'Recojo' },
+            ...bottomNavBase.main.slice(1),
+          ],
+        }
+      : esApoderado && !esHijoInicial && bottomNavBase
+        ? { ...bottomNavBase, main: bottomNavBase.main.filter(m => m.a !== '/apoderado/recojo') }
+        : bottomNavBase
 
   const mainTabs      = bottomNav?.main     ?? []
   const overflowTabs  = bottomNav?.overflow ?? []
@@ -370,6 +433,16 @@ export default function Layout() {
     enabled:   esApoderado,
     staleTime: 60_000,
     select:    items => items.filter(c => !c.leido).length,
+  })
+
+  // Badge avisos del directivo (tutor y auxiliares)
+  const esPersonalOperativo = ['tutor', 'i-auxiliar', 'p-auxiliar', 's-auxiliar'].includes(rolEfectivo)
+  const { data: avisosSinLeer = 0 } = useQuery({
+    queryKey: QK.personalAvisosSinLeer,
+    queryFn:  () => api.get('/personal/avisos/sin-leer').then(r => r.data.sin_leer ?? 0),
+    enabled:   esPersonalOperativo,
+    staleTime: 60_000,
+    refetchInterval: esPersonalOperativo ? 120_000 : false,
   })
 
   useEffect(() => { setStatusBarDark() }, [])
@@ -497,14 +570,14 @@ export default function Layout() {
           {!colapsado && (
             <div>
               <p className="font-bold text-sm leading-tight tracking-tight">CEAUNE</p>
-              <p className="text-[10px] text-white/40 leading-none mt-0.5">{NIVEL_LABEL[rolEfectivo]}</p>
+              <p className="text-[10px] text-white/40 leading-none mt-0.5">{getLabelCargo(rolEfectivo, usuario?.nivel)}</p>
             </div>
           )}
         </div>
 
         {/* Navegación */}
         <nav className="flex-1 py-3 overflow-y-auto">
-          {menu.map(({ a, icon: Icon, label }) => (
+          {menu.map(({ a, icon: Icon, label, avisoBadge }) => (
             <NavLink
               key={a}
               to={a}
@@ -517,8 +590,20 @@ export default function Layout() {
               }
               title={colapsado ? label : undefined}
             >
-              <Icon size={17} className="flex-shrink-0" />
-              {!colapsado && <span className="truncate">{label}</span>}
+              <div className="relative flex-shrink-0">
+                <Icon size={17} />
+                {avisoBadge && avisosSinLeer > 0 && (
+                  <span className="absolute -top-1 -right-1 min-w-[13px] h-3.5 px-0.5 bg-red-500 text-white text-[7px] font-black rounded-full flex items-center justify-center leading-none">
+                    {avisosSinLeer > 9 ? '9+' : avisosSinLeer}
+                  </span>
+                )}
+              </div>
+              {!colapsado && <span className="truncate flex-1">{label}</span>}
+              {!colapsado && avisoBadge && avisosSinLeer > 0 && (
+                <span className="min-w-[18px] h-4 px-1 bg-red-500 text-white text-[9px] font-black rounded-full flex items-center justify-center flex-shrink-0">
+                  {avisosSinLeer > 9 ? '9+' : avisosSinLeer}
+                </span>
+              )}
             </NavLink>
           ))}
         </nav>
@@ -548,7 +633,7 @@ export default function Layout() {
               /* ── Estado colapsado: ícono que alterna rol directo ── */
               <button
                 onClick={() => elegirModo(rolEfectivo === 'apoderado' ? 'personal' : 'apoderado')}
-                title={rolEfectivo === 'apoderado' ? `Cambiar a ${NIVEL_LABEL[usuario.rol]}` : 'Cambiar a Apoderado'}
+                title={rolEfectivo === 'apoderado' ? `Cambiar a ${getLabelCargo(usuario?.rol, usuario?.nivel)}` : 'Cambiar a Apoderado'}
                 className="w-full flex items-center justify-center py-2.5 rounded-xl text-white/60 hover:bg-white/10 hover:text-white transition-all"
               >
                 <ArrowLeftRight size={17} />
@@ -570,7 +655,7 @@ export default function Layout() {
                     }`}
                   >
                     <Briefcase size={15} className="flex-shrink-0" />
-                    <span className="truncate flex-1 text-left">{NIVEL_LABEL[usuario.rol]}</span>
+                    <span className="truncate flex-1 text-left">{getLabelCargo(usuario?.rol, usuario?.nivel)}</span>
                     {rolEfectivo !== 'apoderado' && (
                       <span className="text-[9px] bg-dorado text-white px-1.5 py-0.5 rounded-full font-bold flex-shrink-0">
                         Activo
@@ -636,7 +721,7 @@ export default function Layout() {
             />
             <div className="min-w-0">
               <p className="text-[10px] font-semibold text-white/40 uppercase tracking-wider leading-none truncate">
-                {NIVEL_LABEL[rolEfectivo]}
+                {getLabelCargo(rolEfectivo, usuario?.nivel)}
               </p>
               <p className="text-sm font-bold text-white leading-tight mt-0.5 truncate">
                 {usuario ? `${usuario.nombre} ${usuario.apellido}` : ''}
@@ -746,7 +831,7 @@ export default function Layout() {
                         <p className={`text-[11px] font-bold leading-tight ${
                           rolEfectivo !== 'apoderado' ? 'text-white' : 'text-gray-600'
                         }`}>
-                          {NIVEL_LABEL[usuario?.rol]}
+                          {getLabelCargo(usuario?.rol, usuario?.nivel)}
                         </p>
                         {rolEfectivo !== 'apoderado'
                           ? <span className="inline-block mt-1 text-[9px] bg-dorado text-white px-2 py-0.5 rounded-full font-bold">Activo</span>
@@ -790,7 +875,7 @@ export default function Layout() {
 
               {/* Grid 3 columnas */}
               <div className="grid grid-cols-3 gap-2 mb-3">
-                {overflowTabs.map(({ a, icon: Icon, label }) => (
+                {overflowTabs.map(({ a, icon: Icon, label, avisoBadge }) => (
                   <NavLink
                     key={a}
                     to={a}
@@ -805,7 +890,14 @@ export default function Layout() {
                   >
                     {({ isActive }) => (
                       <>
-                        <Icon size={22} strokeWidth={isActive ? 2.5 : 1.8} />
+                        <div className="relative">
+                          <Icon size={22} strokeWidth={isActive ? 2.5 : 1.8} />
+                          {avisoBadge && avisosSinLeer > 0 && (
+                            <span className="absolute -top-1 -right-1 min-w-[14px] h-3.5 px-0.5 bg-red-500 text-white text-[8px] font-black rounded-full flex items-center justify-center leading-none">
+                              {avisosSinLeer > 9 ? '9+' : avisosSinLeer}
+                            </span>
+                          )}
+                        </div>
                         <span className="text-[11px] font-semibold text-center leading-tight">
                           {label}
                         </span>
@@ -987,7 +1079,7 @@ export default function Layout() {
                 <Briefcase size={20} className="text-white" />
               </div>
               <div>
-                <p className="font-bold text-marino">{NIVEL_LABEL[usuario?.rol]}</p>
+                <p className="font-bold text-marino">{getLabelCargo(usuario?.rol, usuario?.nivel)}</p>
                 <p className="text-xs text-gray-500 mt-0.5">Portal del personal docente</p>
               </div>
             </button>

@@ -202,7 +202,7 @@
     @apply badge bg-gray-100 text-gray-500;
   }
   .badge-azul {
-    @apply badge bg-marino-50 text-marino;
+    @apply badge bg-indigo-50 text-indigo-700;
   }
   .badge-dorado {
     @apply badge bg-dorado-50 text-dorado-700;

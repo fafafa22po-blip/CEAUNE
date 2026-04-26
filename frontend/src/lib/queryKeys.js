@@ -32,6 +32,18 @@ export const QK = {
   // ── Apoderado (libretas) ───────────────────────────────────
   apoderadoLibretas: (hijoId, anio) => ['apoderado', 'libretas', hijoId, anio],
 
+  // ── Directivo ──────────────────────────────────────────────
+  directivoSupervision:    (fecha) => ['directivo', 'supervision', fecha],
+  directivoAuxDetalle:     (id, fecha) => ['directivo', 'aux-detalle', id, fecha],
+  directivoTutorDetalle:   (id) => ['directivo', 'tutor-detalle', id],
+  directivoCirculares:     ['directivo', 'circulares'],
+  directivoComunicados:    (id, pagina, q, filtro) => ['directivo', 'comunicados', id, pagina, q, filtro],
+  directivoJustificaciones:(nivel, estado, pagina)  => ['directivo', 'justificaciones', nivel, estado, pagina],
+
+  // ── Personal (tutor / auxiliar) — bandeja de avisos ────────
+  personalAvisos:       ['personal', 'avisos'],
+  personalAvisosSinLeer:['personal', 'avisos-sin-leer'],
+
   // ── Apoderado (estadísticas + días no laborables) ─────────
   resumenMes:      (hijoId, mes, anio) => ['apoderado', 'resumen-mes',      hijoId, mes, anio],
   diasNoLab:       (hijoId, mes, anio) => ['apoderado', 'dias-no-lab',      hijoId, mes, anio],

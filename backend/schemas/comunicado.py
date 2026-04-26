@@ -39,6 +39,8 @@ class ComunicadoResponse(BaseModel):
     adjunto_nombre: Optional[str] = None
     adjunto_drive_url: Optional[str] = None
     tipo_envio: str
+    tipo: str = "normal"
+    cargo_emisor: Optional[str] = None
     created_at: datetime
     total_destinatarios: Optional[int] = None
     leidos: Optional[int] = None

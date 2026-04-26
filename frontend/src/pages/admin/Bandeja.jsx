@@ -273,7 +273,7 @@ function PanelDetalle({ com, onVolver, onMarcarLeida }) {
 }
 
 // ── Página principal ──────────────────────────────────────────────────────────
-export default function AdminBandeja() {
+export default function AdminBandeja({ inTab = false } = {}) {
   const [lista,         setLista]         = useState([])
   const [seleccionado,  setSeleccionado]  = useState(null)
   const [pagina,        setPagina]        = useState(1)
@@ -335,12 +335,17 @@ export default function AdminBandeja() {
   const totalPaginas = Math.ceil(total / POR_PAGINA)
 
   return (
-    <div className="flex flex-col" style={{ height: 'calc(100vh - 7rem)' }}>
+    <div
+      className={inTab ? 'flex flex-col flex-1 min-h-0' : 'flex flex-col'}
+      style={inTab ? undefined : { height: 'calc(100vh - 7rem)' }}
+    >
 
-      <div className="flex-shrink-0 mb-4">
-        <h1 className="text-xl font-bold text-marino">Bandeja de salida</h1>
-        <p className="text-sm text-gray-400 mt-0.5">Comunicados enviados a apoderados</p>
-      </div>
+      {!inTab && (
+        <div className="flex-shrink-0 mb-4">
+          <h1 className="text-xl font-bold text-marino">Bandeja de salida</h1>
+          <p className="text-sm text-gray-400 mt-0.5">Comunicados enviados a apoderados</p>
+        </div>
+      )}
 
       <div className="flex-1 grid grid-cols-1 lg:grid-cols-5 gap-4 min-h-0">
 

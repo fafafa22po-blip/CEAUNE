@@ -9,6 +9,7 @@ const ROLES = [
   { v: 'p-auxiliar', label: 'Auxiliar Primaria' },
   { v: 's-auxiliar', label: 'Auxiliar Secundaria' },
   { v: 'tutor',      label: 'Tutor' },
+  { v: 'directivo',  label: 'Directivo' },
   { v: 'admin',      label: 'Administrador' },
 ]
 
@@ -20,11 +21,20 @@ const NIVELES = [
   { v: 'secundaria', label: 'Secundaria' },
 ]
 
+const NIVELES_DIRECTIVO = [
+  { v: 'inicial',    label: 'Inicial (Directora)' },
+  { v: 'primaria',   label: 'Primaria (Subdirector)' },
+  { v: 'secundaria', label: 'Secundaria (Subdirector)' },
+  { v: 'formacion',  label: 'Form. General (Subdirector)' },
+  { v: 'todos',      label: 'Director del CEAUNE' },
+]
+
 const ROL_BADGE = {
   'i-auxiliar': 'badge-gris',
   'p-auxiliar': 'badge-gris',
   's-auxiliar': 'badge-gris',
   'tutor':      'badge-amarillo',
+  'directivo':  'badge-azul',
   'admin':      'badge-rojo',
 }
 
@@ -110,8 +120,10 @@ export default function Usuarios() {
 
   const esAuxiliarForm  = ['i-auxiliar', 'p-auxiliar', 's-auxiliar'].includes(form.rol)
   const esTutorForm     = form.rol === 'tutor'
+  const esDirectivoForm = form.rol === 'directivo'
   const esAuxiliarEdit  = ['i-auxiliar', 'p-auxiliar', 's-auxiliar'].includes(formEditar.rol)
   const esTutorEdit     = formEditar.rol === 'tutor'
+  const esDirectivoEdit = formEditar.rol === 'directivo'
 
   const abrirEditar = (u) => {
     setUsuarioEdit(u)
@@ -150,7 +162,7 @@ export default function Usuarios() {
       rol:      form.rol,
       telefono: form.telefono.trim() || null,
     }
-    if (esAuxiliarForm && form.nivel) payload.nivel = form.nivel
+    if ((esAuxiliarForm || esDirectivoForm) && form.nivel) payload.nivel = form.nivel
     if (esTutorForm) {
       if (form.nivel)   payload.nivel_tutor = form.nivel
       if (form.grado)   payload.grado       = form.grado
@@ -182,7 +194,7 @@ export default function Usuarios() {
       activo:       formEditar.activo,
       es_apoderado: formEditar.es_apoderado,
     }
-    if (esAuxiliarEdit && formEditar.nivel) payload.nivel = formEditar.nivel
+    if ((esAuxiliarEdit || esDirectivoEdit) && formEditar.nivel) payload.nivel = formEditar.nivel
     if (esTutorEdit) {
       if (formEditar.nivel)   payload.nivel_tutor = formEditar.nivel
       if (formEditar.grado)   payload.grado       = formEditar.grado
@@ -490,7 +502,7 @@ export default function Usuarios() {
                 {ROLES.map(({ v, label }) => <option key={v} value={v}>{label}</option>)}
               </select>
             </Campo>
-            {(esAuxiliarForm || esTutorForm) && (
+            {(esAuxiliarForm || esTutorForm || esDirectivoForm) && (
               <Campo label="WhatsApp (opcional)">
                 <input
                   className="input"
@@ -502,12 +514,12 @@ export default function Usuarios() {
                 />
               </Campo>
             )}
-            {(esAuxiliarForm || esTutorForm) && (
-              <Campo label="Nivel">
+            {(esAuxiliarForm || esTutorForm || esDirectivoForm) && (
+              <Campo label={esDirectivoForm ? 'Cargo / Nivel' : 'Nivel'}>
                 <select className="input" value={form.nivel}
                   onChange={(e) => setForm(f => ({ ...f, nivel: e.target.value, grado: '' }))} required>
                   <option value="">Seleccionar nivel...</option>
-                  {NIVELES.map(({ v, label }) => <option key={v} value={v}>{label}</option>)}
+                  {(esDirectivoForm ? NIVELES_DIRECTIVO : NIVELES).map(({ v, label }) => <option key={v} value={v}>{label}</option>)}
                 </select>
               </Campo>
             )}
@@ -578,12 +590,12 @@ export default function Usuarios() {
                 />
               </Campo>
             )}
-            {(esAuxiliarEdit || esTutorEdit) && (
-              <Campo label="Nivel">
+            {(esAuxiliarEdit || esTutorEdit || esDirectivoEdit) && (
+              <Campo label={esDirectivoEdit ? 'Cargo / Nivel' : 'Nivel'}>
                 <select className="input" value={formEditar.nivel}
                   onChange={(e) => setFormEditar(f => ({ ...f, nivel: e.target.value, grado: '' }))} required>
                   <option value="">Seleccionar nivel...</option>
-                  {NIVELES.map(({ v, label }) => <option key={v} value={v}>{label}</option>)}
+                  {(esDirectivoEdit ? NIVELES_DIRECTIVO : NIVELES).map(({ v, label }) => <option key={v} value={v}>{label}</option>)}
                 </select>
               </Campo>
             )}

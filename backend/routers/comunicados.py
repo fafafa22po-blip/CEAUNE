@@ -22,7 +22,7 @@ from schemas.estudiante import EstudianteBasico
 
 router = APIRouter()
 
-ROLES_AUXILIAR = {"i-auxiliar", "p-auxiliar", "s-auxiliar", "admin"}
+ROLES_AUXILIAR = {"i-auxiliar", "p-auxiliar", "s-auxiliar", "admin", "directivo"}
 
 
 # ---------------------------------------------------------------------------
@@ -117,9 +117,16 @@ def _resolver_destinatarios(data: ComunicarRequest, user: Usuario, db: Session):
     """Devuelve lista de Estudiante según el tipo de envío."""
     q = db.query(Estudiante).filter(Estudiante.activo == True)
 
-    # Respetar nivel del auxiliar (no admin)
+    # Restringir por nivel según rol:
+    #   auxiliar → nivel fijo por rol
+    #   directivo con nivel específico → solo su nivel
+    #   directivo general (todos/formacion) → sin restricción
+    #   admin → sin restricción
     nivel_forzado = None
-    if user.rol != "admin":
+    if user.rol == "directivo":
+        if user.nivel in ("inicial", "primaria", "secundaria"):
+            nivel_forzado = user.nivel
+    elif user.rol != "admin":
         from routers.asistencia import NIVEL_POR_ROL
         nivel_forzado = NIVEL_POR_ROL.get(user.rol)
 

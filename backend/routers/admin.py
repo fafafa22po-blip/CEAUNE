@@ -623,7 +623,7 @@ async def importar_apoderados_excel(
 # ---------------------------------------------------------------------------
 
 _ROL_TO_NIVEL  = {"i-auxiliar": "inicial", "p-auxiliar": "primaria", "s-auxiliar": "secundaria"}
-_ROLES_HORARIO = ("admin", "i-auxiliar", "p-auxiliar", "s-auxiliar")
+_ROLES_HORARIO = ("admin", "i-auxiliar", "p-auxiliar", "s-auxiliar", "directivo")
 
 @router.get("/horarios", response_model=List[HorarioResponse])
 def listar_horarios(
@@ -808,6 +808,9 @@ def crear_dia_no_laborable(
             dia = DiasNoLaborables(
                 fecha=cursor,
                 tipo=data.tipo,
+                nivel=data.nivel or "todos",
+                grado=data.grado or None,
+                seccion=data.seccion or None,
                 motivo=data.descripcion,
                 created_by=current_user.id,
             )

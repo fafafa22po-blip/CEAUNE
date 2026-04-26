@@ -7,6 +7,9 @@ import api from '../../lib/api'
 import toast from 'react-hot-toast'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
+import { obtenerUsuario } from '../../lib/auth'
+
+const _ROL_NIVEL = { 'i-auxiliar': 'inicial', 'p-auxiliar': 'primaria', 's-auxiliar': 'secundaria' }
 
 // ─── Constantes ───────────────────────────────────────────────────────────────
 
@@ -156,10 +159,13 @@ function TablaResultados({ registros, vista }) {
 // ─── Componente principal ─────────────────────────────────────────────────────
 
 export default function Reportes() {
+  const usuarioActual  = obtenerUsuario()
+  const nivelFijo      = _ROL_NIVEL[usuarioActual?.rol] || null   // null = admin (sin restricción)
+
   const [vista,              setVista]              = useState('mensual')
   const [fechaInicio,        setFechaInicio]        = useState(format(new Date(), 'yyyy-MM-01'))
   const [fechaFin,           setFechaFin]           = useState(format(new Date(), 'yyyy-MM-dd'))
-  const [nivel,              setNivel]              = useState('')
+  const [nivel,              setNivel]              = useState(nivelFijo || '')
   const [grado,              setGrado]              = useState('')
   const [seccion,            setSeccion]            = useState('')
   const [busqueda,           setBusqueda]           = useState('')
@@ -323,11 +329,17 @@ export default function Reportes() {
         {(vista === 'mensual' || vista === 'aula') && (
           <div>
             <label className="block text-xs font-semibold text-gray-600 mb-1.5">Nivel</label>
-            <select className="input" value={nivel} onChange={(e) => setNivel(e.target.value)}>
-              {NIVELES.map(({ v, label }) => (
-                <option key={v} value={v}>{label}</option>
-              ))}
-            </select>
+            {nivelFijo ? (
+              <div className="input bg-gray-50 text-gray-500 cursor-not-allowed capitalize">
+                {nivelFijo}
+              </div>
+            ) : (
+              <select className="input" value={nivel} onChange={(e) => setNivel(e.target.value)}>
+                {NIVELES.map(({ v, label }) => (
+                  <option key={v} value={v}>{label}</option>
+                ))}
+              </select>
+            )}
           </div>
         )}
 

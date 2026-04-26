@@ -280,8 +280,8 @@ def previsualizar_inicial(
     if not ingreso_hoy:
         if hora_actual <= h_ingreso_fin:
             return _resp("ingreso", "puntual", False, False, "INGRESO PUNTUAL", "Llegó a tiempo")
-        return _resp("ingreso", "tardanza", True, False, "TARDANZA",
-                     "Llegó después de la hora límite — ingresa el motivo")
+        return _resp("ingreso", "tardanza", False, False, "TARDANZA",
+                     "Llegó después de la hora límite")
 
     if salida_hoy and salida_hoy.tipo == "salida_especial":
         motivo = salida_hoy.motivo_especial or "otro"
@@ -442,12 +442,6 @@ def _registrar_asistencia(
             )
 
     tipo_registro, estado = detectar_estado(hora_actual, horario, tipo_solicitado)
-
-    if estado == "tardanza" and not observacion:
-        raise HTTPException(
-            status.HTTP_422_UNPROCESSABLE_ENTITY,
-            "La observación es obligatoria para tardanzas",
-        )
 
     # Verificar duplicado
     tipos_grupo = (

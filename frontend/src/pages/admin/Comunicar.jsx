@@ -201,7 +201,7 @@ function SheetBuscarAlumno({ destinatarios, onAgregar, onQuitar, onConfirmar }) 
   )
 }
 
-export default function AdminComunicar() {
+export default function AdminComunicar({ onEnviado } = {}) {
   const [tipoEnvio, setTipoEnvio] = useState('individual')
 
   // Individual
@@ -336,6 +336,7 @@ export default function AdminComunicar() {
       toast.success('Comunicado enviado correctamente')
       resetForm()
       setVerModal(false)
+      onEnviado?.()
       return true
     } catch (err) {
       toast.error(err.response?.data?.detail || 'Error al enviar')

@@ -163,7 +163,7 @@ function ModalPerfil({ perfil, onCerrar }) {
 
   const copiar      = (apo) => { navigator.clipboard.writeText(`+51${apo.telefono}`); toast.success('Número copiado') }
   const abrirWA     = (apo) => abrirWhatsApp(apo.telefono, mensajeWA)
-  const irAComunicar = () => { onCerrar(); navigate('/auxiliar/comunicar', { state: { alumno: estudiante } }) }
+  const irAComunicar = () => { onCerrar(); navigate('/auxiliar/comunicados', { state: { alumno: estudiante } }) }
 
   return (
     <div
