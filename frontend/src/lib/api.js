@@ -1,8 +1,15 @@
 import axios from 'axios'
 
+// En producción (Vercel) usamos el proxy /backend/* → el browser nunca hace
+// cross-origin y el error "No CORS header" desaparece por completo.
+// En local dev se usa VITE_API_URL (Railway directo) o localhost.
+const BASE_URL = import.meta.env.PROD
+  ? '/backend'
+  : (import.meta.env.VITE_API_URL || 'http://localhost:8000')
+
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || '/api',
-  timeout: 15000,
+  baseURL: BASE_URL,
+  timeout: 20000,
 })
 
 // Adjuntar access token en cada request

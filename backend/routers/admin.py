@@ -2,12 +2,15 @@
 Router de administración.
 Dashboard, usuarios CRUD, horarios, dias-no-laborables, reportes y jobs manuales.
 """
+import logging
 import re
 from datetime import date
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
 from sqlalchemy.orm import Session
+
+log = logging.getLogger(__name__)
 
 
 def _norm_grado(v: str) -> str:
@@ -113,40 +116,49 @@ def listar_usuarios(
     if activo is not None:
         q = q.filter(Usuario.activo == activo)
 
-    total = q.count()
-    usuarios = q.order_by(Usuario.apellido, Usuario.nombre).offset(offset).limit(por_pagina).all()
+    try:
+        total = q.count()
+        usuarios = q.order_by(Usuario.apellido, Usuario.nombre).offset(offset).limit(por_pagina).all()
 
-    # Batch load aulas para tutores (evita N+1)
-    tutor_ids = [u.id for u in usuarios if u.rol == "tutor"]
-    aulas_map: dict = {}
-    if tutor_ids:
-        for a in db.query(TutorAula).filter(TutorAula.tutor_id.in_(tutor_ids)).all():
-            aulas_map[a.tutor_id] = {"nivel": a.nivel, "grado": a.grado, "seccion": a.seccion, "anio": a.anio}
+        # Batch load aulas para tutores (evita N+1)
+        tutor_ids = [u.id for u in usuarios if u.rol == "tutor"]
+        aulas_map: dict = {}
+        if tutor_ids:
+            for a in db.query(TutorAula).filter(TutorAula.tutor_id.in_(tutor_ids)).all():
+                aulas_map[a.tutor_id] = {"nivel": a.nivel, "grado": a.grado, "seccion": a.seccion, "anio": a.anio}
 
-    # Batch load hijos para apoderados (evita N+1)
-    apod_ids = [u.id for u in usuarios if u.es_apoderado or u.rol == "apoderado"]
-    hijos_map: dict = {}
-    if apod_ids:
-        vinculos = db.query(ApoderadoEstudiante).filter(
-            ApoderadoEstudiante.apoderado_id.in_(apod_ids)
-        ).all()
-        est_ids = list({v.estudiante_id for v in vinculos})
-        est_map = {e.id: e for e in db.query(Estudiante).filter(Estudiante.id.in_(est_ids)).all()} if est_ids else {}
-        for v in vinculos:
-            e = est_map.get(v.estudiante_id)
-            if e:
-                hijos_map.setdefault(v.apoderado_id, []).append({
-                    "id": e.id, "nombre": e.nombre, "apellido": e.apellido,
-                    "dni": e.dni, "nivel": e.nivel, "grado": e.grado,
-                    "seccion": e.seccion, "activo": e.activo,
-                })
+        # Batch load hijos para apoderados (evita N+1)
+        apod_ids = [u.id for u in usuarios if u.es_apoderado or u.rol == "apoderado"]
+        hijos_map: dict = {}
+        if apod_ids:
+            vinculos = db.query(ApoderadoEstudiante).filter(
+                ApoderadoEstudiante.apoderado_id.in_(apod_ids)
+            ).all()
+            est_ids = list({v.estudiante_id for v in vinculos})
+            est_map = {e.id: e for e in db.query(Estudiante).filter(Estudiante.id.in_(est_ids)).all()} if est_ids else {}
+            for v in vinculos:
+                e = est_map.get(v.estudiante_id)
+                if e:
+                    hijos_map.setdefault(v.apoderado_id, []).append({
+                        "id": e.id, "nombre": e.nombre, "apellido": e.apellido,
+                        "dni": e.dni, "nivel": e.nivel, "grado": e.grado,
+                        "seccion": e.seccion, "activo": e.activo,
+                    })
 
-    return {
-        "total": total,
-        "pagina": pagina,
-        "por_pagina": por_pagina,
-        "items": [_usuario_dict_fast(u, aulas_map, hijos_map) for u in usuarios],
-    }
+        return {
+            "total": total,
+            "pagina": pagina,
+            "por_pagina": por_pagina,
+            "items": [_usuario_dict_fast(u, aulas_map, hijos_map) for u in usuarios],
+        }
+    except HTTPException:
+        raise
+    except Exception as exc:
+        log.error("listar_usuarios DB error: %s", exc)
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Error de conexión con la base de datos, intenta de nuevo",
+        )
 
 
 @router.get("/usuarios/buscar-dni/{dni}")
