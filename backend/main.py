@@ -87,6 +87,11 @@ async def lifespan(app: FastAPI):
         # Fix: foto_url truncada — TEXT (64KB) → MEDIUMTEXT (16MB) para base64 JPEG
         "ALTER TABLE personas_autorizadas MODIFY COLUMN foto_url MEDIUMTEXT NULL",
         "ALTER TABLE recojo_logs MODIFY COLUMN foto_snapshot MEDIUMTEXT NULL",
+        # Comunicados: tipo (normal/circular) y cargo del emisor
+        "ALTER TABLE comunicados ADD COLUMN tipo ENUM('normal','circular') NOT NULL DEFAULT 'normal'",
+        "ALTER TABLE comunicados ADD COLUMN cargo_emisor VARCHAR(100) NULL",
+        # Avisos directivo (tabla nueva — create_all la crea, pero por si acaso)
+        "ALTER TABLE avisos_directivo ADD COLUMN leido_at TIMESTAMP NULL",
     ]
     with engine.connect() as _conn:
         for _sql in _nuevas_cols:
