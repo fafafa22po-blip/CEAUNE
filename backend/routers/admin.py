@@ -20,8 +20,8 @@ def _norm_grado(v: str) -> str:
 def _norm_seccion(v: str) -> str:
     return v.strip().upper()
 
-from core.dependencies import get_current_user, get_db
-from core.tz import hoy as _hoy, require_roles
+from core.dependencies import get_current_user, get_db, require_roles
+from core.tz import hoy as _hoy
 from core.security import get_password_hash
 from models.asistencia import Asistencia, Horario
 from models.comunicado import ComunicadoDestinatario
