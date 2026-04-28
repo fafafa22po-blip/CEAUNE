@@ -24,6 +24,7 @@ from fastapi.responses import Response
 from sqlalchemy.orm import Session
 
 from core.dependencies import get_current_user, get_db, require_roles
+from core.tz import hoy as _hoy
 from models.asistencia import Asistencia
 from models.dia_no_laborable import DiasNoLaborables
 from models.estudiante import ApoderadoEstudiante, Estudiante
@@ -222,7 +223,7 @@ def estado_hoy_apoderado(
     Devuelve ingreso y recojo (si ocurrieron hoy).
     """
     _verificar_apoderado(current_user)
-    hoy = date.today()
+    hoy = _hoy()
     ids_hijos = _mis_hijos_ids(current_user.id, db)
     if not ids_hijos:
         return []
@@ -368,7 +369,7 @@ def calendario_mes_apoderado(
 
     inicio = date(anio, mes, 1)
     fin    = date(anio + 1, 1, 1) - timedelta(days=1) if mes == 12 else date(anio, mes + 1, 1) - timedelta(days=1)
-    hoy    = date.today()
+    hoy    = _hoy()
 
     # Días no laborables del mes
     dnl_rows = db.query(DiasNoLaborables).filter(
@@ -620,7 +621,7 @@ def admin_activar(
     persona.observacion_admin = body.get("observacion") or persona.observacion_admin
 
     # Vigencia: hasta 31/12 del año actual por defecto
-    anio = date.today().year
+    anio = _hoy().year
     persona.vigencia_hasta = body.get("vigencia_hasta") or date(anio, 12, 31)
     persona.fotocheck_emitido_at = datetime.now()
 
@@ -848,7 +849,7 @@ def admin_activar_directo(
     pa.precio_fotocheck  = precio
     pa.observacion_admin = observacion
 
-    anio = date.today().year
+    anio = _hoy().year
     pa.vigencia_hasta       = date(anio, 12, 31)
     pa.fotocheck_emitido_at = datetime.now()
     pa.qr_token = f"RECOJO-{pa.id[:8].upper()}-{generar_qr_token()[7:]}"
@@ -904,11 +905,11 @@ def _logica_escaneo(persona: "PersonaAutorizada", db: Session, current_user):
     autorizado = persona.estado == "activo"
     vencido = False
     if autorizado and persona.vigencia_hasta:
-        if date.today() > persona.vigencia_hasta:
+        if _hoy() > persona.vigencia_hasta:
             autorizado = False
             vencido = True
 
-    hoy = date.today()
+    hoy = _hoy()
     log_confirmado_hoy = (
         db.query(RecojoLog)
         .filter(
@@ -1136,7 +1137,7 @@ def resumen_hoy(
     # Determinar nivel según rol (el admin puede pasar ?nivel=)
     nivel_filtro = nivel or NIVEL_POR_ROL.get(current_user.rol)
 
-    hoy = date.today()
+    hoy = _hoy()
     inicio_hoy = datetime(hoy.year, hoy.month, hoy.day)
 
     # ── 1. Alumnos con ingreso hoy ───────────────────────────────────────────
@@ -1251,7 +1252,7 @@ def resumen_periodo(
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "periodo debe ser 'semana' o 'mes'")
 
     nivel_filtro = nivel or NIVEL_POR_ROL.get(current_user.rol)
-    hoy = date.today()
+    hoy = _hoy()
     inicio = hoy - timedelta(days=hoy.weekday()) if periodo == "semana" else hoy.replace(day=1)
     inicio_dt = datetime(inicio.year, inicio.month, inicio.day)
 
@@ -1320,7 +1321,7 @@ def logs_hoy(
     if current_user.rol not in ROLES_ESCANEO:
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Sin permiso")
 
-    hoy = date.today()
+    hoy = _hoy()
     logs = (
         db.query(RecojoLog)
         .filter(

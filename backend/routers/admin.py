@@ -20,7 +20,8 @@ def _norm_grado(v: str) -> str:
 def _norm_seccion(v: str) -> str:
     return v.strip().upper()
 
-from core.dependencies import get_current_user, get_db, require_roles
+from core.dependencies import get_current_user, get_db
+from core.tz import hoy as _hoy, require_roles
 from core.security import get_password_hash
 from models.asistencia import Asistencia, Horario
 from models.comunicado import ComunicadoDestinatario
@@ -50,7 +51,7 @@ def dashboard(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(require_roles("admin")),
 ):
-    hoy = date.today()
+    hoy = _hoy()
 
     total_estudiantes = db.query(Estudiante).filter(Estudiante.activo == True).count()
     total_usuarios = db.query(Usuario).filter(Usuario.activo == True).count()
@@ -238,7 +239,7 @@ def crear_usuario(
             nivel=nivel_tutor,
             grado=_norm_grado(data["grado"]),
             seccion=_norm_seccion(data["seccion"]),
-            anio=data.get("anio", date.today().year),
+            anio=data.get("anio", _hoy().year),
         ))
         u.nivel = nivel_tutor  # también en usuarios para acceso rápido por token
 
@@ -290,7 +291,7 @@ def actualizar_usuario(
                 nivel=nivel_t,
                 grado=_norm_grado(data["grado"]),
                 seccion=_norm_seccion(data["seccion"]),
-                anio=data.get("anio", date.today().year),
+                anio=data.get("anio", _hoy().year),
             ))
 
     db.commit()
@@ -758,7 +759,7 @@ def listar_excepciones(
     current_user: Usuario = Depends(require_roles(*_ROLES_HORARIO)),
 ):
     """Devuelve las excepciones de horario desde `desde` en adelante."""
-    fecha_min = desde or date.today()
+    fecha_min = desde or _hoy()
     q = db.query(HorarioExcepcion).filter(HorarioExcepcion.fecha >= fecha_min)
     if current_user.rol in _ROL_TO_NIVEL:
         nivel_aux = _ROL_TO_NIVEL[current_user.rol]
@@ -847,7 +848,7 @@ def listar_dias_no_laborables(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(require_roles("admin")),
 ):
-    anio_filtro = anio or date.today().year
+    anio_filtro = anio or _hoy().year
     return (
         db.query(DiasNoLaborables)
         .filter(
@@ -997,7 +998,7 @@ def asistencia_general(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(require_roles("admin")),
 ):
-    hoy = fecha or date.today()
+    hoy = fecha or _hoy()
 
     q = (
         db.query(Asistencia)
@@ -1079,7 +1080,7 @@ def get_horario_archivo(
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Solo puedes ver horarios de tu nivel")
     """Devuelve el archivo de horario de clases para un aula, si existe."""
     from models.horario_archivo import HorarioArchivo
-    year = anio or date.today().year
+    year = anio or _hoy().year
     h = db.query(HorarioArchivo).filter(
         HorarioArchivo.nivel   == nivel,
         HorarioArchivo.grado   == grado,

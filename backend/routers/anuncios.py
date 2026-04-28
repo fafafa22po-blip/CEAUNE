@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 from typing import Optional
 
 from core.dependencies import get_current_user, get_db, require_roles
+from core.tz import hoy as _hoy
 from models.anuncio import Anuncio
 from models.usuario import Usuario
 
@@ -107,7 +108,7 @@ def listar_activos(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_user),
 ):
-    hoy = date.today()
+    hoy = _hoy()
     q = db.query(Anuncio).filter(
         Anuncio.activo == True,
         Anuncio.fecha_inicio <= hoy,

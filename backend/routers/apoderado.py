@@ -10,6 +10,7 @@ from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, 
 from sqlalchemy.orm import Session
 
 from core.dependencies import get_current_user, get_db
+from core.tz import hoy as _hoy
 from models.asistencia import Asistencia
 from models.comunicado import (
     Comunicado, ComunicadoDestinatario, ComunicadoRespuesta, ObservacionTutor,
@@ -89,7 +90,7 @@ def contactos_hijo(
     _verificar_apoderado(current_user)
     est = _verificar_hijo(current_user.id, estudiante_id, db)
 
-    anio_actual = date.today().year
+    anio_actual = _hoy().year
 
     # Tutor asignado al aula del estudiante
     tutor_info = None
@@ -168,7 +169,7 @@ def resumen_mes(
     _verificar_apoderado(current_user)
     est = _verificar_hijo(current_user.id, estudiante_id, db)
 
-    hoy  = date.today()
+    hoy  = _hoy()
     anio = anio or hoy.year
     mes  = mes  or hoy.month
 
@@ -192,7 +193,7 @@ def dias_no_laborables_hijo(
     _verificar_apoderado(current_user)
     est = _verificar_hijo(current_user.id, estudiante_id, db)
 
-    hoy  = date.today()
+    hoy  = _hoy()
     anio = anio or hoy.year
     mes  = mes  or hoy.month
 
@@ -240,7 +241,7 @@ def timeline_hijo(
     _verificar_apoderado(current_user)
     _verificar_hijo(current_user.id, estudiante_id, db)
 
-    hoy = date.today()
+    hoy = _hoy()
     anio = anio or hoy.year
     mes = mes or hoy.month
 
@@ -527,7 +528,7 @@ def horario_hijo(
     """Devuelve el horario semanal de clases del estudiante (agrupa por nivel+grado+sección+año)."""
     _verificar_apoderado(current_user)
     estudiante = _verificar_hijo(str(current_user.id), estudiante_id, db)
-    year = anio or date.today().year
+    year = anio or _hoy().year
 
     from models.horario_curso import HorarioCurso
     periodos = (
@@ -569,7 +570,7 @@ def horario_archivo_hijo(
     """Devuelve el archivo (PDF/imagen) del horario de clases del estudiante."""
     _verificar_apoderado(current_user)
     estudiante = _verificar_hijo(str(current_user.id), estudiante_id, db)
-    year = anio or date.today().year
+    year = anio or _hoy().year
 
     from models.horario_archivo import HorarioArchivo
     h = db.query(HorarioArchivo).filter(

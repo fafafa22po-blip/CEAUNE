@@ -15,6 +15,7 @@ from slowapi.util import get_remote_address
 from sqlalchemy.orm import Session
 
 from core.dependencies import get_db, require_roles
+from core.tz import hoy as _hoy
 from models.asistencia import Asistencia
 from models.estudiante import Estudiante
 from models.usuario import Usuario
@@ -732,7 +733,7 @@ def reporte_mensual_pdf(
     titulo    = f"Reporte Mensual de Asistencia{nivel_txt}"
     subtitulo = f"Periodo: {fecha_inicio.strftime('%d/%m/%Y')} al {fecha_fin.strftime('%d/%m/%Y')}"
 
-    pdf = _pdf_tabla(titulo, subtitulo, stats, registros, date.today(), con_nivel=True)
+    pdf = _pdf_tabla(titulo, subtitulo, stats, registros, _hoy(), con_nivel=True)
     nombre = f"Reporte_Mensual_{fecha_inicio}_{fecha_fin}.pdf"
     return StreamingResponse(
         BytesIO(pdf),
@@ -775,7 +776,7 @@ def reporte_aula_pdf(
     titulo    = f"Reporte de Aula {grado}{seccion.upper()}{nivel_txt}"
     subtitulo = f"Periodo: {fecha_inicio.strftime('%d/%m/%Y')} al {fecha_fin.strftime('%d/%m/%Y')}"
 
-    pdf = _pdf_tabla(titulo, subtitulo, stats, registros, date.today(), con_nivel=False)
+    pdf = _pdf_tabla(titulo, subtitulo, stats, registros, _hoy(), con_nivel=False)
     nombre = f"Reporte_Aula_{grado}{seccion.upper()}_{fecha_inicio}_{fecha_fin}.pdf"
     return StreamingResponse(
         BytesIO(pdf),
@@ -807,7 +808,7 @@ def reporte_alumno_pdf(
                                   fecha_inicio, fecha_fin, db)
     registros = _registros_canonicos(est, fecha_inicio, fecha_fin, db)
 
-    pdf = _pdf_alumno(est, res, registros, date.today())
+    pdf = _pdf_alumno(est, res, registros, _hoy())
     nombre = f"Reporte_{est.apellido}_{est.nombre}_{fecha_inicio}_{fecha_fin}.pdf"
     return StreamingResponse(
         BytesIO(pdf),
