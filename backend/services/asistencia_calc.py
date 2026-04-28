@@ -2,30 +2,27 @@
 Servicio centralizado de cálculo de asistencia.
 
 Todos los roles (apoderado, tutor, auxiliar) usan estas funciones
-para garantizar lógica idéntica: días laborables, faltas implícitas,
-hora_cierre_faltas y porcentaje.
+para garantizar lógica idéntica: días laborables, faltas implícitas
+y porcentaje.
 
 Reglas canónicas
 ----------------
 - días_lab  : L-V excluyendo DiasNoLaborables del nivel/grado/sección.
 - faltas implícitas:
-    · mes actual             → siempre (el colegio está operando hoy)
+    · mes actual             → siempre, incluyendo hoy (no registro = falta)
     · mes pasado con datos   → también (días sin registro = falta)
     · mes pasado sin datos   → NO (sistema no estaba activo ese mes)
     · mes futuro             → NO (no ha ocurrido)
-- hoy se incluye en faltas solo si ya pasó hora_cierre_faltas del nivel.
 - pct = round((dias_lab - faltas) / dias_lab * 100)  si dias_lab > 0
         100                                           si dias_lab == 0
 """
 
 from calendar import monthrange
-from datetime import date, datetime, time, timedelta
+from datetime import date, timedelta
 
 from sqlalchemy.orm import Session
 
-from core.tz import ahora as _ahora_lima
-
-from models.asistencia import Asistencia, Horario
+from models.asistencia import Asistencia
 from models.dia_no_laborable import DiasNoLaborables
 
 _PRIORIDAD: dict[str, int] = {"tardanza": 3, "puntual": 2, "especial": 2, "falta": 1}
@@ -52,22 +49,6 @@ def _get_dias_no_lab(nivel: str, grado: str, seccion: str,
                     dias.add(r.fecha)
     return dias
 
-
-def _get_hora_cierre(nivel: str, db: Session) -> time:
-    """hora_cierre_faltas del nivel; por defecto 15:00 si no hay configuración.
-    Maneja tanto string 'HH:MM:SS' como timedelta (MySQL devuelve TIME como timedelta).
-    """
-    horario = db.query(Horario).filter(Horario.nivel == nivel).first()
-    raw = horario.hora_cierre_faltas if horario else None
-    if raw is None:
-        return time(15, 0, 0)
-    if isinstance(raw, time):
-        return raw
-    if isinstance(raw, timedelta):
-        total = int(raw.total_seconds())
-        return time(total // 3600, (total % 3600) // 60, total % 60)
-    p = str(raw).split(":")
-    return time(int(p[0]), int(p[1]), int(p[2]) if len(p) > 2 else 0)
 
 
 def _rango_mes(mes: int, anio: int) -> tuple:
@@ -163,13 +144,10 @@ def calcular_resumen_mes(estudiante_id: str, nivel: str, grado: str, seccion: st
         if _PRIORIDAD.get(a.estado, 0) > _PRIORIDAD.get(mapa.get(a.fecha), 0):
             mapa[a.fecha] = a.estado
 
-    # Faltas implícitas según reglas canónicas
+    # Faltas implícitas: día sin registro = falta, siempre, incluido hoy
     es_mes_actual = (mes == hoy.month and anio == hoy.year)
     if es_mes_actual or asistencias:
-        hora_cierre = _get_hora_cierre(nivel, db)
-        dia_cerrado = _ahora_lima().time() >= hora_cierre
-        hasta_impl  = hasta if dia_cerrado else min(hasta, hoy - timedelta(days=1))
-        _aplicar_faltas_implicitas(mapa, inicio, hasta_impl, dias_no_lab)
+        _aplicar_faltas_implicitas(mapa, inicio, hasta, dias_no_lab)
 
     totales = _conteo(mapa, dias_lab)
     return {
@@ -202,9 +180,6 @@ def calcular_resumen_mes_aula(estudiantes: list, nivel: str, grado: str, seccion
     dias_no_lab = _get_dias_no_lab(nivel, grado, seccion, inicio, fin, db)
     dias_lab    = _contar_dias_lab(inicio, fin, dias_no_lab)
 
-    hora_cierre = _get_hora_cierre(nivel, db)
-    dia_cerrado = _ahora_lima().time() >= hora_cierre
-    hasta_impl  = hasta if dia_cerrado else min(hasta, hoy - timedelta(days=1))
     es_mes_actual = (mes == hoy.month and anio == hoy.year)
 
     ids = [e.id for e in estudiantes]
@@ -232,7 +207,7 @@ def calcular_resumen_mes_aula(estudiantes: list, nivel: str, grado: str, seccion
                 mapa[a.fecha] = a.estado
 
         if dias_lab > 0 and (es_mes_actual or asistencias):
-            _aplicar_faltas_implicitas(mapa, inicio, hasta_impl, dias_no_lab)
+            _aplicar_faltas_implicitas(mapa, inicio, hasta, dias_no_lab)
 
         por_alumno[est.id] = _conteo(mapa, dias_lab)
 

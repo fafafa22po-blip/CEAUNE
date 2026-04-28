@@ -91,17 +91,26 @@ def estudiantes_aula(
         .all()
     )
 
+    ids = [e.id for e in estudiantes]
+    todas_hoy = (
+        db.query(Asistencia)
+        .filter(
+            Asistencia.estudiante_id.in_(ids),
+            Asistencia.fecha == hoy,
+        )
+        .order_by(Asistencia.hora.asc())
+        .all()
+    )
+
+    # Agrupar por estudiante
+    por_est: dict = {e.id: [] for e in estudiantes}
+    for a in todas_hoy:
+        if a.estudiante_id in por_est:
+            por_est[a.estudiante_id].append(a)
+
     result = []
     for est in estudiantes:
-        asistencias_hoy = (
-            db.query(Asistencia)
-            .filter(
-                Asistencia.estudiante_id == est.id,
-                Asistencia.fecha == hoy,
-            )
-            .order_by(Asistencia.hora.asc())
-            .all()
-        )
+        asistencias_hoy = por_est[est.id]
 
         registros = [
             {
@@ -114,15 +123,14 @@ def estudiantes_aula(
             for a in asistencias_hoy
         ]
 
-        estados = [a.estado for a in asistencias_hoy]
-        if "falta" in estados:
-            estado_dia = "falta"
-        elif "tardanza" in estados:
-            estado_dia = "tardanza"
-        elif any(e in estados for e in ("puntual", "especial")):
-            estado_dia = "presente"
+        ingreso = next(
+            (a for a in asistencias_hoy if a.tipo in ("ingreso", "ingreso_especial")),
+            None,
+        )
+        if ingreso:
+            estado_dia = ingreso.estado  # puntual | tardanza | especial
         else:
-            estado_dia = "sin_registro"
+            estado_dia = "falta"
 
         result.append({
             "id": est.id,
