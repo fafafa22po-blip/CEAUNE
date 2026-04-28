@@ -273,12 +273,20 @@ def historial_aula(
         .all()
     )
 
+    _PRIO = {"tardanza": 3, "presente": 2, "falta": 1}
+
     mapa = {}
     for a in asistencias:
         f = a.fecha.isoformat()
         est_map = mapa.setdefault(a.estudiante_id, {})
-        if f not in est_map or a.estado == "tardanza":
-            est_map[f] = "tardanza" if a.estado == "tardanza" else "presente"
+        if a.estado == "tardanza":
+            estado_mapped = "tardanza"
+        elif a.estado == "falta":
+            estado_mapped = "falta"
+        else:
+            estado_mapped = "presente"
+        if _PRIO.get(estado_mapped, 0) > _PRIO.get(est_map.get(f), 0):
+            est_map[f] = estado_mapped
 
     # Fechas L-V excluyendo DNL (misma lógica que el resto de roles)
     from services.asistencia_calc import get_fechas_laborables
