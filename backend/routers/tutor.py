@@ -836,11 +836,13 @@ def seguimiento_estudiante(
         .all()
     )
 
-    # mapa fecha → mejor registro del día
+    # mapa fecha → mejor registro del día (tardanza > puntual/especial > falta)
+    _PRIO_SEG = {"tardanza": 3, "puntual": 2, "especial": 2, "falta": 1}
     mapa_asist = {}
     for a in asistencias:
         f = a.fecha
-        if f not in mapa_asist or a.estado == "tardanza":
+        cur = mapa_asist.get(f)
+        if _PRIO_SEG.get(a.estado, 0) > _PRIO_SEG.get(cur.estado if cur else None, 0):
             mapa_asist[f] = a
 
     # estadísticas mensuales — servicio centralizado (misma lógica que la lista)
@@ -864,6 +866,12 @@ def seguimiento_estudiante(
                     "hora":  a.hora.isoformat() if a.hora else None,
                     "detalle": {"observacion": a.observacion},
                 })
+            elif a.estado == "falta":
+                eventos.append({
+                    "id": f"falta-{d.isoformat()}", "tipo": "falta",
+                    "fecha": d.isoformat(), "hora": None, "detalle": {},
+                })
+            # puntual/especial → sin evento (se muestra como ok)
         elif d <= hoy:
             eventos.append({
                 "id": f"falta-{d.isoformat()}", "tipo": "falta",
