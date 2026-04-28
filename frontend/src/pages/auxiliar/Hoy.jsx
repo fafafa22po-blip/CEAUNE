@@ -50,7 +50,7 @@ const ESTADO_CELL = {
   especial: { bg: 'bg-orange-100 text-orange-700', titulo: 'Especial' },
 }
 
-function CalendarioMes({ estados = {}, mes, anio }) {
+function CalendarioMes({ estados = {}, noLaborables = {}, mes, anio }) {
   const hoy        = new Date()
   const diasEnMes  = new Date(anio, mes + 1, 0).getDate()
   const primerDia  = new Date(anio, mes, 1)
@@ -78,20 +78,28 @@ function CalendarioMes({ estados = {}, mes, anio }) {
           const esHoy    = fecha.toDateString() === hoy.toDateString()
           const estado   = estados[fechaStr]
           const cellCfg  = ESTADO_CELL[estado]
+          const motivo   = noLaborables[fechaStr]
+          const esNoLab  = !!motivo
 
           let cls = 'bg-gray-50 text-gray-300'
-          if (cellCfg)       cls = cellCfg.bg
+          let label = String(dia)
+          if (esNoLab)       { cls = 'bg-sky-50 text-sky-400'; label = 'L' }
+          else if (cellCfg)  cls = cellCfg.bg
           else if (esFuturo) cls = 'bg-gray-50 text-gray-300'
           else if (esFin)    cls = 'bg-gray-50 text-gray-200'
           else               cls = 'bg-gray-100 text-gray-400'
 
+          const titleStr = esNoLab
+            ? `No laborable — ${motivo}`
+            : cellCfg ? `${fechaStr} — ${cellCfg.titulo}` : fechaStr
+
           return (
             <div
               key={dia}
-              title={cellCfg ? `${fechaStr} — ${cellCfg.titulo}` : fechaStr}
+              title={titleStr}
               className={`rounded-lg aspect-square flex items-center justify-center text-xs font-semibold ${cls} ${esHoy ? 'ring-2 ring-marino ring-offset-1' : ''}`}
             >
-              {dia}
+              {label}
             </div>
           )
         })}
@@ -104,6 +112,10 @@ function CalendarioMes({ estados = {}, mes, anio }) {
             <span className="text-[11px] text-gray-400">{v.titulo}</span>
           </div>
         ))}
+        <div className="flex items-center gap-1.5">
+          <div className="w-3 h-3 rounded bg-sky-50 border border-sky-200" />
+          <span className="text-[11px] text-gray-400">No laborable</span>
+        </div>
         <div className="flex items-center gap-1.5">
           <div className="w-3 h-3 rounded bg-gray-100" />
           <span className="text-[11px] text-gray-400">Sin registro</span>
@@ -127,10 +139,11 @@ const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto'
 function ModalPerfil({ estudiante, estadoDia, tarMes, faltMes, onClose, nav }) {
   const [paso, setPaso]             = useState(1)
   const [perfil, setPerfil]         = useState(null)
-  const [resumen, setResumen] = useState(null)
+  const [resumen, setResumen]       = useState(null)
+  const [noLab, setNoLab]           = useState({})
   const [cargando, setCargando]     = useState(true)
-  const [tagActivo, setTagActivo] = useState(null)
-  const [motivo, setMotivo]       = useState('')
+  const [tagActivo, setTagActivo]   = useState(null)
+  const [motivo, setMotivo]         = useState('')
 
   const cfg         = ESTADO_CFG[estadoDia] || ESTADO_CFG.puntual
   const tieneAlerta = tarMes >= 3 || faltMes >= 3
@@ -141,10 +154,16 @@ function ModalPerfil({ estudiante, estadoDia, tarMes, faltMes, onClose, nav }) {
     Promise.all([
       api.get(`/asistencia/perfil-alumno/${estudiante.id}`),
       api.get(`/asistencia/estudiante/${estudiante.id}/resumen-mes`),
+      api.get(`/asistencia/estudiante/${estudiante.id}/dias-no-laborables`, {
+        params: { mes: mesActual + 1, anio: anioActual },
+      }),
     ])
-      .then(([perfilRes, mesRes]) => {
+      .then(([perfilRes, mesRes, dnlRes]) => {
         setPerfil(perfilRes.data)
         setResumen(mesRes.data)
+        const mapa = {}
+        ;(dnlRes.data || []).forEach(d => { mapa[d.fecha] = d.motivo })
+        setNoLab(mapa)
       })
       .catch(() => toast.error('Error al cargar perfil'))
       .finally(() => setCargando(false))
@@ -245,7 +264,7 @@ function ModalPerfil({ estudiante, estadoDia, tarMes, faltMes, onClose, nav }) {
                     Cargando calendario...
                   </div>
                 ) : (
-                  <CalendarioMes estados={resumen?.estados ?? {}} mes={mesActual} anio={anioActual} />
+                  <CalendarioMes estados={resumen?.estados ?? {}} noLaborables={noLab} mes={mesActual} anio={anioActual} />
                 )}
               </div>
 

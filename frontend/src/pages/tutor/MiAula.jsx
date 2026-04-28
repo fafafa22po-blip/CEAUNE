@@ -54,6 +54,18 @@ function FichaModal({ estudianteId, nombreCompleto, grado, seccion, onCerrar }) 
     queryFn:  () => api.get(`/tutor/estudiante/${estudianteId}/ficha`).then(r => r.data),
   })
 
+  const ahora      = new Date()
+  const mesActual  = ahora.getMonth() + 1
+  const anioActual = ahora.getFullYear()
+  const { data: dnlData = [] } = useQuery({
+    queryKey: ['dnl', estudianteId, mesActual, anioActual],
+    queryFn:  () => api.get(`/asistencia/estudiante/${estudianteId}/dias-no-laborables`, {
+      params: { mes: mesActual, anio: anioActual },
+    }).then(r => r.data),
+  })
+  const mapaNoLab = {}
+  dnlData.forEach(d => { mapaNoLab[d.fecha] = d.motivo })
+
   const crearObs = useMutation({
     mutationFn: (payload) => api.post('/tutor/observaciones', payload),
     onSuccess: () => {
@@ -238,16 +250,26 @@ function FichaModal({ estudianteId, nombreCompleto, grado, seccion, onCerrar }) 
                                 </td>
                                 {semana.map((celda, ci) => {
                                   if (!celda.enRango) return <td key={ci} className="w-10 h-10" />
-                                  const cfg = CELDA[celda.estado]
+                                  const cfg      = CELDA[celda.estado]
+                                  const motivoNL = mapaNoLab[celda.dStr]
+                                  const esNoLab  = !!motivoNL
                                   return (
                                     <td key={ci} className="w-10 h-10">
-                                      <div title={`${format(celda.fecha, "EEEE d 'de' MMMM", { locale: es })}\n${ESTADOS[celda.estado]?.label ?? 'Sin registro'}`}
-                                        className={`w-10 h-10 rounded-xl flex flex-col items-center justify-center cursor-default transition-colors select-none ${cfg ? `${cfg.bg} ${cfg.text}` : 'bg-gray-100 text-gray-400'}`}>
-                                        <span className="text-sm font-bold leading-none">{celda.dia}</span>
-                                        <span className="text-[9px] leading-none mt-0.5 opacity-70">
-                                          {celda.estado === 'presente' ? 'ok' : celda.estado === 'tardanza' ? 'tard' : celda.estado === 'falta' ? 'falta' : '—'}
-                                        </span>
-                                      </div>
+                                      {esNoLab ? (
+                                        <div title={`No laborable — ${motivoNL}`}
+                                          className="w-10 h-10 rounded-xl flex flex-col items-center justify-center cursor-default select-none bg-sky-50 text-sky-400">
+                                          <span className="text-sm font-bold leading-none">L</span>
+                                          <span className="text-[9px] leading-none mt-0.5 opacity-70">no lab</span>
+                                        </div>
+                                      ) : (
+                                        <div title={`${format(celda.fecha, "EEEE d 'de' MMMM", { locale: es })}\n${ESTADOS[celda.estado]?.label ?? 'Sin registro'}`}
+                                          className={`w-10 h-10 rounded-xl flex flex-col items-center justify-center cursor-default transition-colors select-none ${cfg ? `${cfg.bg} ${cfg.text}` : 'bg-gray-100 text-gray-400'}`}>
+                                          <span className="text-sm font-bold leading-none">{celda.dia}</span>
+                                          <span className="text-[9px] leading-none mt-0.5 opacity-70">
+                                            {celda.estado === 'presente' ? 'ok' : celda.estado === 'tardanza' ? 'tard' : celda.estado === 'falta' ? 'falta' : '—'}
+                                          </span>
+                                        </div>
+                                      )}
                                     </td>
                                   )
                                 })}
@@ -256,6 +278,20 @@ function FichaModal({ estudianteId, nombreCompleto, grado, seccion, onCerrar }) 
                           })}
                         </tbody>
                       </table>
+                    </div>
+                    <div className="flex flex-wrap gap-3 mt-3">
+                      {[
+                        { cls: 'bg-green-100 text-green-800', label: 'Presente' },
+                        { cls: 'bg-amber-100 text-amber-800', label: 'Tardanza' },
+                        { cls: 'bg-red-100 text-red-800',     label: 'Falta'    },
+                        { cls: 'bg-sky-50 text-sky-400',      label: 'No laborable' },
+                        { cls: 'bg-gray-100 text-gray-400',   label: 'Sin registro' },
+                      ].map(({ cls, label }) => (
+                        <div key={label} className="flex items-center gap-1.5">
+                          <div className={`w-3 h-3 rounded ${cls}`} />
+                          <span className="text-[11px] text-gray-400">{label}</span>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 </div>

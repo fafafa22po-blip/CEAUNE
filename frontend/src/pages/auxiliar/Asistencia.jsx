@@ -114,7 +114,7 @@ function IconWhatsApp({ size = 16 }) {
 // ─── Calendario mensual (modal perfil) ────────────────────────────────────────
 // `estados` es el dict { "yyyy-MM-dd": "falta"|"puntual"|"tardanza"|"especial" }
 // que devuelve el servicio canónico del backend.
-function CalendarioMes({ estados = {}, mes, anio }) {
+function CalendarioMes({ estados = {}, noLaborables = {}, mes, anio }) {
   const hoy       = new Date()
   const diasEnMes = new Date(anio, mes + 1, 0).getDate()
   const offset    = (new Date(anio, mes, 1).getDay() + 6) % 7
@@ -136,11 +136,19 @@ function CalendarioMes({ estados = {}, mes, anio }) {
           const esHoyD   = fecha.toDateString() === hoy.toDateString()
           const estado   = estados[fechaStr]
           const cellCfg  = ESTADO_CELL[estado]
+          const motivo   = noLaborables[fechaStr]
+          const esNoLab  = !!motivo
+
           let cls = esFuturo ? 'bg-gray-50 text-gray-300' : esFin ? 'bg-gray-50 text-gray-200' : cellCfg ? cellCfg.bg : 'bg-gray-100 text-gray-400'
+          let label = String(dia)
+          if (esNoLab) { cls = 'bg-sky-50 text-sky-400'; label = 'L' }
+
+          const titleStr = esNoLab ? `No laborable — ${motivo}` : fechaStr
+
           return (
-            <div key={dia} title={fechaStr}
+            <div key={dia} title={titleStr}
               className={`rounded-lg aspect-square flex items-center justify-center text-xs font-semibold ${cls} ${esHoyD ? 'ring-2 ring-marino ring-offset-1' : ''}`}>
-              {dia}
+              {label}
             </div>
           )
         })}
@@ -152,6 +160,10 @@ function CalendarioMes({ estados = {}, mes, anio }) {
             <span className="text-[11px] text-gray-400">{ESTADO_CFG[k]?.label}</span>
           </div>
         ))}
+        <div className="flex items-center gap-1.5">
+          <div className="w-3 h-3 rounded bg-sky-50 border border-sky-200" />
+          <span className="text-[11px] text-gray-400">No laborable</span>
+        </div>
       </div>
     </div>
   )
@@ -170,18 +182,32 @@ function ModalPerfil({ estudiante, estadoDia, onClose, nav }) {
   const [paso, setPaso]         = useState(1)
   const [perfil, setPerfil]     = useState(null)
   const [resumen, setResumen]   = useState(null)
+  const [noLab, setNoLab]       = useState({})
   const [cargando, setCargando] = useState(true)
   const [tagActivo, setTagActivo] = useState(null)
   const [motivo, setMotivo]     = useState('')
 
   const cfg = ESTADO_CFG[estadoDia] || ESTADO_CFG.puntual
 
+  const ahora      = new Date()
+  const mesActual  = ahora.getMonth()
+  const anioActual = ahora.getFullYear()
+
   useEffect(() => {
     Promise.all([
       api.get(`/asistencia/perfil-alumno/${estudiante.id}`),
       api.get(`/asistencia/estudiante/${estudiante.id}/resumen-mes`),
+      api.get(`/asistencia/estudiante/${estudiante.id}/dias-no-laborables`, {
+        params: { mes: mesActual + 1, anio: anioActual },
+      }),
     ])
-      .then(([pRes, rRes]) => { setPerfil(pRes.data); setResumen(rRes.data) })
+      .then(([pRes, rRes, dnlRes]) => {
+        setPerfil(pRes.data)
+        setResumen(rRes.data)
+        const mapa = {}
+        ;(dnlRes.data || []).forEach(d => { mapa[d.fecha] = d.motivo })
+        setNoLab(mapa)
+      })
       .catch(() => toast.error('Error al cargar perfil'))
       .finally(() => setCargando(false))
   }, [estudiante.id])
@@ -201,10 +227,6 @@ function ModalPerfil({ estudiante, estadoDia, onClose, nav }) {
   const faltMes = resumen?.faltas    ?? 0
   const tarMes  = resumen?.tardanzas ?? 0
   const tieneAlerta = tarMes >= 3 || faltMes >= 3
-
-  const ahora      = new Date()
-  const mesActual  = ahora.getMonth()
-  const anioActual = ahora.getFullYear()
 
   const apoderados  = perfil?.apoderados || []
   const conTelefono = apoderados.filter(a => a.telefono)
@@ -263,7 +285,7 @@ function ModalPerfil({ estudiante, estadoDia, onClose, nav }) {
                 </p>
                 {cargando
                   ? <div className="flex items-center justify-center h-32 gap-2 text-gray-400 text-sm"><span className="animate-spin w-4 h-4 border-2 border-dorado border-t-transparent rounded-full" />Cargando...</div>
-                  : <CalendarioMes estados={resumen?.estados ?? {}} mes={mesActual} anio={anioActual} />}
+                  : <CalendarioMes estados={resumen?.estados ?? {}} noLaborables={noLab} mes={mesActual} anio={anioActual} />}
               </div>
             </div>
 

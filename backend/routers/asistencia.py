@@ -700,6 +700,50 @@ def resumen_mes_estudiante(
 
 
 # ---------------------------------------------------------------------------
+# GET /asistencia/estudiante/{id}/dias-no-laborables
+# ---------------------------------------------------------------------------
+
+@router.get("/estudiante/{estudiante_id}/dias-no-laborables")
+def dias_no_laborables_estudiante(
+    estudiante_id: str,
+    mes:  Optional[int] = Query(None, ge=1, le=12),
+    anio: Optional[int] = Query(None),
+    db:   Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_user),
+):
+    from calendar import monthrange as _monthrange
+    est = db.query(Estudiante).filter(Estudiante.id == estudiante_id).first()
+    if not est:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Estudiante no encontrado")
+
+    hoy  = _hoy()
+    anio = anio or hoy.year
+    mes  = mes  or hoy.month
+
+    inicio = date(anio, mes, 1)
+    fin    = date(anio, mes, _monthrange(anio, mes)[1])
+
+    registros = db.query(DiasNoLaborables).filter(
+        DiasNoLaborables.fecha >= inicio,
+        DiasNoLaborables.fecha <= fin,
+    ).all()
+
+    result = []
+    for r in registros:
+        aplica = False
+        if r.nivel == "todos":
+            aplica = True
+        elif r.nivel == est.nivel:
+            if r.grado is None or r.grado == est.grado:
+                if r.seccion is None or r.seccion == est.seccion:
+                    aplica = True
+        if aplica:
+            result.append({"fecha": r.fecha.isoformat(), "motivo": r.motivo})
+
+    return result
+
+
+# ---------------------------------------------------------------------------
 # GET /asistencia/perfil-qr/{qr_token}  — inspección por QR sin registrar
 # ---------------------------------------------------------------------------
 
