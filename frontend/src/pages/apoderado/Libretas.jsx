@@ -61,13 +61,13 @@ export default function Libretas() {
             <button
               key={b}
               onClick={() => setBimestre(b)}
-              className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all relative ${
+              className={`flex-1 py-2.5 rounded-xl text-xs font-semibold transition-all relative ${
                 bimestre === b
                   ? 'bg-marino text-white shadow-sm'
                   : 'bg-white border border-gray-200 text-gray-500 hover:border-gray-300'
               }`}
             >
-              B{b}
+              Bimestre {b}
               {tiene && (
                 <span className={`absolute top-1.5 right-1.5 w-2 h-2 rounded-full ${
                   bimestre === b ? 'bg-white/60' : 'bg-green-400'
