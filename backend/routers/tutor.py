@@ -818,11 +818,11 @@ def seguimiento_estudiante(
     fin    = date(anio_q, mes_q, monthrange(anio_q, mes_q)[1])
     hasta  = min(fin, hoy)
 
-    # días laborables del período
+    # días laborables del período — respeta días no laborables configurados por admin
+    from services.asistencia_calc import get_fechas_laborables
     dias_lab = [
-        inicio + timedelta(days=i)
-        for i in range((hasta - inicio).days + 1)
-        if (inicio + timedelta(days=i)).weekday() < 5
+        date.fromisoformat(f)
+        for f in get_fechas_laborables(est.nivel, est.grado, est.seccion, inicio, hasta, db)
     ]
 
     # asistencias del período (solo ingreso)
@@ -1008,13 +1008,11 @@ def ficha_estudiante(
         if _PRIO_FICHA.get(estado_mapped, 0) > _PRIO_FICHA.get(mapa_dias.get(f), 0):
             mapa_dias[f] = estado_mapped
 
-    fechas = []
-    d = inicio_mes
-    while d <= hoy:
-        if d.weekday() < 5:
-            f = d.isoformat()
-            fechas.append({"fecha": f, "estado": mapa_dias.get(f, "falta")})
-        d += timedelta(days=1)
+    from services.asistencia_calc import get_fechas_laborables
+    fechas = [
+        {"fecha": f, "estado": mapa_dias.get(f, "falta")}
+        for f in get_fechas_laborables(est.nivel, est.grado, est.seccion, inicio_mes, hoy, db)
+    ]
 
     obs_recientes = (
         db.query(ObservacionTutor)
