@@ -22,6 +22,7 @@ from datetime import date, timedelta
 
 from sqlalchemy.orm import Session
 
+from core.tz import hoy as _hoy
 from models.asistencia import Asistencia
 from models.dia_no_laborable import DiasNoLaborables
 
@@ -58,7 +59,7 @@ def _rango_mes(mes: int, anio: int) -> tuple:
     - mes futuro  → hasta = inicio - 1  (vacío, pct=100)
     - mes pasado  → hasta = fin
     """
-    hoy = date.today()
+    hoy = _hoy()
     inicio = date(anio, mes, 1)
     fin = date(anio, mes, monthrange(anio, mes)[1])
     if mes == hoy.month and anio == hoy.year:
@@ -118,7 +119,7 @@ def calcular_resumen_mes(estudiante_id: str, nivel: str, grado: str, seccion: st
     dias_lab usa `fin` (mes completo) como denominador para que el porcentaje
     empiece en 100% y baje con cada falta, sin colapsar a 0% al inicio del mes.
     """
-    hoy = date.today()
+    hoy = _hoy()
     inicio, fin, hasta = _rango_mes(mes, anio)
 
     dias_no_lab = _get_dias_no_lab(nivel, grado, seccion, inicio, fin, db)
@@ -174,7 +175,7 @@ def calcular_resumen_mes_aula(estudiantes: list, nivel: str, grado: str, seccion
     if not estudiantes:
         return {"dias_lab": 0, "dias_no_lab": 0, "por_alumno": {}}
 
-    hoy = date.today()
+    hoy = _hoy()
     inicio, fin, hasta = _rango_mes(mes, anio)
 
     dias_no_lab = _get_dias_no_lab(nivel, grado, seccion, inicio, fin, db)

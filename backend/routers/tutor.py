@@ -16,6 +16,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from core.dependencies import get_current_user, get_db
+from core.tz import hoy as _hoy
 from models.audit_log import AuditLog
 from models.asistencia import Asistencia
 from models.comunicado import (
@@ -77,7 +78,7 @@ def estudiantes_aula(
     _verificar_tutor(current_user)
     vinculo = _get_tutor_aula(current_user.id, db)
 
-    hoy = fecha or date.today()
+    hoy = fecha or _hoy()
 
     estudiantes = (
         db.query(Estudiante)
@@ -246,7 +247,7 @@ def historial_aula(
     _verificar_tutor(current_user)
     vinculo = _get_tutor_aula(current_user.id, db)
 
-    hoy = date.today()
+    hoy = _hoy()
     fecha_inicio = hoy - timedelta(days=dias - 1)
 
     estudiantes = (
@@ -321,7 +322,7 @@ def estadisticas_aula(
     _verificar_tutor(current_user)
     vinculo = _get_tutor_aula(current_user.id, db)
 
-    hoy = date.today()
+    hoy = _hoy()
     mes_actual  = mes  or hoy.month
     anio_actual = anio or hoy.year
 
@@ -361,7 +362,7 @@ def estadisticas_aula(
 
     # Días laborables transcurridos hasta hoy (para calcular riesgo real)
     from services.asistencia_calc import get_fechas_laborables
-    hoy_r = date.today()
+    hoy_r = _hoy()
     inicio_r = date(mes_actual, 1, 1).replace(year=anio_actual)
     hasta_r  = min(date(anio_actual, mes_actual, monthrange(anio_actual, mes_actual)[1]), hoy_r)
     dias_transcurridos = len(get_fechas_laborables(vinculo.nivel, vinculo.grado, vinculo.seccion, inicio_r, hasta_r, db))
@@ -389,7 +390,7 @@ def estadisticas_pdf(
     _verificar_tutor(current_user)
     vinculo = _get_tutor_aula(current_user.id, db)
 
-    hoy = date.today()
+    hoy = _hoy()
     mes_q  = mes  or hoy.month
     anio_q = anio or hoy.year
 
@@ -810,7 +811,7 @@ def seguimiento_estudiante(
     if est.nivel != vinculo.nivel or est.grado != vinculo.grado or est.seccion != vinculo.seccion:
         raise HTTPException(status.HTTP_403_FORBIDDEN, "El estudiante no es de tu aula")
 
-    hoy    = date.today()
+    hoy    = _hoy()
     mes_q  = mes  or hoy.month
     anio_q = anio or hoy.year
     inicio = date(anio_q, mes_q, 1)
@@ -980,7 +981,7 @@ def ficha_estudiante(
     ))
     db.commit()
 
-    hoy = date.today()
+    hoy = _hoy()
     inicio_mes = date(hoy.year, hoy.month, 1)
 
     asistencias = (
@@ -994,11 +995,18 @@ def ficha_estudiante(
         .all()
     )
 
+    _PRIO_FICHA = {"tardanza": 3, "puntual": 2, "especial": 2, "falta": 1}
     mapa_dias = {}
     for a in asistencias:
         f = a.fecha.isoformat()
-        if f not in mapa_dias or a.estado == "tardanza":
-            mapa_dias[f] = "tardanza" if a.estado == "tardanza" else "presente"
+        if a.estado == "tardanza":
+            estado_mapped = "tardanza"
+        elif a.estado == "falta":
+            estado_mapped = "falta"
+        else:
+            estado_mapped = "presente"
+        if _PRIO_FICHA.get(estado_mapped, 0) > _PRIO_FICHA.get(mapa_dias.get(f), 0):
+            mapa_dias[f] = estado_mapped
 
     fechas = []
     d = inicio_mes
@@ -1481,7 +1489,7 @@ def reporte_pdf_estudiante(
     if est.nivel != vinculo.nivel or est.grado != vinculo.grado or est.seccion != vinculo.seccion:
         raise HTTPException(status.HTTP_403_FORBIDDEN, "El estudiante no es de tu aula")
 
-    hoy    = date.today()
+    hoy    = _hoy()
     mes_q  = mes  or hoy.month
     anio_q = anio or hoy.year
     inicio = date(anio_q, mes_q, 1)
@@ -1593,7 +1601,7 @@ def alertas_tutor(
     _verificar_tutor(current_user)
     vinculo = _get_tutor_aula(current_user.id, db)
 
-    hoy = date.today()
+    hoy = _hoy()
     alertas = []
 
     estudiantes = (
@@ -1780,7 +1788,7 @@ def comparativa_mensual(
     _verificar_tutor(current_user)
     vinculo = _get_tutor_aula(current_user.id, db)
 
-    hoy = date.today()
+    hoy = _hoy()
     mes_act = mes or hoy.month
     anio_act = anio or hoy.year
 
